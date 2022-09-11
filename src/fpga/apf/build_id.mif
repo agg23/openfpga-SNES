@@ -1,0 +1,16 @@
+-- Build ID Memory Initialization File
+--
+
+DEPTH = 256;
+WIDTH = 32;
+ADDRESS_RADIX = HEX;
+DATA_RADIX = HEX;
+
+CONTENT
+BEGIN
+
+   0E0 : 20220823;
+   0E1 : 00024957;
+   0E2 : b7d9142a;
+
+END;

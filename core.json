@@ -1,0 +1,34 @@
+{
+  "core": {
+    "magic": "APF_VER_1",
+    "metadata": {
+      "platform_ids": ["snes"],
+      "shortname": "SNES",
+      "description": "APF core template. Displays gray test screen.",
+      "author": "agg23",
+      "url": "https://github.com/open-fpga/core-template",
+      "version": "1.0.0",
+      "date_release": "2022-08-23"
+    },
+    "framework": {
+      "target_product": "Analogue Pocket",
+      "version_required": "1.1",
+      "sleep_supported": false,
+      "dock": {
+        "supported": true,
+        "analog_output": false
+      },
+      "hardware": {
+        "link_port": false,
+        "cartridge_adapter": -1
+      }
+    },
+    "cores": [
+      {
+        "name": "default",
+        "id": 0,
+        "filename": "bitstream.rbf_r"
+      }
+    ]
+  }
+}

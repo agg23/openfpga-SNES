@@ -1,0 +1,7 @@
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) "apf_top.v"]
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) "common.v"]
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) "io_bridge_peripheral.v"]
+set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) "io_pad_controller.v"]
+set_global_assignment -name SDC_FILE [file join $::quartus(qip_path) "apf_constraints.sdc"]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) "mf_ddio_bidir_12.qip"]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) "mf_datatable.qip"]
