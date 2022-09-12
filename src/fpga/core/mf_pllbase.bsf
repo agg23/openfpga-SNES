@@ -4,7 +4,7 @@ editor if you plan to continue editing the block that represents it in
 the Block Editor! File corruption is VERY likely to occur.
 */
 /*
-Copyright (C) 2019  Intel Corporation. All rights reserved.
+Copyright (C) 2022  Intel Corporation. All rights reserved.
 Your use of Intel Corporation's design tools, logic functions 
 and other software and tools, and any partner logic 
 functions, and any output files from any of the foregoing 
@@ -21,9 +21,9 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 0 0 160 304)
+	(rect 0 0 160 264)
 	(text "mf_pllbase" (rect 48 -1 91 11)(font "Arial" (font_size 10)))
-	(text "inst" (rect 8 288 20 300)(font "Arial" ))
+	(text "inst" (rect 8 248 20 260)(font "Arial" ))
 	(port
 		(pt 0 72)
 		(input)
@@ -69,16 +69,9 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 160 232)
 		(output)
-		(text "outclk_4" (rect 0 0 34 12)(font "Arial" (font_size 8)))
-		(text "outclk_4" (rect 117 221 165 232)(font "Arial" (font_size 8)))
-		(line (pt 160 232)(pt 112 232)(line_width 1))
-	)
-	(port
-		(pt 160 272)
-		(output)
 		(text "locked" (rect 0 0 24 12)(font "Arial" (font_size 8)))
-		(text "locked" (rect 127 261 163 272)(font "Arial" (font_size 8)))
-		(line (pt 160 272)(pt 112 272)(line_width 1))
+		(text "locked" (rect 127 221 163 232)(font "Arial" (font_size 8)))
+		(line (pt 160 232)(pt 112 232)(line_width 1))
 	)
 	(drawing
 		(text "refclk" (rect 16 43 68 99)(font "Arial" (color 128 0 0)(font_size 9)))
@@ -93,15 +86,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "clk" (rect 97 147 212 304)(font "Arial" (color 0 0 0)))
 		(text "outclk3" (rect 113 163 268 339)(font "Arial" (color 128 0 0)(font_size 9)))
 		(text "clk" (rect 97 187 212 384)(font "Arial" (color 0 0 0)))
-		(text "outclk4" (rect 113 203 268 419)(font "Arial" (color 128 0 0)(font_size 9)))
-		(text "clk" (rect 97 227 212 464)(font "Arial" (color 0 0 0)))
-		(text "locked" (rect 113 243 262 499)(font "Arial" (color 128 0 0)(font_size 9)))
-		(text "export" (rect 82 267 200 544)(font "Arial" (color 0 0 0)))
-		(text " altera_pll " (rect 118 288 308 586)(font "Arial" ))
+		(text "locked" (rect 113 203 262 419)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 82 227 200 464)(font "Arial" (color 0 0 0)))
+		(text " altera_pll " (rect 118 248 308 506)(font "Arial" ))
 		(line (pt 48 32)(pt 112 32)(line_width 1))
-		(line (pt 112 32)(pt 112 288)(line_width 1))
-		(line (pt 48 288)(pt 112 288)(line_width 1))
-		(line (pt 48 32)(pt 48 288)(line_width 1))
+		(line (pt 112 32)(pt 112 248)(line_width 1))
+		(line (pt 48 248)(pt 112 248)(line_width 1))
+		(line (pt 48 32)(pt 48 248)(line_width 1))
 		(line (pt 49 52)(pt 49 76)(line_width 1))
 		(line (pt 50 52)(pt 50 76)(line_width 1))
 		(line (pt 49 92)(pt 49 116)(line_width 1))
@@ -116,11 +107,9 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 110 172)(pt 110 196)(line_width 1))
 		(line (pt 111 212)(pt 111 236)(line_width 1))
 		(line (pt 110 212)(pt 110 236)(line_width 1))
-		(line (pt 111 252)(pt 111 276)(line_width 1))
-		(line (pt 110 252)(pt 110 276)(line_width 1))
 		(line (pt 0 0)(pt 160 0)(line_width 1))
-		(line (pt 160 0)(pt 160 304)(line_width 1))
-		(line (pt 0 304)(pt 160 304)(line_width 1))
-		(line (pt 0 0)(pt 0 304)(line_width 1))
+		(line (pt 160 0)(pt 160 264)(line_width 1))
+		(line (pt 0 264)(pt 160 264)(line_width 1))
+		(line (pt 0 0)(pt 0 264)(line_width 1))
 	)
 )

@@ -11,7 +11,6 @@
   <pin name="outclk_1" direction="output" scope="external" />
   <pin name="outclk_2" direction="output" scope="external" />
   <pin name="outclk_3" direction="output" scope="external" />
-  <pin name="outclk_4" direction="output" scope="external" />
   <pin name="locked" direction="output" scope="external" />
  </global>
 </pinplan>

@@ -42,7 +42,7 @@
 # ========================
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "21:31:36  JANUARY 22, 2020"
-set_global_assignment -name LAST_QUARTUS_VERSION "18.1.1 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:apf/build_id_gen.tcl"
 set_global_assignment -name SMART_RECOMPILE ON
@@ -737,6 +737,29 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 
 # end ENTITY(mf_pllbase_0002)
 # ---------------------------
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/psram.sv
+set_global_assignment -name VERILOG_FILE core/rtl/mister_top/data_loader.v
+set_global_assignment -name QIP_FILE core/rtl/SPC700/SPC700.qip
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/SNES.sv
+set_global_assignment -name QIP_FILE core/rtl/65C816/65C816.qip
+set_global_assignment -name VHDL_FILE core/rtl/SWRAM.vhd
+set_global_assignment -name VHDL_FILE core/rtl/SNES.vhd
+set_global_assignment -name VHDL_FILE core/rtl/SMP.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/sdram.sv
+set_global_assignment -name VHDL_FILE core/rtl/PPU_PKG.vhd
+set_global_assignment -name VHDL_FILE core/rtl/PPU.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/miracle.sv
+set_global_assignment -name VERILOG_FILE core/rtl/main.v
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/lightgun.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/ioport.sv
+set_global_assignment -name VERILOG_FILE core/rtl/hps_ext.v
+set_global_assignment -name VHDL_FILE core/rtl/DSP_PKG.vhd
+set_global_assignment -name VHDL_FILE core/rtl/DSP.vhd
+set_global_assignment -name VHDL_FILE core/rtl/CPU.vhd
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/cheatcodes.sv
+set_global_assignment -name VHDL_FILE core/rtl/CEGen.vhd
+set_global_assignment -name VHDL_FILE core/rtl/bram.vhd
+set_global_assignment -name QIP_FILE core/rtl/chip/chip.qip
 set_global_assignment -name QIP_FILE apf/apf.qip
 set_global_assignment -name VERILOG_FILE core/core_top.v
 set_global_assignment -name VERILOG_FILE core/core_bridge_cmd.v
@@ -744,5 +767,584 @@ set_global_assignment -name SDC_FILE core/core_constraints.sdc
 set_global_assignment -name SIGNALTAP_FILE core/stp1.stp
 set_global_assignment -name QIP_FILE core/mf_pllbase.qip
 set_global_assignment -name SIP_FILE core/mf_pllbase.sip
+
+set_global_assignment -name ALM_REGISTER_PACKING_EFFORT LOW
+set_global_assignment -name ROUTER_REGISTER_DUPLICATION ON
+set_global_assignment -name SLD_NODE_CREATOR_ID 110 -section_id PC_20Start
+set_global_assignment -name SLD_NODE_ENTITY_NAME sld_signaltap -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_clk -to "core_top:ic|mf_pllbase:mp1|outclk_1" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_RAM_BLOCK_TYPE=AUTO" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_NODE_INFO=805334531" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_POWER_UP_TRIGGER=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_INVERSION_MASK=000000000000000000000000" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_INVERSION_MASK_LENGTH=24" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STORAGE_QUALIFIER_INVERSION_MASK_LENGTH=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_SEGMENT_SIZE=1024" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ATTRIBUTE_MEM_MODE=OFF" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STATE_FLOW_USE_GENERATED=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STATE_BITS=11" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_BUFFER_FULL_STOP=1" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_CURRENT_RESOURCE_WIDTH=1" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_INCREMENTAL_ROUTING=1" -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[0] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[1] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[5] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[8] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[9] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[12] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[16] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[17] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[22] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[23] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[26] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[29] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[30] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[31] -to PC_20Start|gnd -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_LEVEL=1" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_SAMPLE_DEPTH=1024" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_IN_ENABLED=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_PIPELINE=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_RAM_PIPELINE=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_COUNTER_PIPELINE=0" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_LEVEL_PIPELINE=1" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ENABLE_ADVANCED_TRIGGER=1" -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[2] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[3] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[13] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[19] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[20] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[21] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[0] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[1] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[2] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[3] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[4] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[5] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[6] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[7] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[8] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[9] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[10] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[11] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[12] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[13] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[14] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[15] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[16] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[17] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[18] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[19] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[20] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[21] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[22] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[23] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[24] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[25] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[26] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[27] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[28] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[29] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[30] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[31] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[32] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[33] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[34] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[35] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[36] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[37] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[38] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[39] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[40] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_CE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[41] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_OE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[42] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_SEL" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[43] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_WE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[44] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[45] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[46] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[47] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[48] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[49] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[50] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[51] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[52] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[53] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[54] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[55] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[56] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[57] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[58] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[59] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[60] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[61] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[62] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[63] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[64] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[65] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[66] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[67] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[68] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[69] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[70] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[71] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[72] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[73] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[74] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[75] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[76] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[77] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[78] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[79] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[80] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[81] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[82] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[83] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[84] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[85] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[86] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[87] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[88] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[89] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[90] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[91] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[92] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|NO_BSRAM_SEL" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[93] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[94] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[95] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[96] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[97] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[98] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[99] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[100] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[101] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[102] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[103] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[104] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[105] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[106] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[107] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[108] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[109] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[110] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[111] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[112] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[113] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[114] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[115] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[116] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[117] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[118] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[119] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[120] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[121] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[122] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[123] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[124] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[125] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[126] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[127] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[128] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[129] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[130] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[131] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[132] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[133] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[134] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[135] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[136] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[137] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[138] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[139] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[140] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[141] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[142] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[143] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[144] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[145] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[146] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[147] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[148] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[149] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[150] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[151] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[152] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[153] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[154] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[155] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[156] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[157] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[158] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[159] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[160] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[161] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[162] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[163] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[164] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[165] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[166] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[167] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[168] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[169] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[170] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[171] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[172] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[173] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[174] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[175] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[176] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[177] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[178] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[179] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[180] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[181] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[182] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[183] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[184] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[185] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[186] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[187] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[188] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[189] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[190] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[191] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[192] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[193] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[194] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[195] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[196] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[197] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[198] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[199] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[200] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[201] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[202] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[203] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[204] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[205] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[206] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[207] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[208] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[209] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[210] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[211] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[212] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[213] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[214] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[215] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[216] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[217] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[218] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[219] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[220] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[221] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|RST_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[222] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|busy" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[223] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[224] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[225] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[226] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[227] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[228] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[229] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[230] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[231] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[232] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[233] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[234] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[235] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[236] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[237] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[238] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[239] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[240] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[241] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[242] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[243] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[244] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[245] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[246] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[247] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[248] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[249] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[250] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[251] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[252] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[253] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[254] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[255] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|rd" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[256] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|word" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_trigger_in[257] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|wr" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[0] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[1] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[2] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[3] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[4] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[5] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[6] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[7] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[8] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[9] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[10] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[11] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[12] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[13] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[14] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[15] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[16] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[17] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[18] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[19] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BRAM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[20] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[21] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[22] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[23] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[24] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[25] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[26] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[27] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[28] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[29] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[30] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[31] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[32] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[33] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[34] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[35] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[36] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[37] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[38] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[39] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[40] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_CE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[41] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_OE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[42] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_SEL" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[43] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|BSRAM_WE_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[44] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[45] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[46] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[47] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[48] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[49] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[50] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[51] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[52] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[53] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[54] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[55] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[56] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[57] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[58] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[59] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[60] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[61] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[62] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[63] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[64] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[65] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[66] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[67] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CART_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[68] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[69] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[70] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[71] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[72] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[73] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[74] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[75] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[76] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[77] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[78] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[79] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[80] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[81] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[82] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[83] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[84] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[85] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[86] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[87] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[88] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[89] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[90] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[91] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|CA[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[92] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|NO_BSRAM_SEL" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[93] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[94] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[95] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[96] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[97] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[98] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[99] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[100] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[101] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[102] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[103] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[104] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[105] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[106] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[107] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[108] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[109] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[110] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[111] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[112] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[113] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[114] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[115] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[116] -to "core_top:ic|MAIN_SNES:snes|main:main|DSP_LHRomMap:DSP_LHRomMap|ROM_MASK[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[117] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[118] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[119] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[120] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[121] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[122] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[123] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[124] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[16]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[125] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[17]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[126] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[18]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[127] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[19]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[128] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[129] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[20]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[130] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[21]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[131] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[22]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[132] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[23]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[133] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[134] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[135] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[136] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[137] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[138] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[139] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[140] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_ADDR[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[141] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[142] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[143] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[144] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[145] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[146] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[147] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[148] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[149] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[150] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[151] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[152] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[153] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[154] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[155] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[156] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_D[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[157] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[158] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[159] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[160] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[161] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[162] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[163] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[164] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[165] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[166] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[167] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[168] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[169] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[170] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[171] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[172] -to "core_top:ic|MAIN_SNES:snes|main:main|ROM_Q[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[173] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[174] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[175] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[176] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[177] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[178] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[179] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[180] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|DR[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[181] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[182] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[183] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[184] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[185] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[186] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[187] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[188] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|D_IN[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[189] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[190] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[191] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[192] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[193] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[194] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[195] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[196] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[197] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[198] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[199] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[200] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[201] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[202] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[203] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[204] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PC[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[205] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[206] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[207] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[208] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[209] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[210] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[211] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[212] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[213] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[214] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[215] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[216] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[217] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[218] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[219] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[220] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|AddrGen:AddrGen|PCr[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[221] -to "core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|SCPU:CPU|P65C816:P65C816|RST_N" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[222] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|busy" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[223] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[224] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[225] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[226] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[227] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[228] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[229] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[230] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[231] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[232] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[233] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[234] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[235] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[236] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[237] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[238] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|din[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[239] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[0]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[240] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[10]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[241] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[11]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[242] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[12]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[243] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[13]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[244] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[14]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[245] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[15]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[246] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[1]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[247] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[2]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[248] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[3]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[249] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[4]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[250] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[5]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[251] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[6]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[252] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[7]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[253] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[8]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[254] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|dout[9]" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[255] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|rd" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[256] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|word" -section_id PC_20Start
+set_instance_assignment -name CONNECT_TO_SLD_NODE_ENTITY_PORT acq_data_in[257] -to "core_top:ic|MAIN_SNES:snes|sdram:sdram|wr" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_DATA_BITS=258" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_TRIGGER_BITS=258" -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_STORAGE_QUALIFIER_BITS=258" -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[4] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[6] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[7] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[10] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[11] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[14] -to PC_20Start|gnd -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[15] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[18] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[24] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[25] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[27] -to PC_20Start|vcc -section_id PC_20Start
+set_instance_assignment -name POST_FIT_CONNECT_TO_SLD_NODE_ENTITY_PORT crc[28] -to PC_20Start|gnd -section_id PC_20Start
+set_global_assignment -name SLD_NODE_PARAMETER_ASSIGNMENT "SLD_ADVANCED_TRIGGER_ENTITY=sld_reserved_ap_core_PC_Start_1_33a," -section_id PC_20Start
 set_global_assignment -name SLD_FILE db/stp1_auto_stripped.stp
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

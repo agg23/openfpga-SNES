@@ -1,6 +1,14 @@
 {
   "data": {
     "magic": "APF_VER_1",
-    "data_slots": []
+    "data_slots": [
+      {
+        "name": "SMC",
+        "required": true,
+        "parameters": 257,
+        "extensions": ["smc"],
+        "address": "0x00000000"
+      }
+    ]
   }
 }

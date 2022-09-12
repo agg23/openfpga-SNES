@@ -259,17 +259,17 @@ assign port_tran_sd = 1'bz;
 assign port_tran_sd_dir = 1'b0;     // SD is input and not used
 
 // tie off the rest of the pins we are not using
-assign cram0_a = 'h0;
-assign cram0_dq = {16{1'bZ}};
-assign cram0_clk = 0;
-assign cram0_adv_n = 1;
-assign cram0_cre = 0;
-assign cram0_ce0_n = 1;
-assign cram0_ce1_n = 1;
-assign cram0_oe_n = 1;
-assign cram0_we_n = 1;
-assign cram0_ub_n = 1;
-assign cram0_lb_n = 1;
+// assign cram0_a = 'h0;
+// assign cram0_dq = {16{1'bZ}};
+// assign cram0_clk = 0;
+// assign cram0_adv_n = 1;
+// assign cram0_cre = 0;
+// assign cram0_ce0_n = 1;
+// assign cram0_ce1_n = 1;
+// assign cram0_oe_n = 1;
+// assign cram0_we_n = 1;
+// assign cram0_ub_n = 1;
+// assign cram0_lb_n = 1;
 
 assign cram1_a = 'h0;
 assign cram1_dq = {16{1'bZ}};
@@ -283,15 +283,15 @@ assign cram1_we_n = 1;
 assign cram1_ub_n = 1;
 assign cram1_lb_n = 1;
 
-assign dram_a = 'h0;
-assign dram_ba = 'h0;
-assign dram_dq = {16{1'bZ}};
-assign dram_dqm = 'h0;
-assign dram_clk = 'h0;
-assign dram_cke = 'h0;
-assign dram_ras_n = 'h1;
-assign dram_cas_n = 'h1;
-assign dram_we_n = 'h1;
+// assign dram_a = 'h0;
+// assign dram_ba = 'h0;
+// assign dram_dq = {16{1'bZ}};
+// assign dram_dqm = 'h0;
+// assign dram_clk = 'h0;
+// assign dram_cke = 'h0;
+// assign dram_ras_n = 'h1;
+// assign dram_cas_n = 'h1;
+// assign dram_we_n = 'h1;
 
 assign sram_a = 'h0;
 assign sram_dq = {16{1'bZ}};
@@ -434,171 +434,231 @@ core_bridge_cmd icb (
 
 );
 
+reg ioctl_download;
+wire ioctl_wr;
+wire [24:0] ioctl_addr;
+wire [15:0] ioctl_dout;
 
-
-////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-// video generation
-// ~12,288,000 hz pixel clock
-//
-// we want our video mode of 320x240 @ 60hz, this results in 204800 clocks per frame
-// we need to add hblank and vblank times to this, so there will be a nondisplay area. 
-// it can be thought of as a border around the visible area.
-// to make numbers simple, we can have 400 total clocks per line, and 320 visible.
-// dividing 204800 by 400 results in 512 total lines per frame, and 240 visible.
-// this pixel clock is fairly high for the relatively low resolution, but that's fine.
-// PLL output has a minimum output frequency anyway.
-
-
-assign video_rgb_clock = clk_core_12288;
-assign video_rgb_clock_90 = clk_core_12288_90deg;
-assign video_rgb = vidout_rgb;
-assign video_de = vidout_de;
-assign video_skip = vidout_skip;
-assign video_vs = vidout_vs;
-assign video_hs = vidout_hs;
-
-    localparam  VID_V_BPORCH = 'd10;
-    localparam  VID_V_ACTIVE = 'd240;
-    localparam  VID_V_TOTAL = 'd512;
-    localparam  VID_H_BPORCH = 'd10;
-    localparam  VID_H_ACTIVE = 'd320;
-    localparam  VID_H_TOTAL = 'd400;
-
-    reg [15:0]  frame_count;
-    
-    reg [9:0]   x_count;
-    reg [9:0]   y_count;
-    
-    wire [9:0]  visible_x = x_count - VID_H_BPORCH;
-    wire [9:0]  visible_y = y_count - VID_V_BPORCH;
-
-    reg [23:0]  vidout_rgb;
-    reg         vidout_de, vidout_de_1;
-    reg         vidout_skip;
-    reg         vidout_vs;
-    reg         vidout_hs, vidout_hs_1;
-    
-    reg [9:0]   square_x = 'd135;
-    reg [9:0]   square_y = 'd95;
-
-always @(posedge clk_core_12288 or negedge reset_n) begin
-
-    if(~reset_n) begin
-    
-        x_count <= 0;
-        y_count <= 0;
-        
-    end else begin
-        vidout_de <= 0;
-        vidout_skip <= 0;
-        vidout_vs <= 0;
-        vidout_hs <= 0;
-        
-        vidout_hs_1 <= vidout_hs;
-        vidout_de_1 <= vidout_de;
-        
-        // x and y counters
-        x_count <= x_count + 1'b1;
-        if(x_count == VID_H_TOTAL-1) begin
-            x_count <= 0;
-            
-            y_count <= y_count + 1'b1;
-            if(y_count == VID_V_TOTAL-1) begin
-                y_count <= 0;
-            end
-        end
-        
-        // generate sync 
-        if(x_count == 0 && y_count == 0) begin
-            // sync signal in back porch
-            // new frame
-            vidout_vs <= 1;
-            frame_count <= frame_count + 1'b1;
-        end
-        
-        // we want HS to occur a bit after VS, not on the same cycle
-        if(x_count == 3) begin
-            // sync signal in back porch
-            // new line
-            vidout_hs <= 1;
-        end
-
-        // inactive screen areas are black
-        vidout_rgb <= 24'h0;
-        // generate active video
-        if(x_count >= VID_H_BPORCH && x_count < VID_H_ACTIVE+VID_H_BPORCH) begin
-
-            if(y_count >= VID_V_BPORCH && y_count < VID_V_ACTIVE+VID_V_BPORCH) begin
-                // data enable. this is the active region of the line
-                vidout_de <= 1;
-                
-                vidout_rgb[23:16] <= 8'd60;
-                vidout_rgb[15:8]  <= 8'd60;
-                vidout_rgb[7:0]   <= 8'd60;
-                
-            end 
-        end
-    end
-end
-
-
-
-
-//
-// audio i2s silence generator
-// see other examples for actual audio generation
-//
-
-assign audio_mclk = audgen_mclk;
-assign audio_dac = audgen_dac;
-assign audio_lrck = audgen_lrck;
-
-// generate MCLK = 12.288mhz with fractional accumulator
-    reg         [21:0]  audgen_accum;
-    reg                 audgen_mclk;
-    parameter   [20:0]  CYCLE_48KHZ = 21'd122880 * 2;
 always @(posedge clk_74a) begin
-    audgen_accum <= audgen_accum + CYCLE_48KHZ;
-    if(audgen_accum >= 21'd742500) begin
-        audgen_mclk <= ~audgen_mclk;
-        audgen_accum <= audgen_accum - 21'd742500 + CYCLE_48KHZ;
+    if (dataslot_requestwrite) ioctl_download <= 1;
+    else if (dataslot_allcomplete) ioctl_download <= 0;
+end
+
+data_loader #(.ADDRESS_SIZE(25), .WRITE_MEM_CLOCK_DELAY(5), .OUTPUT_WORD_SIZE(2)) data_loader (
+    .clk_74a(clk_74a),
+    .clk_memory(clk_sys_21_48),
+
+    .reset_n(pll_core_locked),
+
+    .bridge_wr(bridge_wr),
+    .bridge_endian_little(bridge_endian_little),
+    .bridge_addr(bridge_addr),
+    .bridge_wr_data(bridge_wr_data),
+
+    .write_en(ioctl_wr),
+    .write_addr(ioctl_addr),
+    .write_data(ioctl_dout)
+);
+
+wire [15:0] audio_l;
+wire [15:0] audio_r;
+
+MAIN_SNES snes (
+    .clk_mem_85_9(clk_mem_85_9),
+    .clk_sys_21_48(clk_sys_21_48),
+
+    .core_reset(~pll_core_locked),
+
+    // Input
+    .button_a(cont1_key[5]),
+    .button_b(cont1_key[4]),
+    .button_x(cont1_key[6]),
+    .button_y(cont1_key[7]),
+    .button_trig_l(cont1_key[8]),
+    .button_trig_r(cont1_key[9]),
+    .button_start(cont1_key[15]),
+    .button_select(cont1_key[14]),
+    .dpad_up(cont1_key[0]),
+    .dpad_down(cont1_key[1]),
+    .dpad_left(cont1_key[2]),
+    .dpad_right(cont1_key[3]),
+
+    // ROM loading
+    .ioctl_download(ioctl_download),
+    .ioctl_wr(ioctl_wr),
+    .ioctl_addr(ioctl_addr),
+    .ioctl_dout(ioctl_dout),
+
+    // SDRAM
+    .dram_a(dram_a),
+    .dram_ba(dram_ba),
+    .dram_dq(dram_dq),
+    .dram_dqm(dram_dqm),
+    .dram_clk(dram_clk),
+    .dram_cke(dram_cke),
+    .dram_ras_n(dram_ras_n),
+    .dram_cas_n(dram_cas_n),
+    .dram_we_n(dram_we_n),
+
+    // PSRAM
+    .cram_a(cram0_a),
+	.cram_dq(cram0_dq),
+	.cram_wait(cram0_wait),
+	.cram_clk(cram0_clk),
+	.cram_adv_n(cram0_adv_n),
+	.cram_cre(cram0_cre),
+	.cram_ce0_n(cram0_ce0_n),
+	.cram_ce1_n(cram0_ce1_n),
+	.cram_oe_n(cram0_oe_n),
+	.cram_we_n(cram0_we_n),
+	.cram_ub_n(cram0_ub_n),
+	.cram_lb_n(cram0_lb_n),
+
+    // Video
+    .hblank (h_blank),
+    .vblank (v_blank),
+    .hsync  (video_hs_snes),
+    .vsync  (video_vs_snes),
+    .video_r(video_rgb_snes[23:16]),
+    .video_g(video_rgb_snes[15:8]),
+    .video_b(video_rgb_snes[7:0]),
+
+    // Audio
+    .audio_l(audio_l),
+    .audio_r(audio_r)
+);
+
+  // Video
+
+  wire h_blank;
+  wire v_blank;
+  wire video_hs_snes;
+  wire video_vs_snes;
+  wire [23:0] video_rgb_snes;
+
+  reg video_de_reg;
+  reg video_hs_reg;
+  reg video_vs_reg;
+  reg [23:0] video_rgb_reg;
+
+  assign video_rgb_clock = clk_video_5_37;
+  assign video_rgb_clock_90 = clk_video_5_37_90deg;
+  assign video_de = video_de_reg;
+  assign video_hs = video_hs_reg;
+  assign video_vs = video_vs_reg;
+  assign video_rgb = video_rgb_reg;
+
+  reg hs_prev;
+  reg [2:0] hs_delay;
+  reg vs_prev;
+
+  always @(posedge clk_video_5_37) begin
+    video_hs_reg  <= 0;
+    video_de_reg  <= 0;
+    video_rgb_reg <= 24'h0;
+
+    if (~(h_blank || v_blank)) begin
+      video_de_reg  <= 1;
+
+      video_rgb_reg <= video_rgb_snes;
     end
-end
 
-// generate SCLK = 3.072mhz by dividing MCLK by 4
-    reg [1:0]   aud_mclk_divider;
-    wire        audgen_sclk = aud_mclk_divider[1] /* synthesis keep*/;
-    reg         audgen_lrck_1;
-always @(posedge audgen_mclk) begin
+    // if (hs_delay > 0) begin
+    //   hs_delay <= hs_delay - 1;
+    // end
+
+    // if (hs_delay == 1) begin
+    //   video_hs_reg <= 1;
+    // end
+
+    // if (~hs_prev && video_hs_nes) begin
+    //   // HSync went high. Delay by 3 cycles to prevent overlapping with VSync
+    //   hs_delay <= 7;
+    // end
+
+    // Set VSync to be high for a single cycle on the rising edge of the VSync coming out of the core
+    video_hs_reg <= ~hs_prev && video_hs_snes;
+    video_vs_reg <= ~vs_prev && video_vs_snes;
+    hs_prev <= video_hs_snes;
+    vs_prev <= video_vs_snes;
+  end
+
+
+  //
+  // audio i2s generator
+  //
+
+  assign audio_mclk = audgen_mclk;
+  assign audio_dac  = audgen_dac;
+  assign audio_lrck = audgen_lrck;
+
+  reg        audgen_nextsamp;
+
+  // generate MCLK = 12.288mhz with fractional accumulator
+  reg [21:0] audgen_accum;
+  reg        audgen_mclk;
+  parameter [20:0] CYCLE_48KHZ = 21'd122880 * 2;
+  always @(posedge clk_74a) begin
+    audgen_accum <= audgen_accum + CYCLE_48KHZ;
+    if (audgen_accum >= 21'd742500) begin
+      audgen_mclk  <= ~audgen_mclk;
+      audgen_accum <= audgen_accum - 21'd742500 + CYCLE_48KHZ;
+    end
+  end
+
+  // generate SCLK = 3.072mhz by dividing MCLK by 4
+  reg [1:0] aud_mclk_divider;
+  wire audgen_sclk = aud_mclk_divider[1]  /* synthesis keep*/;
+  always @(posedge audgen_mclk) begin
     aud_mclk_divider <= aud_mclk_divider + 1'b1;
-end
+  end
 
-// shift out audio data as I2S 
-// 32 total bits per channel, but only 16 active bits at the start and then 16 dummy bits
-//
-    reg     [4:0]   audgen_lrck_cnt;    
-    reg             audgen_lrck;
-    reg             audgen_dac;
-always @(negedge audgen_sclk) begin
-    audgen_dac <= 1'b0;
+  // shift out audio data as I2S
+  // 32 total bits per channel, but only 16 active bits at the start and then 16 dummy bits
+  //
+  // synchronize audio samples coming from the core
+
+  wire [31:0] audgen_sampdata = {audio_l, audio_r};
+  wire [31:0] audgen_sampdata_s;
+  synch_3 #(
+      .WIDTH(32)
+  ) s5 (
+      audgen_sampdata,
+      audgen_sampdata_s,
+      audgen_sclk
+  );
+  reg  [31:0] audgen_sampshift;
+  reg  [4:0] audgen_lrck_cnt;
+  reg    audgen_lrck;
+  reg    audgen_dac;
+  always @(negedge audgen_sclk) begin
+    // output the next bit
+    audgen_dac <= audgen_sampshift[31];
+
     // 48khz * 64
     audgen_lrck_cnt <= audgen_lrck_cnt + 1'b1;
-    if(audgen_lrck_cnt == 31) begin
-        // switch channels
-        audgen_lrck <= ~audgen_lrck;
-        
-    end 
-end
+    if (audgen_lrck_cnt == 31) begin
+      // switch channels
+      audgen_lrck <= ~audgen_lrck;
+
+      // Reload sample shifter
+      if (~audgen_lrck) begin
+        audgen_sampshift <= audgen_sampdata_s;
+      end
+    end else if (audgen_lrck_cnt < 16) begin
+      // only shift for 16 clocks per channel
+      audgen_sampshift <= {audgen_sampshift[30:0], 1'b0};
+    end
+  end
 
 
 ///////////////////////////////////////////////
 
 
-    wire    clk_core_12288;
-    wire    clk_core_12288_90deg;
+    wire    clk_mem_85_9;
+    wire    clk_sys_21_48;
+    wire clk_video_5_37;
+    wire clk_video_5_37_90deg;
     
     wire    pll_core_locked;
     
@@ -606,8 +666,10 @@ mf_pllbase mp1 (
     .refclk         ( clk_74a ),
     .rst            ( 0 ),
     
-    .outclk_0       ( clk_core_12288 ),
-    .outclk_1       ( clk_core_12288_90deg ),
+    .outclk_0       ( clk_mem_85_9 ),
+    .outclk_1       ( clk_sys_21_48 ),
+    .outclk_2       ( clk_video_5_37 ),
+    .outclk_3       ( clk_video_5_37_90deg ),
     
     .locked         ( pll_core_locked )
 );
