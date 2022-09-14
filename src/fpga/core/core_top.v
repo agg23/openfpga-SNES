@@ -325,6 +325,16 @@ always @(*) begin
     endcase
 end
 
+always @(posedge clk_74a) begin
+    if (bridge_wr) begin
+        casex(bridge_addr)
+            32'h00000000: begin
+                LHRom_type <= bridge_wr_data[2:0];
+            end
+        endcase
+    end
+end
+
 
 //
 // host/target command handler
@@ -444,11 +454,14 @@ always @(posedge clk_74a) begin
     else if (dataslot_allcomplete) ioctl_download <= 0;
 end
 
-data_loader #(.ADDRESS_SIZE(25), .WRITE_MEM_CLOCK_DELAY(5), .OUTPUT_WORD_SIZE(2)) data_loader (
+data_loader #(
+    .ADDRESS_MASK_UPPER_4(4'h1),
+    .ADDRESS_SIZE(25),
+    .WRITE_MEM_CLOCK_DELAY(7),
+    .OUTPUT_WORD_SIZE(2)
+) data_loader (
     .clk_74a(clk_74a),
     .clk_memory(clk_sys_21_48),
-
-    .reset_n(pll_core_locked),
 
     .bridge_wr(bridge_wr),
     .bridge_endian_little(bridge_endian_little),
@@ -463,15 +476,20 @@ data_loader #(.ADDRESS_SIZE(25), .WRITE_MEM_CLOCK_DELAY(5), .OUTPUT_WORD_SIZE(2)
 wire [15:0] audio_l;
 wire [15:0] audio_r;
 
+// TODO: This currently doesn't work. Hardcoding to LoROM code
+reg [2:0] LHRom_type = 2;
+
 MAIN_SNES snes (
     .clk_mem_85_9(clk_mem_85_9),
     .clk_sys_21_48(clk_sys_21_48),
 
     .core_reset(~pll_core_locked),
 
+    .LHRom_type(LHRom_type),
+
     // Input
-    .button_a(cont1_key[5]),
-    .button_b(cont1_key[4]),
+    .button_a(cont1_key[4]),
+    .button_b(cont1_key[5]),
     .button_x(cont1_key[6]),
     .button_y(cont1_key[7]),
     .button_trig_l(cont1_key[8]),

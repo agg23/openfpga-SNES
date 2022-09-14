@@ -1,7 +1,48 @@
 {
   "interact": {
     "magic": "APF_VER_1",
-    "variables": [],
+    "variables": [
+      {
+        "name": "ROM Type",
+        "id": 9,
+        "type": "action",
+        "enabled": false
+      },
+      {
+        "name": "LoROM",
+        "id": 10,
+        "type": "radio",
+        "enabled": true,
+        "group": 1,
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 1,
+        "address": "0x0",
+        "value": 2
+      },
+      {
+        "name": "HiROM",
+        "id": 11,
+        "type": "radio",
+        "enabled": true,
+        "group": 1,
+        "persist": true,
+        "writeonly": true,
+        "address": "0x0",
+        "value": 3
+      },
+      {
+        "name": "ExHiROM",
+        "id": 12,
+        "type": "radio",
+        "enabled": true,
+        "group": 1,
+        "persist": true,
+        "writeonly": true,
+        "address": "0x0",
+        "value": 4
+      }
+    ],
     "messages": []
   }
 }

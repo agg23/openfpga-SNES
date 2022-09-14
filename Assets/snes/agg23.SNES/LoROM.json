@@ -1,0 +1,11 @@
+{
+  "instance": {
+    "magic": "APF_VER_1",
+    "memory_writes": [
+      {
+        "address": "0x0",
+        "data": "0x2"
+      }
+    ]
+  }
+}
