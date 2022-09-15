@@ -14,6 +14,7 @@ set_clock_groups -asynchronous \
  -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk } 
 
 # TODO: There are additional expansion clocks here
+derive_clock_uncertainty
 
 set_max_delay 23 -from [get_registers { ic|icb|* \
 													 ic|data_loader|* \

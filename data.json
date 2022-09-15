@@ -6,7 +6,7 @@
         "name": "Instance JSON",
         "id": 0,
         "required": true,
-        "parameters": "0x11",
+        "parameters": "0x13",
         "extensions": ["json"]
       },
       {
@@ -16,6 +16,16 @@
         "parameters": 257,
         "extensions": ["smc", "sfc"],
         "address": "0x10000000"
+      },
+      {
+        "name": "Save",
+        "id": 10,
+        "required": false,
+        "parameters": "0x4",
+        "nonvolatile": true,
+        "extensions": ["sav"],
+        "address": "0x20000000",
+        "size_maximum": "0x20000"
       }
     ]
   }

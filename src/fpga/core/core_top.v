@@ -323,6 +323,10 @@ always @(*) begin
         bridge_rd_data <= cmd_bridge_rd_data;
     end
     endcase
+
+    if (bridge_addr[31:28] == 4'h2) begin
+        bridge_rd_data <= sd_read_data;
+    end
 end
 
 always @(posedge clk_74a) begin
@@ -385,9 +389,9 @@ end
 
 // bridge data slot access
 
-    wire    [9:0]   datatable_addr;
-    wire            datatable_wren;
-    wire    [31:0]  datatable_data;
+    reg     [9:0]   datatable_addr;
+    reg            datatable_wren;
+    reg     [31:0]  datatable_data;
     wire    [31:0]  datatable_q;
 
 core_bridge_cmd icb (
@@ -473,11 +477,77 @@ data_loader #(
     .write_data(ioctl_dout)
 );
 
+data_loader #(
+    .ADDRESS_MASK_UPPER_4(4'h2),
+    .ADDRESS_SIZE(20),
+    .WRITE_MEM_CLOCK_DELAY(7),
+    .OUTPUT_WORD_SIZE(2)
+) save_data_loader (
+    .clk_74a(clk_74a),
+    .clk_memory(clk_sys_21_48),
+
+    .bridge_wr(bridge_wr),
+    .bridge_endian_little(bridge_endian_little),
+    .bridge_addr(bridge_addr),
+    .bridge_wr_data(bridge_wr_data),
+
+    .write_en(sd_wr),
+    .write_addr(sd_buff_addr_in),
+    .write_data(sd_buff_dout)
+);
+
+wire [31:0] sd_read_data;
+
+wire sd_rd;
+wire sd_wr;
+
+wire [16:0] sd_buff_addr_in;
+wire [16:0] sd_buff_addr_out;
+// Lowest bit is for byte addressing
+wire [15:0] sd_buff_addr = sd_wr ? sd_buff_addr_in[16:1] : sd_buff_addr_out[16:1];
+
+wire [15:0] sd_buff_din;
+wire [15:0] sd_buff_dout;
+
+data_unloader #(
+    .ADDRESS_MASK_UPPER_4(4'h2),
+    .ADDRESS_SIZE(17),
+    .READ_MEM_CLOCK_DELAY(7),
+    .INPUT_WORD_SIZE(2)
+) data_unloader (
+    .clk_74a(clk_74a),
+    .clk_memory(clk_sys_21_48),
+
+    .bridge_rd(bridge_rd),
+    .bridge_endian_little(bridge_endian_little),
+    .bridge_addr(bridge_addr),
+    .bridge_rd_data(sd_read_data),
+
+    .read_en  (sd_rd),
+    .read_addr(sd_buff_addr_out),
+    .read_data(sd_buff_din)
+);
+
+always @(posedge clk_74a or negedge reset_n) begin
+    if (~reset_n) begin
+        datatable_addr <= 0;
+        datatable_data <= 0;
+        datatable_wren <= 0;
+    end else begin
+        datatable_wren <= 1;
+        // sram_size is the size of the config value in the ROM. Convert to actual size
+        datatable_data <= 32'd1024 << sram_size;
+        // Data slot index 2, not id 2
+        datatable_addr <= 2 * 2 + 1;
+    end
+end
+
 wire [15:0] audio_l;
 wire [15:0] audio_r;
 
 // TODO: This currently doesn't work. Hardcoding to LoROM code
 reg [2:0] LHRom_type = 2;
+wire [3:0] sram_size;
 
 MAIN_SNES snes (
     .clk_mem_85_9(clk_mem_85_9),
@@ -506,6 +576,15 @@ MAIN_SNES snes (
     .ioctl_wr(ioctl_wr),
     .ioctl_addr(ioctl_addr),
     .ioctl_dout(ioctl_dout),
+
+    // Save input/output
+    .sd_rd(sd_rd),
+    .sd_wr(sd_wr),
+    .sd_buff_addr(sd_buff_addr),
+    .sd_buff_din(sd_buff_din),
+    .sd_buff_dout(sd_buff_dout),
+
+    .sram_size(sram_size),
 
     // SDRAM
     .dram_a(dram_a),
