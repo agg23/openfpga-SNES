@@ -10,6 +10,8 @@ Please report any issues encountered to this repo. Most likely any problems are 
 
 ROMs should be placed in `/Assets/snes/common`
 
+PAL ROMs are currently not supported
+
 ## Features
 
 ### Dock Support
