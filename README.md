@@ -11,6 +11,11 @@ Please report any issues encountered to this repo. Most likely any problems are 
 ROMs should be placed in `/Assets/snes/common`
 
 ## Features
+
+### Dock Support
+
+Core supports two players/controllers via the Analogue Dock. Multitap and four player support coming soon.
+
 ### Expansion Chips
 
 The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), S-DD1 (Streat Fighter Alpha 2), and CS4 (Mega Man X 2). Additional chip support will come in the future as I rearrange memory and wait on several new features from Analogue.
