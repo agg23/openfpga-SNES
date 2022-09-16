@@ -3,15 +3,8 @@
     "magic": "APF_VER_1",
     "data_slots": [
       {
-        "name": "Instance JSON",
-        "id": 0,
-        "required": true,
-        "parameters": "0x13",
-        "extensions": ["json"]
-      },
-      {
         "name": "SMC",
-        "id": 1,
+        "id": 0,
         "required": true,
         "parameters": 257,
         "extensions": ["smc", "sfc"],

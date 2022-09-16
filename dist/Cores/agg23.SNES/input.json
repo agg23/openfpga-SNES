@@ -1,0 +1,52 @@
+{
+  "input": {
+    "magic": "APF_VER_1",
+    "controllers": [
+      {
+        "type": "default",
+        "mappings": [
+          {
+            "id": 0,
+            "name": "A Button",
+            "key": "pad_btn_a"
+          },
+          {
+            "id": 1,
+            "name": "B Button",
+            "key": "pad_btn_b"
+          },
+          {
+            "id": 2,
+            "name": "X Button",
+            "key": "pad_btn_x"
+          },
+          {
+            "id": 3,
+            "name": "Y Button",
+            "key": "pad_btn_y"
+          },
+          {
+            "id": 10,
+            "name": "Left Trigger",
+            "key": "pad_trig_l"
+          },
+          {
+            "id": 11,
+            "name": "Right Trigger",
+            "key": "pad_trig_r"
+          },
+          {
+            "id": 20,
+            "name": "Start",
+            "key": "pad_btn_start"
+          },
+          {
+            "id": 21,
+            "name": "Select",
+            "key": "pad_btn_select"
+          }
+        ]
+      }
+    ]
+  }
+}

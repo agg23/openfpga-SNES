@@ -1,0 +1,5 @@
+Port by agg23. Core by srg320.
+
+Super Nintendo Entertainment System (SNES), referred to as the Super Famicom (SFC) in Japan was the second home console produced by Nintendo. A 16-bit console that remains hugely popular to this day due to its expansive library and impressive enhancement chips.
+
+Core should support 2 controllers (when connected to the Dock), and the SA1, Super FX (GSU), CX4, and SDD1 expansion chips (more coming later). Please report all issues to agg23, as most likely any issues experienced are issues with the port, not the core.

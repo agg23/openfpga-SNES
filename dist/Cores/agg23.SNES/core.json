@@ -4,11 +4,11 @@
     "metadata": {
       "platform_ids": ["snes"],
       "shortname": "SNES",
-      "description": "APF core template. Displays gray test screen.",
+      "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
       "author": "agg23",
-      "url": "https://github.com/open-fpga/core-template",
-      "version": "1.0.0",
-      "date_release": "2022-08-23"
+      "url": "https://github.com/agg23/openfpga-snes",
+      "version": "0.1.0",
+      "date_release": "2022-09-16"
     },
     "framework": {
       "target_product": "Analogue Pocket",
@@ -27,7 +27,7 @@
       {
         "name": "default",
         "id": 0,
-        "filename": "bitstream.rbf_r"
+        "filename": "snes_main.rev"
       }
     ]
   }
