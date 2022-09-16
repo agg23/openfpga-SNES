@@ -18,7 +18,7 @@ Core supports two players/controllers via the Analogue Dock. Multitap and four p
 
 ### Expansion Chips
 
-The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), S-DD1 (Streat Fighter Alpha 2), and CS4 (Mega Man X 2). Additional chip support will come in the future as I rearrange memory and wait on several new features from Analogue.
+The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), S-DD1 (Streat Fighter Alpha 2), and CX4 (Mega Man X 2). Additional chip support will come in the future as I rearrange memory and wait on several new features from Analogue.
 
 ### Video Modes
 
