@@ -15,7 +15,7 @@ module rom_parser_tb;
   wire [2:0] parsed_rom_type;
 
   rom_parser rom_parser (
-    .clk_74a(clk_74a),
+    .clk_mem(clk_74a),
 
     .rom_file_size(rom_file_size),
 
@@ -36,8 +36,8 @@ module rom_parser_tb;
   reg div;
 
   initial begin
-    fd = $fopen("smw.smc", "rb");
-    rom_file_size = 'h80200;
+    fd = $fopen("Super Mario Kart.smc", "rb");
+    rom_file_size = 'h100200;
     downloading = 1;
 
     if (!fd) begin
