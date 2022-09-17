@@ -49,7 +49,7 @@ module sound_i2s #(
   always @(posedge clk_74a) begin
     audgen_accum <= audgen_accum + CYCLE_48KHZ;
     if (audgen_accum >= 21'd742500) begin
-      audio_mclk  <= ~audio_mclk;
+      audio_mclk   <= ~audio_mclk;
       audgen_accum <= audgen_accum - 21'd742500 + CYCLE_48KHZ;
     end
   end
@@ -66,12 +66,12 @@ module sound_i2s #(
   //
   // synchronize audio samples coming from the core
 
-  localparam CHANNEL_RIGHT_HIGH = SIGNED_INPUT ? 16 : 15;
-  localparam CHANNEL_LEFT_HIGH = 16 + CHANNEL_RIGHT_HIGH;
+  localparam CHANNEL_LEFT_HIGH = SIGNED_INPUT ? 16 : 15;
+  localparam CHANNEL_RIGHT_HIGH = 16 + CHANNEL_LEFT_HIGH;
 
   wire [31:0] audgen_sampdata;
 
-  assign audgen_sampdata[CHANNEL_LEFT_HIGH-1:CHANNEL_LEFT_HIGH-CHANNEL_WIDTH] = audio_l;
+  assign audgen_sampdata[CHANNEL_LEFT_HIGH-1:CHANNEL_LEFT_HIGH-CHANNEL_WIDTH]   = audio_l;
   assign audgen_sampdata[CHANNEL_RIGHT_HIGH-1:CHANNEL_RIGHT_HIGH-CHANNEL_WIDTH] = audio_r;
 
   generate
@@ -83,9 +83,9 @@ module sound_i2s #(
   endgenerate
 
   generate
-    if (31-CHANNEL_WIDTH > 16) begin
+    if (31 - CHANNEL_WIDTH > 16) begin
       assign audgen_sampdata[31-CHANNEL_WIDTH:16] = 0;
-      assign audgen_sampdata[15-CHANNEL_WIDTH:0] = 0;
+      assign audgen_sampdata[15-CHANNEL_WIDTH:0]  = 0;
     end
   endgenerate
 
