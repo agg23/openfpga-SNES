@@ -6,7 +6,7 @@
         "name": "SMC",
         "id": 0,
         "required": true,
-        "parameters": 257,
+        "parameters": "0x108",
         "extensions": ["smc", "sfc"],
         "address": "0x10000000"
       },
@@ -14,7 +14,7 @@
         "name": "Save",
         "id": 10,
         "required": false,
-        "parameters": "0x4",
+        "parameters": "0x84",
         "nonvolatile": true,
         "extensions": ["sav"],
         "address": "0x20000000",
