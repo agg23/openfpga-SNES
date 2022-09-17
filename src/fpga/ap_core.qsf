@@ -741,6 +741,7 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT LOW
 set_global_assignment -name ROUTER_REGISTER_DUPLICATION ON
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name MIF_FILE core/rtl/chip/CX4/drom.mif
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/sound_i2s.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/rom_parser.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/data_unloader.sv

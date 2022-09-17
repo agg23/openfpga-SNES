@@ -1247,7 +1247,7 @@ begin
 		end if;
 	end process; 
 
-	DATA_ROM : entity work.spram generic map(10, 24, "rtl/chip/CX4/drom.mif")
+	DATA_ROM : entity work.spram generic map(10, 24, "core/rtl/chip/CX4/drom.mif")
 	port map(
 		clock		=> not CLK,
 		address	=> DATA_ROM_ADDR,
