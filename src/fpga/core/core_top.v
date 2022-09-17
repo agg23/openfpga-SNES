@@ -259,39 +259,39 @@ module core_top (
   assign port_tran_sd_dir        = 1'b0;  // SD is input and not used
 
   // tie off the rest of the pins we are not using
-  // assign cram0_a = 'h0;
-  // assign cram0_dq = {16{1'bZ}};
-  // assign cram0_clk = 0;
-  // assign cram0_adv_n = 1;
-  // assign cram0_cre = 0;
-  // assign cram0_ce0_n = 1;
-  // assign cram0_ce1_n = 1;
-  // assign cram0_oe_n = 1;
-  // assign cram0_we_n = 1;
-  // assign cram0_ub_n = 1;
-  // assign cram0_lb_n = 1;
+  //   assign cram0_a                 = 'h0;
+  //   assign cram0_dq                = {16{1'bZ}};
+  //   assign cram0_clk               = 0;
+  //   assign cram0_adv_n             = 1;
+  //   assign cram0_cre               = 0;
+  //   assign cram0_ce0_n             = 1;
+  //   assign cram0_ce1_n             = 1;
+  //   assign cram0_oe_n              = 1;
+  //   assign cram0_we_n              = 1;
+  //   assign cram0_ub_n              = 1;
+  //   assign cram0_lb_n              = 1;
 
-  assign cram1_a                 = 'h0;
-  assign cram1_dq                = {16{1'bZ}};
-  assign cram1_clk               = 0;
-  assign cram1_adv_n             = 1;
-  assign cram1_cre               = 0;
-  assign cram1_ce0_n             = 1;
-  assign cram1_ce1_n             = 1;
-  assign cram1_oe_n              = 1;
-  assign cram1_we_n              = 1;
-  assign cram1_ub_n              = 1;
-  assign cram1_lb_n              = 1;
+  //   assign cram1_a                 = 'h0;
+  //   assign cram1_dq                = {16{1'bZ}};
+  //   assign cram1_clk               = 0;
+  //   assign cram1_adv_n             = 1;
+  //   assign cram1_cre               = 0;
+  //   assign cram1_ce0_n             = 1;
+  //   assign cram1_ce1_n             = 1;
+  //   assign cram1_oe_n              = 1;
+  //   assign cram1_we_n              = 1;
+  //   assign cram1_ub_n              = 1;
+  //   assign cram1_lb_n              = 1;
 
-  // assign dram_a = 'h0;
-  // assign dram_ba = 'h0;
-  // assign dram_dq = {16{1'bZ}};
-  // assign dram_dqm = 'h0;
-  // assign dram_clk = 'h0;
-  // assign dram_cke = 'h0;
-  // assign dram_ras_n = 'h1;
-  // assign dram_cas_n = 'h1;
-  // assign dram_we_n = 'h1;
+  //   assign dram_a                  = 'h0;
+  //   assign dram_ba                 = 'h0;
+  //   assign dram_dq                 = {16{1'bZ}};
+  //   assign dram_dqm                = 'h0;
+  //   assign dram_clk                = 'h0;
+  //   assign dram_cke                = 'h0;
+  //   assign dram_ras_n              = 'h1;
+  //   assign dram_cas_n              = 'h1;
+  //   assign dram_we_n               = 'h1;
 
   assign sram_a                  = 'h0;
   assign sram_dq                 = {16{1'bZ}};
@@ -448,15 +448,31 @@ module core_top (
 
   );
 
-  reg ioctl_download;
+  reg ioctl_download = 0;
   wire ioctl_wr;
   wire [24:0] ioctl_addr;
   wire [15:0] ioctl_dout;
 
+  reg save_download = 0;
+  reg dataslot_allcomplete_prev;
+
   always @(posedge clk_74a) begin
+    dataslot_allcomplete_prev <= dataslot_allcomplete;
+
     if (dataslot_requestwrite) ioctl_download <= 1;
     else if (dataslot_allcomplete) ioctl_download <= 0;
+
+    if (dataslot_requestread || dataslot_requestwrite) save_download <= 1;
+    else if (dataslot_allcomplete && ~dataslot_allcomplete_prev) save_download <= 0;
   end
+
+  wire save_download_s;
+
+  synch_3 save_s (
+      save_download,
+      save_download_s,
+      clk_sys_21_48
+  );
 
   data_loader #(
       .ADDRESS_MASK_UPPER_4(4'h1),
@@ -481,7 +497,7 @@ module core_top (
       .ADDRESS_MASK_UPPER_4(4'h2),
       .ADDRESS_SIZE(20),
       .WRITE_MEM_CLOCK_DELAY(7),
-      .OUTPUT_WORD_SIZE(2)
+      .OUTPUT_WORD_SIZE(1)
   ) save_data_loader (
       .clk_74a(clk_74a),
       .clk_memory(clk_sys_21_48),
@@ -503,17 +519,16 @@ module core_top (
 
   wire [16:0] sd_buff_addr_in;
   wire [16:0] sd_buff_addr_out;
-  // Lowest bit is for byte addressing
-  wire [15:0] sd_buff_addr = sd_wr ? sd_buff_addr_in[16:1] : sd_buff_addr_out[16:1];
+  wire [16:0] sd_buff_addr = sd_wr ? sd_buff_addr_in : sd_buff_addr_out;
 
-  wire [15:0] sd_buff_din;
-  wire [15:0] sd_buff_dout;
+  wire [7:0] sd_buff_din;
+  wire [7:0] sd_buff_dout;
 
   data_unloader #(
       .ADDRESS_MASK_UPPER_4(4'h2),
       .ADDRESS_SIZE(17),
       .READ_MEM_CLOCK_DELAY(7),
-      .INPUT_WORD_SIZE(2)
+      .INPUT_WORD_SIZE(1)
   ) data_unloader (
       .clk_74a(clk_74a),
       .clk_memory(clk_sys_21_48),
@@ -623,6 +638,7 @@ module core_top (
       .ioctl_dout(ioctl_dout),
 
       // Save input/output
+      .save_download(save_download_s),
       .sd_rd(sd_rd),
       .sd_wr(sd_wr),
       .sd_buff_addr(sd_buff_addr),
@@ -643,18 +659,31 @@ module core_top (
       .dram_we_n(dram_we_n),
 
       // PSRAM
-      .cram_a(cram0_a),
-      .cram_dq(cram0_dq),
-      .cram_wait(cram0_wait),
-      .cram_clk(cram0_clk),
-      .cram_adv_n(cram0_adv_n),
-      .cram_cre(cram0_cre),
-      .cram_ce0_n(cram0_ce0_n),
-      .cram_ce1_n(cram0_ce1_n),
-      .cram_oe_n(cram0_oe_n),
-      .cram_we_n(cram0_we_n),
-      .cram_ub_n(cram0_ub_n),
-      .cram_lb_n(cram0_lb_n),
+      .cram0_a(cram0_a),
+      .cram0_dq(cram0_dq),
+      .cram0_wait(cram0_wait),
+      .cram0_clk(cram0_clk),
+      .cram0_adv_n(cram0_adv_n),
+      .cram0_cre(cram0_cre),
+      .cram0_ce0_n(cram0_ce0_n),
+      .cram0_ce1_n(cram0_ce1_n),
+      .cram0_oe_n(cram0_oe_n),
+      .cram0_we_n(cram0_we_n),
+      .cram0_ub_n(cram0_ub_n),
+      .cram0_lb_n(cram0_lb_n),
+
+      .cram1_a(cram1_a),
+      .cram1_dq(cram1_dq),
+      .cram1_wait(cram1_wait),
+      .cram1_clk(cram1_clk),
+      .cram1_adv_n(cram1_adv_n),
+      .cram1_cre(cram1_cre),
+      .cram1_ce0_n(cram1_ce0_n),
+      .cram1_ce1_n(cram1_ce1_n),
+      .cram1_oe_n(cram1_oe_n),
+      .cram1_we_n(cram1_we_n),
+      .cram1_ub_n(cram1_ub_n),
+      .cram1_lb_n(cram1_lb_n),
 
       // Video
       .hblank (h_blank),

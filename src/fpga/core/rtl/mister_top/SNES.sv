@@ -42,11 +42,12 @@ module MAIN_SNES (
     input wire [15:0] ioctl_dout,
 
     // Saves
+    input wire save_download,
     input wire sd_rd,
     input wire sd_wr,
-    input wire [15:0] sd_buff_addr,
-    output wire [15:0] sd_buff_din,
-    input wire [15:0] sd_buff_dout,
+    input wire [16:0] sd_buff_addr,
+    output wire [7:0] sd_buff_din,
+    input wire [7:0] sd_buff_dout,
 
     output reg [3:0] sram_size,
 
@@ -62,18 +63,31 @@ module MAIN_SNES (
     output wire        dram_we_n,
 
     // PSRAM
-    output wire [21:16] cram_a,
-    inout wire [15:0] cram_dq,
-    input wire cram_wait,
-    output wire cram_clk,
-    output wire cram_adv_n,
-    output wire cram_cre,
-    output wire cram_ce0_n,
-    output wire cram_ce1_n,
-    output wire cram_oe_n,
-    output wire cram_we_n,
-    output wire cram_ub_n,
-    output wire cram_lb_n,
+    output wire [21:16] cram0_a,
+    inout wire [15:0] cram0_dq,
+    input wire cram0_wait,
+    output wire cram0_clk,
+    output wire cram0_adv_n,
+    output wire cram0_cre,
+    output wire cram0_ce0_n,
+    output wire cram0_ce1_n,
+    output wire cram0_oe_n,
+    output wire cram0_we_n,
+    output wire cram0_ub_n,
+    output wire cram0_lb_n,
+
+    output wire [21:16] cram1_a,
+    inout wire [15:0] cram1_dq,
+    input wire cram1_wait,
+    output wire cram1_clk,
+    output wire cram1_adv_n,
+    output wire cram1_cre,
+    output wire cram1_ce0_n,
+    output wire cram1_ce1_n,
+    output wire cram1_oe_n,
+    output wire cram1_we_n,
+    output wire cram1_ub_n,
+    output wire cram1_lb_n,
 
     // Video
     output wire vblank,
@@ -506,18 +520,18 @@ module MAIN_SNES (
       .data_out(wram_data_out),
 
       // Actual PSRAM interface
-      .cram_a(cram_a),
-      .cram_dq(cram_dq),
-      .cram_wait(cram_wait),
-      .cram_clk(cram_clk),
-      .cram_adv_n(cram_adv_n),
-      .cram_cre(cram_cre),
-      .cram_ce0_n(cram_ce0_n),
-      .cram_ce1_n(cram_ce1_n),
-      .cram_oe_n(cram_oe_n),
-      .cram_we_n(cram_we_n),
-      .cram_ub_n(cram_ub_n),
-      .cram_lb_n(cram_lb_n)
+      .cram_a(cram0_a),
+      .cram_dq(cram0_dq),
+      .cram_wait(cram0_wait),
+      .cram_clk(cram0_clk),
+      .cram_adv_n(cram0_adv_n),
+      .cram_cre(cram0_cre),
+      .cram_ce0_n(cram0_ce0_n),
+      .cram_ce1_n(cram0_ce1_n),
+      .cram_oe_n(cram0_oe_n),
+      .cram_we_n(cram0_we_n),
+      .cram_ub_n(cram0_ub_n),
+      .cram_lb_n(cram0_lb_n)
   );
 
   wire [15:0] VRAM1_ADDR;
@@ -573,21 +587,50 @@ module MAIN_SNES (
   wire        BSRAM_OE_N;
   wire        BSRAM_WE_N;
   wire [7:0] BSRAM_Q, BSRAM_D;
-  dpram_dif #(BSRAM_BITS, 8, BSRAM_BITS - 1, 16) bsram (
-      .clock(clk_sys),
 
-      //Thrash the BSRAM upon ROM loading
-      .address_a(clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0]),
-      .data_a(clearing_ram ? 8'hFF : BSRAM_D),
-      .wren_a(clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N),
-      .q_a(BSRAM_Q),
+  wire [15:0] bsram_16_out;
 
-      // .address_b({sd_lba[BSRAM_BITS-10:0],sd_buff_addr}),
-      .address_b(sd_buff_addr),
-      .data_b(sd_buff_dout),
-      .wren_b(sd_wr),
-      // .wren_b(sd_buff_wr & sd_ack),
-      .q_b(sd_buff_din)
+  assign BSRAM_Q = psram_bsram_addr[0] ? bsram_16_out[15:8] : bsram_16_out[7:0];
+  assign sd_buff_din = BSRAM_Q;
+
+  wire [16:0] psram_bsram_addr = save_download ? sd_buff_addr :
+		clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0];
+
+  wire [15:0] bsram_16_data = psram_bsram_addr[0] ? {bsram_data, 8'h0} : {8'h0, bsram_data};
+  wire [7:0] bsram_data = save_download ? sd_buff_dout : clearing_ram ? 8'hFF : BSRAM_D;
+  wire bsram_wren = save_download ? sd_wr : clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N;
+  wire bsram_rden = save_download ? sd_rd : clearing_ram ? 1'b0 : ~BSRAM_CE_N & ~BSRAM_OE_N;
+
+  psram #(
+      .CLOCK_SPEED(85.9)
+  ) bsram (
+      .clk(clk_mem_85_9),
+
+      .bank_sel(0),
+      // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
+      .addr(psram_bsram_addr[16:1]),
+
+      .write_en(bsram_wren),
+      .data_in(bsram_16_data),
+      .write_high_byte(psram_bsram_addr[0]),
+      .write_low_byte(~psram_bsram_addr[0]),
+
+      .read_en (bsram_rden),
+      .data_out(bsram_16_out),
+
+      // Actual PSRAM interface
+      .cram_a(cram1_a),
+      .cram_dq(cram1_dq),
+      .cram_wait(cram1_wait),
+      .cram_clk(cram1_clk),
+      .cram_adv_n(cram1_adv_n),
+      .cram_cre(cram1_cre),
+      .cram_ce0_n(cram1_ce0_n),
+      .cram_ce1_n(cram1_ce1_n),
+      .cram_oe_n(cram1_oe_n),
+      .cram_we_n(cram1_we_n),
+      .cram_ub_n(cram1_ub_n),
+      .cram_lb_n(cram1_lb_n)
   );
 
   // wire [BSRAM_BITS-1:0] psram_bsram_addr = clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0];

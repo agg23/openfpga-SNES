@@ -135,7 +135,7 @@ module rom_parser (
       end else if (mapping_mode == 'h30 && rom_type == 'h05 && dev_id != 'hB2) begin
         // DSP1B
         chip_type = chip_type | 'h80;
-      end else if (mapping_mode == 'h31 && (rom_type == 'h03 && rom_type != 'h05)) begin
+      end else if (mapping_mode == 'h31 && (rom_type == 'h03 || rom_type == 'h05)) begin
         // DSP1B
         chip_type = chip_type | 'h80;
       end else if (mapping_mode == 'h20 && rom_type == 'h05) begin
@@ -147,7 +147,7 @@ module rom_parser (
       end else if (mapping_mode == 'h30 && rom_type == 'h03) begin
         // DSP4
         chip_type = chip_type | 'hB0;
-      end else if (mapping_mode == 'h30 && rom_type == 'h03) begin
+      end else if (mapping_mode == 'h30 && rom_type == 'hF6) begin
         // ST010
         chip_type = chip_type | 'h88;
 
