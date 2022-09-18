@@ -39,38 +39,38 @@ Odd div: false
 ## C2
 
 NTSC:
-Lo: 56
-Hi: 56
+Lo: 28
+Hi: 28
 Bypass: false
 Odd div: false
 
-0x083838
+0x081C1C
 
 PAL:
-Lo: 64
-Hi: 64
+Lo: 32
+Hi: 32
 Bypass: false
 Odd div: false
 
-0x084040
+0x082020
 
 ## C3
 
 NTSC:
-Lo: 56
-Hi: 56
+Lo: 28
+Hi: 28
 Bypass: false
 Odd div: false
 
-0x0C3838
+0x0C1C1C
 
 PAL:
-Lo: 64
-Hi: 64
+Lo: 32
+Hi: 32
 Bypass: false
 Odd div: false
 
-0x0C4040
+0x0C2020
 
 # M Counter
 
@@ -92,5 +92,5 @@ Odd div: true
 
 # Fractional division
 
-NTSC: 425936216
-PAL: 737734298
+NTSC: 425937894
+PAL: 737741702

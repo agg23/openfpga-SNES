@@ -828,12 +828,12 @@ module core_top (
           // NTSC: 425936216
           //   Mem: 85.90908MHz
           //   Main: 21.47727MHz
-          //   Vid: 5.3693MHz
+          //   Vid: 10.7386MHz
           // PAL:
           //   Mem: 85.12548MHz
           //   Main: 21.28137MHz
-          //   Vid: 5.32034MHz
-          cfg_data <= pald2 ? 737734298 : 425936216;
+          //   Vid: 10.64069MHz
+          cfg_data <= pald2 ? 737741702 : 425937894;
           cfg_write <= 1;
         end
         5: begin
@@ -851,13 +851,13 @@ module core_top (
         9: begin
           // Set counter C2
           cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h084040 : 32'h083838;
+          cfg_data <= pald2 ? 32'h082020 : 32'h081C1C;
           cfg_write <= 1;
         end
         11: begin
           // Set counter C3
           cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h0C4040 : 32'h0C3838;
+          cfg_data <= pald2 ? 32'h0C2020 : 32'h0C1C1C;
           cfg_write <= 1;
         end
         13: begin
