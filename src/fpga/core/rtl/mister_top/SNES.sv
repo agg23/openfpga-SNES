@@ -99,6 +99,8 @@ module MAIN_SNES (
     output wire [7:0] video_g,
     output wire [7:0] video_b,
 
+    output reg PAL,
+
     // Audio
     output wire [15:0] audio_l,
     output wire [15:0] audio_r
@@ -169,11 +171,10 @@ module MAIN_SNES (
       .has_header(has_header),
       .parsed_rom_type(rom_type),
       .parsed_rom_size(rom_size),
-      .parsed_sram_size(ram_size)
+      .parsed_sram_size(ram_size),
+      .pal(PAL)
   );
 
-  // TODO: Add PAL support
-  reg        PAL = 0;
   wire [7:0] rom_type;
   reg [23:0] rom_mask, ram_mask;
   // Replaced by rom_parser

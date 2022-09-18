@@ -1,0 +1,133 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2022  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 416 304)
+	(text "mf_pllcfg" (rect 181 -1 218 11)(font "Arial" (font_size 10)))
+	(text "inst" (rect 8 288 20 300)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "mgmt_clk" (rect 0 0 40 12)(font "Arial" (font_size 8)))
+		(text "mgmt_clk" (rect 4 61 52 72)(font "Arial" (font_size 8)))
+		(line (pt 0 72)(pt 128 72)(line_width 1))
+	)
+	(port
+		(pt 0 112)
+		(input)
+		(text "mgmt_reset" (rect 0 0 49 12)(font "Arial" (font_size 8)))
+		(text "mgmt_reset" (rect 4 101 64 112)(font "Arial" (font_size 8)))
+		(line (pt 0 112)(pt 128 112)(line_width 1))
+	)
+	(port
+		(pt 0 168)
+		(input)
+		(text "mgmt_read" (rect 0 0 47 12)(font "Arial" (font_size 8)))
+		(text "mgmt_read" (rect 4 157 58 168)(font "Arial" (font_size 8)))
+		(line (pt 0 168)(pt 128 168)(line_width 1))
+	)
+	(port
+		(pt 0 184)
+		(input)
+		(text "mgmt_write" (rect 0 0 47 12)(font "Arial" (font_size 8)))
+		(text "mgmt_write" (rect 4 173 64 184)(font "Arial" (font_size 8)))
+		(line (pt 0 184)(pt 128 184)(line_width 1))
+	)
+	(port
+		(pt 0 216)
+		(input)
+		(text "mgmt_address[5..0]" (rect 0 0 81 12)(font "Arial" (font_size 8)))
+		(text "mgmt_address[5..0]" (rect 4 205 112 216)(font "Arial" (font_size 8)))
+		(line (pt 0 216)(pt 128 216)(line_width 3))
+	)
+	(port
+		(pt 0 232)
+		(input)
+		(text "mgmt_writedata[31..0]" (rect 0 0 87 12)(font "Arial" (font_size 8)))
+		(text "mgmt_writedata[31..0]" (rect 4 221 130 232)(font "Arial" (font_size 8)))
+		(line (pt 0 232)(pt 128 232)(line_width 3))
+	)
+	(port
+		(pt 0 272)
+		(input)
+		(text "reconfig_from_pll[63..0]" (rect 0 0 95 12)(font "Arial" (font_size 8)))
+		(text "reconfig_from_pll[63..0]" (rect 4 261 148 272)(font "Arial" (font_size 8)))
+		(line (pt 0 272)(pt 128 272)(line_width 3))
+	)
+	(port
+		(pt 0 152)
+		(output)
+		(text "mgmt_waitrequest" (rect 0 0 73 12)(font "Arial" (font_size 8)))
+		(text "mgmt_waitrequest" (rect 4 141 100 152)(font "Arial" (font_size 8)))
+		(line (pt 0 152)(pt 128 152)(line_width 1))
+	)
+	(port
+		(pt 0 200)
+		(output)
+		(text "mgmt_readdata[31..0]" (rect 0 0 87 12)(font "Arial" (font_size 8)))
+		(text "mgmt_readdata[31..0]" (rect 4 189 124 200)(font "Arial" (font_size 8)))
+		(line (pt 0 200)(pt 128 200)(line_width 3))
+	)
+	(port
+		(pt 416 72)
+		(output)
+		(text "reconfig_to_pll[63..0]" (rect 0 0 82 12)(font "Arial" (font_size 8)))
+		(text "reconfig_to_pll[63..0]" (rect 310 61 442 72)(font "Arial" (font_size 8)))
+		(line (pt 416 72)(pt 288 72)(line_width 3))
+	)
+	(drawing
+		(text "mgmt_clk" (rect 72 43 192 99)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 133 67 284 144)(font "Arial" (color 0 0 0)))
+		(text "mgmt_reset" (rect 58 83 176 179)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset" (rect 133 107 296 224)(font "Arial" (color 0 0 0)))
+		(text "mgmt_avalon_slave" (rect 13 123 128 259)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "waitrequest" (rect 133 147 332 304)(font "Arial" (color 0 0 0)))
+		(text "read" (rect 133 163 290 336)(font "Arial" (color 0 0 0)))
+		(text "write" (rect 133 179 296 368)(font "Arial" (color 0 0 0)))
+		(text "readdata" (rect 133 195 314 400)(font "Arial" (color 0 0 0)))
+		(text "address" (rect 133 211 308 432)(font "Arial" (color 0 0 0)))
+		(text "writedata" (rect 133 227 320 464)(font "Arial" (color 0 0 0)))
+		(text "reconfig_to_pll" (rect 289 43 668 99)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reconfig_to_pll" (rect 221 67 532 144)(font "Arial" (color 0 0 0)))
+		(text "reconfig_from_pll" (rect 25 243 152 499)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reconfig_from_pll" (rect 133 267 368 544)(font "Arial" (color 0 0 0)))
+		(text " altera_pll_reconfig " (rect 333 288 792 586)(font "Arial" ))
+		(line (pt 128 32)(pt 288 32)(line_width 1))
+		(line (pt 288 32)(pt 288 288)(line_width 1))
+		(line (pt 128 288)(pt 288 288)(line_width 1))
+		(line (pt 128 32)(pt 128 288)(line_width 1))
+		(line (pt 129 52)(pt 129 76)(line_width 1))
+		(line (pt 130 52)(pt 130 76)(line_width 1))
+		(line (pt 129 92)(pt 129 116)(line_width 1))
+		(line (pt 130 92)(pt 130 116)(line_width 1))
+		(line (pt 129 132)(pt 129 236)(line_width 1))
+		(line (pt 130 132)(pt 130 236)(line_width 1))
+		(line (pt 287 52)(pt 287 76)(line_width 1))
+		(line (pt 286 52)(pt 286 76)(line_width 1))
+		(line (pt 129 252)(pt 129 276)(line_width 1))
+		(line (pt 130 252)(pt 130 276)(line_width 1))
+		(line (pt 0 0)(pt 416 0)(line_width 1))
+		(line (pt 416 0)(pt 416 304)(line_width 1))
+		(line (pt 0 304)(pt 416 304)(line_width 1))
+		(line (pt 0 0)(pt 0 304)(line_width 1))
+	)
+)

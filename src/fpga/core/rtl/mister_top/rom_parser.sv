@@ -12,7 +12,8 @@ module rom_parser (
 
     output reg [7:0] parsed_rom_type = 0,
     output reg [7:0] parsed_rom_size = 0,
-    output reg [7:0] parsed_sram_size = 0
+    output reg [7:0] parsed_sram_size = 0,
+    output reg pal
 );
 
   // 512 bytes at the beginning of the ROM to ignore
@@ -48,16 +49,19 @@ module rom_parser (
   reg [7:0] lorom_score = 0;
   reg [7:0] lorom_rom_size;
   reg [7:0] lorom_sram_size;
+  reg lorom_pal;
   reg [7:0] lorom_chip_type = 0;
 
   reg [7:0] hirom_score = 0;
   reg [7:0] hirom_rom_size;
   reg [7:0] hirom_sram_size;
+  reg hirom_pal;
   reg [7:0] hirom_chip_type = 0;
 
   reg [7:0] exhirom_score = 0;
   reg [7:0] exhirom_rom_size;
   reg [7:0] exhirom_sram_size;
+  reg exhirom_pal;
   reg [7:0] exhirom_chip_type = 0;
 
   always @(posedge clk_mem) begin
@@ -98,6 +102,7 @@ module rom_parser (
       automatic reg [7:0] header_score = 0;
       automatic reg [7:0] chip_type = 0;
       automatic reg [7:0] ramsz = sram_size;
+      automatic reg local_pal = 0;
 
       if (checksum != 0 && checksum_compliment != 0 && checksum + checksum_compliment == 'hFFFF) begin
         // Checksum and compliment match. High probability this is header
@@ -199,6 +204,11 @@ module rom_parser (
         chip_type = chip_type | 'h70;
       end
 
+      if ((region >= 'h02 && region <= 'h0C) || region == 'h11) begin
+        // PAL detection
+        local_pal = 1;
+      end
+
       if (prev_rom_kind_area == 1) begin
         // Area was LoROM
         if (mapping_mode == 'h20 || mapping_mode == 'h22) begin
@@ -209,6 +219,7 @@ module rom_parser (
         lorom_score <= header_score;
         lorom_rom_size <= rom_size;
         lorom_sram_size <= ramsz;
+        lorom_pal <= local_pal;
         lorom_chip_type <= chip_type;
       end else if (prev_rom_kind_area == 2) begin
         // Area was HiROM
@@ -219,6 +230,7 @@ module rom_parser (
         hirom_score <= header_score;
         hirom_rom_size <= rom_size;
         hirom_sram_size <= ramsz;
+        hirom_pal <= local_pal;
         hirom_chip_type <= chip_type;
       end else if (prev_rom_kind_area == 3) begin
         // Area was ExHiROM
@@ -234,6 +246,7 @@ module rom_parser (
         exhirom_score <= header_score;
         exhirom_rom_size <= rom_size;
         exhirom_sram_size <= ramsz;
+        exhirom_pal <= local_pal;
         exhirom_chip_type <= chip_type;
       end
     end
@@ -241,18 +254,21 @@ module rom_parser (
     if (prev_downloading && ~downloading) begin
       // ROM loading ended, figure out what ROM this is
       if (lorom_score >= hirom_score && lorom_score >= exhirom_score) begin
-        parsed_rom_type  <= 0 | lorom_chip_type;
-        parsed_rom_size  <= lorom_rom_size;
+        parsed_rom_type <= 0 | lorom_chip_type;
+        parsed_rom_size <= lorom_rom_size;
         parsed_sram_size <= lorom_sram_size;
+        pal <= lorom_pal;
       end else if (hirom_score >= exhirom_score) begin
-        parsed_rom_type  <= 1 | hirom_chip_type;
-        parsed_rom_size  <= hirom_rom_size;
+        parsed_rom_type <= 1 | hirom_chip_type;
+        parsed_rom_size <= hirom_rom_size;
         parsed_sram_size <= hirom_sram_size;
+        pal <= hirom_pal;
       end else if (exhirom_score > 0) begin
         // Only set ExHiROM if there's actually a score, otherwise fall back to LoROM
-        parsed_rom_type  <= 2 | exhirom_chip_type;
-        parsed_rom_size  <= exhirom_rom_size;
+        parsed_rom_type <= 2 | exhirom_chip_type;
+        parsed_rom_size <= exhirom_rom_size;
         parsed_sram_size <= exhirom_sram_size;
+        pal <= exhirom_pal;
       end
     end
   end
