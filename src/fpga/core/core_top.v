@@ -597,6 +597,8 @@ module core_top (
       clk_sys_21_48
   );
 
+  wire PAL;
+
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
@@ -694,6 +696,8 @@ module core_top (
       .video_g(video_rgb_snes[15:8]),
       .video_b(video_rgb_snes[7:0]),
 
+      .PAL(PAL),
+
       // Audio
       .audio_l(audio_l),
       .audio_r(audio_r)
@@ -774,9 +778,61 @@ module core_top (
       .outclk_2(clk_video_5_37),
       .outclk_3(clk_video_5_37_90deg),
 
-      .locked(pll_core_locked)
+      .locked(pll_core_locked),
+      .reconfig_to_pll(reconfig_to_pll),
+      .reconfig_from_pll(reconfig_from_pll)
   );
 
+  wire [63:0] reconfig_to_pll;
+  wire [63:0] reconfig_from_pll;
+  wire        cfg_waitrequest;
+  reg         cfg_write;
+  reg  [ 5:0] cfg_address;
+  reg  [31:0] cfg_data;
 
+  mf_pllcfg pll_cfg (
+      .mgmt_clk(clk_74a),
+      .mgmt_reset(0),
+      .mgmt_waitrequest(cfg_waitrequest),
+      .mgmt_read(0),
+      .mgmt_readdata(),
+      .mgmt_write(cfg_write),
+      .mgmt_address(cfg_address),
+      .mgmt_writedata(cfg_data),
+      .reconfig_to_pll(reconfig_to_pll),
+      .reconfig_from_pll(reconfig_from_pll)
+  );
+
+  //   always @(posedge clk_74a) begin
+  //     reg pald = 0, pald2 = 0;
+  //     reg [2:0] state = 0;
+
+  //     pald <= PAL;
+  //     pald2 <= pald;
+
+  //     cfg_write <= 0;
+  //     if (pald2 != pald) state <= 1;
+
+  //     if (!cfg_waitrequest) begin
+  //       if (state) state <= state + 1'd1;
+  //       case (state)
+  //         1: begin
+  //           cfg_address <= 0;
+  //           cfg_data <= 0;
+  //           cfg_write <= 1;
+  //         end
+  //         3: begin
+  //           cfg_address <= 7;
+  //           cfg_data <= pald2 ? 2201376898 : 2537930535;
+  //           cfg_write <= 1;
+  //         end
+  //         5: begin
+  //           cfg_address <= 2;
+  //           cfg_data <= 0;
+  //           cfg_write <= 1;
+  //         end
+  //       endcase
+  //     end
+  //   end
 
 endmodule
