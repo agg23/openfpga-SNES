@@ -8,10 +8,10 @@ set_clock_groups -asynchronous \
  -group { bridge_spiclk } \
  -group { clk_74a } \
  -group { clk_74b } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk } 
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|cyclonev_pll|counter[0].output_counter|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|cyclonev_pll|counter[1].output_counter|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|cyclonev_pll|counter[2].output_counter|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|cyclonev_pll|counter[3].output_counter|divclk } 
 
 create_generated_clock -name GSU_CACHE_CLK -source [get_pins -compatibility_mode {*|mp1|mf_pllbase_inst|altera_pll_i|*[1].*|divclk}] \
 							  -invert [get_pins {ic|snes|main|GSUMap|GSU|CACHE|altsyncram_component|auto_generated|*|clk0}]
@@ -29,8 +29,7 @@ set_max_delay 23 -from [get_registers { ic|icb|* \
 													 ic|data_loader|* \
 													 ic|snes|main|* \
 													 ic|snes|rom_mask[*] \
-													 ic|ioctl* |
-													 ic|rom_file_size }] \
+													 ic|snes|rom_parser|parsed_rom_type[*] }] \
 					  -to   [get_registers { ic|snes|sdram|a[*] \
 													 ic|snes|sdram|ram_req* \
 													 ic|snes|sdram|we* \
@@ -46,9 +45,5 @@ set_max_delay 23 -from [get_registers { ic|snes|sdram|* }] \
 													 ic|snes|bsram|* \
 													 ic|snes|wram|* \
 													 ic|snes|vram*|* }]
-
-set_max_delay 23 -from [get_registers { ic|snes|wram|* \
-													 ic|snes|bsram|* }] \
-					  -to   [get_registers { ic|snes|main|SNES|CPU|P65C816|* }]
 
 set_false_path -to [get_registers { ic|snes|sdram|ds ic|snes|sdram|data[*]}]

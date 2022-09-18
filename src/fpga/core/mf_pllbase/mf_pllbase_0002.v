@@ -34,7 +34,7 @@ module  mf_pllbase_0002(
 		.reference_clock_frequency("74.25 MHz"),
 		.pll_fractional_cout(32),
 		.pll_dsm_out_sel("1st_order"),
-		.operation_mode("normal"),
+		.operation_mode("direct"),
 		.number_of_clocks(4),
 		.output_clock_frequency0("85.909072 MHz"),
 		.phase_shift0("0 ps"),
@@ -231,9 +231,9 @@ module  mf_pllbase_0002(
 		.pll_bwctrl(2000),
 		.pll_output_clk_frequency("601.363447 MHz"),
 		.pll_fractional_division("425936216"),
-		.mimic_fbclk_type("gclk"),
+		.mimic_fbclk_type("none"),
 		.pll_fbclk_mux_1("glb"),
-		.pll_fbclk_mux_2("fb_1"),
+		.pll_fbclk_mux_2("m_cnt"),
 		.pll_m_cnt_in_src("ph_mux_clk"),
 		.pll_slf_rst("true")
 	) altera_pll_i (
