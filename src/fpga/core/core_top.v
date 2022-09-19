@@ -749,7 +749,8 @@ module core_top (
       .CHANNEL_WIDTH(16),
       .SIGNED_INPUT (1)
   ) sound_i2s (
-      .clk_74a(clk_74a),
+      .clk_74a  (clk_74a),
+      .clk_audio(clk_sys_21_48),
 
       .audio_l(audio_l),
       .audio_r(audio_r),
