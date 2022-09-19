@@ -779,102 +779,100 @@ module core_top (
       .outclk_2(clk_video_5_37),
       .outclk_3(clk_video_5_37_90deg),
 
-      .locked(pll_core_locked),
-      .reconfig_to_pll(reconfig_to_pll),
-      .reconfig_from_pll(reconfig_from_pll)
+      .locked(pll_core_locked)
   );
 
-  wire [63:0] reconfig_to_pll;
-  wire [63:0] reconfig_from_pll;
-  wire        cfg_waitrequest;
-  reg         cfg_write;
-  reg  [ 5:0] cfg_address;
-  reg  [31:0] cfg_data;
+  //   wire [63:0] reconfig_to_pll;
+  //   wire [63:0] reconfig_from_pll;
+  //   wire        cfg_waitrequest;
+  //   reg         cfg_write;
+  //   reg  [ 5:0] cfg_address;
+  //   reg  [31:0] cfg_data;
 
-  mf_pllcfg pll_cfg (
-      .mgmt_clk(clk_74a),
-      .mgmt_reset(0),
-      .mgmt_waitrequest(cfg_waitrequest),
-      .mgmt_read(0),
-      .mgmt_readdata(),
-      .mgmt_write(cfg_write),
-      .mgmt_address(cfg_address),
-      .mgmt_writedata(cfg_data),
-      .reconfig_to_pll(reconfig_to_pll),
-      .reconfig_from_pll(reconfig_from_pll)
-  );
+  //   mf_pllcfg pll_cfg (
+  //       .mgmt_clk(clk_74a),
+  //       .mgmt_reset(0),
+  //       .mgmt_waitrequest(cfg_waitrequest),
+  //       .mgmt_read(0),
+  //       .mgmt_readdata(),
+  //       .mgmt_write(cfg_write),
+  //       .mgmt_address(cfg_address),
+  //       .mgmt_writedata(cfg_data),
+  //       .reconfig_to_pll(reconfig_to_pll),
+  //       .reconfig_from_pll(reconfig_from_pll)
+  //   );
 
-  always @(posedge clk_74a) begin
-    reg pald = 0, pald2 = 0;
-    reg [2:0] state = 0;
+  //   always @(posedge clk_74a) begin
+  //     reg pald = 0, pald2 = 0;
+  //     reg [2:0] state = 0;
 
-    pald <= PAL;
-    pald2 <= pald;
+  //     pald <= PAL;
+  //     pald2 <= pald;
 
-    cfg_write <= 0;
-    if (pald2 != pald) state <= 1;
+  //     cfg_write <= 0;
+  //     if (pald2 != pald) state <= 1;
 
-    if (!cfg_waitrequest) begin
-      if (state) state <= state + 1'd1;
-      case (state)
-        1: begin
-          // Set mode to waitrequest
-          cfg_address <= 0;
-          cfg_data <= 0;
-          cfg_write <= 1;
-        end
-        3: begin
-          // Set fractional division
-          cfg_address <= 7;
-          // NTSC: 425936216
-          //   Mem: 85.90908MHz
-          //   Main: 21.47727MHz
-          //   Vid: 10.7386MHz
-          // PAL:
-          //   Mem: 85.12548MHz
-          //   Main: 21.28137MHz
-          //   Vid: 10.64069MHz
-          cfg_data <= pald2 ? 737741702 : 425937894;
-          cfg_write <= 1;
-        end
-        5: begin
-          // Set counter C0
-          cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h000404 : 32'h020403;
-          cfg_write <= 1;
-        end
-        7: begin
-          // Set counter C1
-          cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h041010 : 32'h040E0E;
-          cfg_write <= 1;
-        end
-        9: begin
-          // Set counter C2
-          cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h082020 : 32'h081C1C;
-          cfg_write <= 1;
-        end
-        11: begin
-          // Set counter C3
-          cfg_address <= 'h5;
-          cfg_data <= pald2 ? 32'h0C2020 : 32'h0C1C1C;
-          cfg_write <= 1;
-        end
-        13: begin
-          // Set counter M
-          cfg_address <= 'h4;
-          cfg_data <= pald2 ? 32'h20504 : 32'h00404;
-          cfg_write <= 1;
-        end
-        15: begin
-          // Begin fractional PLL reconfig
-          cfg_address <= 2;
-          cfg_data <= 0;
-          cfg_write <= 1;
-        end
-      endcase
-    end
-  end
+  //     if (!cfg_waitrequest) begin
+  //       if (state) state <= state + 1'd1;
+  //       case (state)
+  //         1: begin
+  //           // Set mode to waitrequest
+  //           cfg_address <= 0;
+  //           cfg_data <= 0;
+  //           cfg_write <= 1;
+  //         end
+  //         3: begin
+  //           // Set fractional division
+  //           cfg_address <= 7;
+  //           // NTSC: 425936216
+  //           //   Mem: 85.90908MHz
+  //           //   Main: 21.47727MHz
+  //           //   Vid: 10.7386MHz
+  //           // PAL:
+  //           //   Mem: 85.12548MHz
+  //           //   Main: 21.28137MHz
+  //           //   Vid: 10.64069MHz
+  //           cfg_data <= pald2 ? 737741702 : 425937894;
+  //           cfg_write <= 1;
+  //         end
+  //         5: begin
+  //           // Set counter C0
+  //           cfg_address <= 'h5;
+  //           cfg_data <= pald2 ? 32'h000404 : 32'h020403;
+  //           cfg_write <= 1;
+  //         end
+  //         7: begin
+  //           // Set counter C1
+  //           cfg_address <= 'h5;
+  //           cfg_data <= pald2 ? 32'h041010 : 32'h040E0E;
+  //           cfg_write <= 1;
+  //         end
+  //         9: begin
+  //           // Set counter C2
+  //           cfg_address <= 'h5;
+  //           cfg_data <= pald2 ? 32'h082020 : 32'h081C1C;
+  //           cfg_write <= 1;
+  //         end
+  //         11: begin
+  //           // Set counter C3
+  //           cfg_address <= 'h5;
+  //           cfg_data <= pald2 ? 32'h0C2020 : 32'h0C1C1C;
+  //           cfg_write <= 1;
+  //         end
+  //         13: begin
+  //           // Set counter M
+  //           cfg_address <= 'h4;
+  //           cfg_data <= pald2 ? 32'h20504 : 32'h00404;
+  //           cfg_write <= 1;
+  //         end
+  //         15: begin
+  //           // Begin fractional PLL reconfig
+  //           cfg_address <= 2;
+  //           cfg_data <= 0;
+  //           cfg_write <= 1;
+  //         end
+  //       endcase
+  //     end
+  //   end
 
 endmodule
