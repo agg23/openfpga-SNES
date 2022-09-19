@@ -46,8 +46,8 @@ module MAIN_SNES (
     input wire sd_rd,
     input wire sd_wr,
     input wire [16:0] sd_buff_addr,
-    output wire [7:0] sd_buff_din,
-    input wire [7:0] sd_buff_dout,
+    output wire [15:0] sd_buff_din,
+    input wire [15:0] sd_buff_dout,
 
     output reg [3:0] sram_size,
 
@@ -135,7 +135,8 @@ module MAIN_SNES (
   wire code_index = &ioctl_index;
   wire code_download = ioctl_download & code_index;
   wire cart_download = ioctl_download & ioctl_index[5:0] == 0;
-  wire spc_download = ioctl_download & ioctl_index[5:0] == 6'h01;
+  // wire spc_download = ioctl_download & ioctl_index[5:0] == 6'h01;
+  wire spc_download = 0;
 
   reg new_vmode;
   always @(posedge clk_sys) begin
@@ -320,6 +321,7 @@ module MAIN_SNES (
       .ARAM_D(ARAM_D),
       .ARAM_Q(ARAM_Q),
       .ARAM_CE_N(ARAM_CE_N),
+      .ARAM_OE_N(ARAM_OE_N),
       .ARAM_WE_N(ARAM_WE_N),
 
       .R(video_r),
@@ -481,19 +483,6 @@ module MAIN_SNES (
   wire        WRAM_OE_N;
   wire        WRAM_WE_N;
   wire [7:0] WRAM_Q, WRAM_D;
-  // dpram #(17)	wram
-  // (
-  // 	.clock(clk_sys),
-  // 	.address_a(WRAM_ADDR),
-  // 	.data_a(WRAM_D),
-  // 	.wren_a(~WRAM_CE_N & ~WRAM_WE_N),
-  // 	.q_a(WRAM_Q),
-
-  // 	// clear the RAM on loading
-  // 	.address_b(mem_fill_addr[16:0]),
-  // 	.data_b(wram_fill_data),
-  // 	.wren_b(clearing_ram)
-  // );
 
   wire [16:0] psram_wram_addr = clearing_ram ? mem_fill_addr[16:0] : WRAM_ADDR;
   wire [15:0] wram_data_in = clearing_ram ? {wram_fill_data, wram_fill_data} : // TODO: This isn't correct
@@ -567,57 +556,35 @@ module MAIN_SNES (
 
   wire [15:0] ARAM_ADDR;
   wire        ARAM_CE_N;
+  wire        ARAM_OE_N;
   wire        ARAM_WE_N;
   wire [7:0] ARAM_Q, ARAM_D;
-  dpram_dif #(16, 8, 15, 16) aram (
-      .clock(clk_sys),
-      .address_a(ARAM_ADDR),
-      .data_a(ARAM_D),
-      .wren_a(~ARAM_CE_N & ~ARAM_WE_N),
-      .q_A(ARAM_Q),
 
-      // clear the RAM on loading
-      .address_b(spc_download ? addr_download[15:1] : mem_fill_addr[15:1]),
-      .data_b(spc_download ? ioctl_dout : {2{aram_fill_data}}),
-      .wren_b(spc_download ? ioctl_wr : clearing_ram)
-  );
+  wire [15:0] aram_16_out;
 
-  localparam BSRAM_BITS = 17;  // 1Mbits
-  wire [19:0] BSRAM_ADDR;
-  wire        BSRAM_CE_N;
-  wire        BSRAM_OE_N;
-  wire        BSRAM_WE_N;
-  wire [7:0] BSRAM_Q, BSRAM_D;
+  assign ARAM_Q = psram_aram_addr[0] ? aram_16_out[15:8] : aram_16_out[7:0];
 
-  wire [15:0] bsram_16_out;
+  wire [15:0] psram_aram_addr = clearing_ram ? mem_fill_addr[15:0] : ARAM_ADDR;
 
-  assign BSRAM_Q = psram_bsram_addr[0] ? bsram_16_out[15:8] : bsram_16_out[7:0];
-  assign sd_buff_din = BSRAM_Q;
-
-  wire [16:0] psram_bsram_addr = save_download ? sd_buff_addr :
-		clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0];
-
-  wire [15:0] bsram_16_data = psram_bsram_addr[0] ? {bsram_data, 8'h0} : {8'h0, bsram_data};
-  wire [7:0] bsram_data = save_download ? sd_buff_dout : clearing_ram ? 8'hFF : BSRAM_D;
-  wire bsram_wren = save_download ? sd_wr : clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N;
-  wire bsram_rden = save_download ? sd_rd : clearing_ram ? 1'b0 : ~BSRAM_CE_N & ~BSRAM_OE_N;
+  wire [ 7:0] aram_data = clearing_ram ? aram_fill_data : ARAM_D;
+  wire [15:0] aram_16_data = psram_aram_addr[0] ? {aram_data, 8'h0} : {8'h0, aram_data};
 
   psram #(
       .CLOCK_SPEED(85.9)
-  ) bsram (
+  ) aram (
       .clk(clk_mem_85_9),
 
       .bank_sel(0),
       // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
-      .addr(psram_bsram_addr[16:1]),
+      .addr(psram_aram_addr[15:1]),
 
-      .write_en(bsram_wren),
-      .data_in(bsram_16_data),
-      .write_high_byte(psram_bsram_addr[0]),
-      .write_low_byte(~psram_bsram_addr[0]),
+      .write_en(clearing_ram ? 1'b1 : ~ARAM_CE_N & ~ARAM_WE_N),
+      .data_in(aram_16_data),
+      .write_high_byte(psram_aram_addr[0]),
+      .write_low_byte(~psram_aram_addr[0]),
 
-      .read_en (bsram_rden),
-      .data_out(bsram_16_out),
+      .read_en (~ARAM_CE_N & ~ARAM_OE_N),
+      .data_out(aram_16_out),
 
       // Actual PSRAM interface
       .cram_a(cram1_a),
@@ -634,55 +601,28 @@ module MAIN_SNES (
       .cram_lb_n(cram1_lb_n)
   );
 
-  // wire [BSRAM_BITS-1:0] psram_bsram_addr = clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0];
-  // wire [15:0] psram_data_in = clearing_ram ? 16'hFFFF :
-  // 	// Data either goes in high or low byte
-  // 	psram_bsram_addr[0] ? {BSRAM_D, 8'h0} : {8'h0, BSRAM_D};
-  // wire [15:0] psram_bsram_data_out = 0;
+  localparam BSRAM_BITS = 17;  // 1Mbits
+  wire [19:0] BSRAM_ADDR;
+  wire        BSRAM_CE_N;
+  wire        BSRAM_OE_N;
+  wire        BSRAM_WE_N;
+  wire [7:0] BSRAM_Q, BSRAM_D;
+  dpram_dif #(BSRAM_BITS, 8, BSRAM_BITS - 1, 16) bsram (
+      .clock(clk_sys),
 
-  // assign BSRAM_Q = psram_bsram_addr[0] ? psram_bsram_data_out[15:8] : psram_bsram_data_out[7:0];
+      //Thrash the BSRAM upon ROM loading
+      .address_a(clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0]),
+      .data_a(clearing_ram ? 8'hFF : BSRAM_D),
+      .wren_a(clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N),
+      .q_a(BSRAM_Q),
 
-  // assign cram_a = 'h0;
-  // assign cram_dq = {16{1'bZ}};
-  // assign cram_clk = 0;
-  // assign cram_adv_n = 1;
-  // assign cram_cre = 0;
-  // assign cram_ce0_n = 1;
-  // assign cram_ce1_n = 1;
-  // assign cram_oe_n = 1;
-  // assign cram_we_n = 1;
-  // assign cram_ub_n = 1;
-  // assign cram_lb_n = 1;
-
-  // psram #(.CLOCK_SPEED(85.9)) bsram (
-  // 	.clk(clk_mem_85_9),
-
-  // 	.bank_sel(0),
-  // 	// Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
-  // 	.addr(psram_bsram_addr[BSRAM_BITS-1:1]),
-
-  // 	.write_en(clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N),
-  // 	.data_in(psram_data_in),
-  // 	.write_high_byte(psram_bsram_addr[0]),
-  // 	.write_low_byte(~psram_bsram_addr[0]),
-
-  // 	.read_en(clearing_ram ? 1'b0 : ~BSRAM_CE_N & ~BSRAM_OE_N),
-  // 	.data_out(psram_bsram_data_out),
-
-  // 	// Actual PSRAM interface
-  // 	.cram_a(cram_a),
-  // 	.cram_dq(cram_dq),
-  // 	.cram_wait(cram_wait),
-  // 	.cram_clk(cram_clk),
-  // 	.cram_adv_n(cram_adv_n),
-  // 	.cram_cre(cram_cre),
-  // 	.cram_ce0_n(cram_ce0_n),
-  // 	.cram_ce1_n(cram_ce1_n),
-  // 	.cram_oe_n(cram_oe_n),
-  // 	.cram_we_n(cram_we_n),
-  // 	.cram_ub_n(cram_ub_n),
-  // 	.cram_lb_n(cram_lb_n)
-  // );
+      // .address_b({sd_lba[BSRAM_BITS-10:0],sd_buff_addr}),
+      .address_b(sd_buff_addr),
+      .data_b(sd_buff_dout),
+      .wren_b(sd_wr),
+      // .wren_b(sd_buff_wr & sd_ack),
+      .q_b(sd_buff_din)
+  );
 
   ////////////////////////////  I/O PORTS  ////////////////////////////////
 

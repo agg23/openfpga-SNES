@@ -495,9 +495,9 @@ module core_top (
 
   data_loader #(
       .ADDRESS_MASK_UPPER_4(4'h2),
-      .ADDRESS_SIZE(20),
+      .ADDRESS_SIZE(17),
       .WRITE_MEM_CLOCK_DELAY(7),
-      .OUTPUT_WORD_SIZE(1)
+      .OUTPUT_WORD_SIZE(2)
   ) save_data_loader (
       .clk_74a(clk_74a),
       .clk_memory(clk_sys_21_48),
@@ -519,16 +519,18 @@ module core_top (
 
   wire [16:0] sd_buff_addr_in;
   wire [16:0] sd_buff_addr_out;
-  wire [16:0] sd_buff_addr = sd_wr ? sd_buff_addr_in : sd_buff_addr_out;
 
-  wire [7:0] sd_buff_din;
-  wire [7:0] sd_buff_dout;
+  // Lowest bit is for byte addressing
+  wire [15:0] sd_buff_addr = sd_wr ? sd_buff_addr_in[16:1] : sd_buff_addr_out[16:1];
+
+  wire [15:0] sd_buff_din;
+  wire [15:0] sd_buff_dout;
 
   data_unloader #(
       .ADDRESS_MASK_UPPER_4(4'h2),
       .ADDRESS_SIZE(17),
       .READ_MEM_CLOCK_DELAY(7),
-      .INPUT_WORD_SIZE(1)
+      .INPUT_WORD_SIZE(2)
   ) data_unloader (
       .clk_74a(clk_74a),
       .clk_memory(clk_sys_21_48),
