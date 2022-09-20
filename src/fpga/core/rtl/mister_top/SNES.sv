@@ -4,8 +4,8 @@ module MAIN_SNES (
 
     input wire core_reset,
 
-    // ROM type (maybe needs to be determined by CHIP32)
-    // input wire [2:0] LHRom_type,
+    // Settings
+    input wire multitap_enabled,
 
     // Inputs
     input wire p1_button_a,
@@ -33,6 +33,32 @@ module MAIN_SNES (
     input wire p2_dpad_down,
     input wire p2_dpad_left,
     input wire p2_dpad_right,
+
+    input wire p3_button_a,
+    input wire p3_button_b,
+    input wire p3_button_x,
+    input wire p3_button_y,
+    input wire p3_button_trig_l,
+    input wire p3_button_trig_r,
+    input wire p3_button_start,
+    input wire p3_button_select,
+    input wire p3_dpad_up,
+    input wire p3_dpad_down,
+    input wire p3_dpad_left,
+    input wire p3_dpad_right,
+
+    input wire p4_button_a,
+    input wire p4_button_b,
+    input wire p4_button_x,
+    input wire p4_button_y,
+    input wire p4_button_trig_l,
+    input wire p4_button_trig_r,
+    input wire p4_button_start,
+    input wire p4_button_select,
+    input wire p4_dpad_up,
+    input wire p4_dpad_down,
+    input wire p4_dpad_left,
+    input wire p4_dpad_right,
 
     // ROM loading
     input wire [31:0] rom_file_size,
@@ -666,6 +692,7 @@ module MAIN_SNES (
     p1_dpad_left,
     p1_dpad_right
   };
+
   wire [11:0] joy1 = {
     p2_button_start,
     p2_button_select,
@@ -679,6 +706,36 @@ module MAIN_SNES (
     p2_dpad_down,
     p2_dpad_left,
     p2_dpad_right
+  };
+
+  wire [11:0] joy2 = {
+    p3_button_start,
+    p3_button_select,
+    p3_button_trig_r,
+    p3_button_trig_l,
+    p3_button_y,
+    p3_button_x,
+    p3_button_b,
+    p3_button_a,
+    p3_dpad_up,
+    p3_dpad_down,
+    p3_dpad_left,
+    p3_dpad_right
+  };
+
+  wire [11:0] joy3 = {
+    p4_button_start,
+    p4_button_select,
+    p4_button_trig_r,
+    p4_button_trig_l,
+    p4_button_y,
+    p4_button_x,
+    p4_button_b,
+    p4_button_a,
+    p4_dpad_up,
+    p4_dpad_down,
+    p4_dpad_left,
+    p4_dpad_right
   };
 
   wire [1:0] JOY1_DO = piano ? {1'b1, piano_joypad_do} : JOY1_DO_t;
@@ -708,7 +765,7 @@ module MAIN_SNES (
   ioport port2 (
       .CLK(clk_sys),
 
-      .MULTITAP(status[17]),
+      .MULTITAP(multitap_enabled),
 
       .PORT_LATCH(JOY_STRB),
       .PORT_CLK(JOY2_CLK),
@@ -716,8 +773,8 @@ module MAIN_SNES (
       .PORT_DO(JOY2_DO),
 
       .JOYSTICK1((joy_swap ^ raw_serial) ? joy0 : joy1),
-      // .JOYSTICK2(joy2),
-      // .JOYSTICK3(joy3),
+      .JOYSTICK2(joy2),
+      .JOYSTICK3(joy3),
       // .JOYSTICK4(joy4),
 
       // .MOUSE(ps2_mouse),

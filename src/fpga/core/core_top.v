@@ -316,7 +316,6 @@ module core_top (
       end
       32'h10xxxxxx: begin
         // example
-        // bridge_rd_data <= example_device_data;
         bridge_rd_data <= 0;
       end
       32'hF8xxxxxx: begin
@@ -329,15 +328,15 @@ module core_top (
     end
   end
 
-  // always @(posedge clk_74a) begin
-  //     if (bridge_wr) begin
-  //         casex(bridge_addr)
-  //             32'h00000000: begin
-  //                 LHRom_type <= bridge_wr_data[2:0];
-  //             end
-  //         endcase
-  //     end
-  // end
+  always @(posedge clk_74a) begin
+    if (bridge_wr) begin
+      casex (bridge_addr)
+        32'h00000100: begin
+          multitap_enabled <= bridge_wr_data[0];
+        end
+      endcase
+    end
+  end
 
 
   //
@@ -582,6 +581,8 @@ module core_top (
 
   wire [15:0] cont1_key_s;
   wire [15:0] cont2_key_s;
+  wire [15:0] cont3_key_s;
+  wire [15:0] cont4_key_s;
 
   synch_3 #(
       .WIDTH(32)
@@ -599,13 +600,35 @@ module core_top (
       clk_sys_21_48
   );
 
+  synch_3 #(
+      .WIDTH(32)
+  ) cont3_s (
+      cont3_key,
+      cont3_key_s,
+      clk_sys_21_48
+  );
+
+  synch_3 #(
+      .WIDTH(32)
+  ) cont4_s (
+      cont4_key,
+      cont4_key_s,
+      clk_sys_21_48
+  );
+
   wire PAL;
+
+  // Settings
+  reg  multitap_enabled;
 
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
 
       .core_reset(~pll_core_locked),
+
+      // Settings
+      .multitap_enabled(multitap_enabled),
 
       // Input
       .p1_button_a(cont1_key_s[4]),
@@ -633,6 +656,32 @@ module core_top (
       .p2_dpad_down(cont2_key_s[1]),
       .p2_dpad_left(cont2_key_s[2]),
       .p2_dpad_right(cont2_key_s[3]),
+
+      .p3_button_a(cont3_key_s[4]),
+      .p3_button_b(cont3_key_s[5]),
+      .p3_button_x(cont3_key_s[6]),
+      .p3_button_y(cont3_key_s[7]),
+      .p3_button_trig_l(cont3_key_s[8]),
+      .p3_button_trig_r(cont3_key_s[9]),
+      .p3_button_start(cont3_key_s[15]),
+      .p3_button_select(cont3_key_s[14]),
+      .p3_dpad_up(cont3_key_s[0]),
+      .p3_dpad_down(cont3_key_s[1]),
+      .p3_dpad_left(cont3_key_s[2]),
+      .p3_dpad_right(cont3_key_s[3]),
+
+      .p4_button_a(cont4_key_s[4]),
+      .p4_button_b(cont4_key_s[5]),
+      .p4_button_x(cont4_key_s[6]),
+      .p4_button_y(cont4_key_s[7]),
+      .p4_button_trig_l(cont4_key_s[8]),
+      .p4_button_trig_r(cont4_key_s[9]),
+      .p4_button_start(cont4_key_s[15]),
+      .p4_button_select(cont4_key_s[14]),
+      .p4_dpad_up(cont4_key_s[0]),
+      .p4_dpad_down(cont4_key_s[1]),
+      .p4_dpad_left(cont4_key_s[2]),
+      .p4_dpad_right(cont4_key_s[3]),
 
       // ROM loading
       .rom_file_size(rom_file_size),
