@@ -156,9 +156,9 @@ module rom_parser (
         // ST010
         chip_type = chip_type | 'h88;
 
-        if (rom_size < 10) chip_type = chip_type | 'h20;
+        if (rom_size < 10) chip_type = chip_type | 'h20;  // ST011
 
-        rom_size <= 1;
+        ramsz = 1;
       end else if (mapping_mode == 'h30 && rom_type == 'h25) begin
         // OBC1
         chip_type = chip_type | 'hC0;
