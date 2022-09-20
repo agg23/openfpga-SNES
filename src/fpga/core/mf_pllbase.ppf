@@ -12,7 +12,5 @@
   <pin name="outclk_2" direction="output" scope="external" />
   <pin name="outclk_3" direction="output" scope="external" />
   <pin name="locked" direction="output" scope="external" />
-  <pin name="reconfig_to_pll[63..0]" direction="input" scope="external" />
-  <pin name="reconfig_from_pll[63..0]" direction="output" scope="external" />
  </global>
 </pinplan>

@@ -1,4 +1,0 @@
-mf_pllcfg_sim/mf_pllcfg.v
-mf_pllcfg_sim/altera_pll_reconfig/altera_pll_reconfig_top.v
-mf_pllcfg_sim/altera_pll_reconfig/altera_pll_reconfig_core.v
-mf_pllcfg_sim/altera_pll_reconfig/altera_std_synchronizer.v
