@@ -37,7 +37,7 @@ module rom_parser_tb;
 
   initial begin
     fd = $fopen("Super Mario Kart.smc", "rb");
-    rom_file_size = 'h100200;
+    rom_file_size = 'h100000;
     downloading = 1;
 
     if (!fd) begin

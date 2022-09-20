@@ -363,7 +363,7 @@ module core_top (
 
   wire dataslot_allcomplete;
 
-  wire savestate_supported;
+  wire savestate_supported = 0;
   wire [31:0] savestate_addr;
   wire [31:0] savestate_size;
   wire [31:0] savestate_maxloadsize;

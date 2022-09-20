@@ -47,22 +47,21 @@ module rom_parser (
   reg [7:0] gsu_ramsz;
 
   reg [7:0] lorom_score = 0;
-  reg [7:0] lorom_rom_size;
   reg [7:0] lorom_sram_size;
   reg lorom_pal;
   reg [7:0] lorom_chip_type = 0;
 
   reg [7:0] hirom_score = 0;
-  reg [7:0] hirom_rom_size;
   reg [7:0] hirom_sram_size;
   reg hirom_pal;
   reg [7:0] hirom_chip_type = 0;
 
   reg [7:0] exhirom_score = 0;
-  reg [7:0] exhirom_rom_size;
   reg [7:0] exhirom_sram_size;
   reg exhirom_pal;
   reg [7:0] exhirom_chip_type = 0;
+
+  reg [24:0] max_addr;
 
   always @(posedge clk_mem) begin
     prev_rom_kind_area <= rom_kind_area;
@@ -217,7 +216,7 @@ module rom_parser (
         end
 
         lorom_score <= header_score;
-        lorom_rom_size <= rom_size;
+        // lorom_rom_size <= rom_size;
         lorom_sram_size <= ramsz;
         lorom_pal <= local_pal;
         lorom_chip_type <= chip_type;
@@ -228,7 +227,7 @@ module rom_parser (
         end
 
         hirom_score <= header_score;
-        hirom_rom_size <= rom_size;
+        // hirom_rom_size <= rom_size;
         hirom_sram_size <= ramsz;
         hirom_pal <= local_pal;
         hirom_chip_type <= chip_type;
@@ -244,29 +243,41 @@ module rom_parser (
         end
 
         exhirom_score <= header_score;
-        exhirom_rom_size <= rom_size;
+        // exhirom_rom_size <= rom_size;
         exhirom_sram_size <= ramsz;
         exhirom_pal <= local_pal;
         exhirom_chip_type <= chip_type;
       end
     end
 
-    if (prev_downloading && ~downloading) begin
+    if (downloading) begin
+      max_addr <= addr;
+    end else if (prev_downloading && ~downloading) begin
       // ROM loading ended, figure out what ROM this is
+      automatic reg [ 7:0] romsz = 15;
+      automatic reg [24:0] size = max_addr - 1;
+
+      for (romsz = 15; romsz > 0; romsz = romsz - 1) begin
+        if (size > 25'h1000000) begin
+          break;
+        end
+
+        size = size << 1;
+      end
+
+      parsed_rom_size <= romsz;
+
       if (lorom_score >= hirom_score && lorom_score >= exhirom_score) begin
         parsed_rom_type <= 0 | lorom_chip_type;
-        parsed_rom_size <= lorom_rom_size;
         parsed_sram_size <= lorom_sram_size;
         pal <= lorom_pal;
       end else if (hirom_score >= exhirom_score) begin
         parsed_rom_type <= 1 | hirom_chip_type;
-        parsed_rom_size <= hirom_rom_size;
         parsed_sram_size <= hirom_sram_size;
         pal <= hirom_pal;
       end else if (exhirom_score > 0) begin
         // Only set ExHiROM if there's actually a score, otherwise fall back to LoROM
         parsed_rom_type <= 2 | exhirom_chip_type;
-        parsed_rom_size <= exhirom_rom_size;
         parsed_sram_size <= exhirom_sram_size;
         pal <= exhirom_pal;
       end
