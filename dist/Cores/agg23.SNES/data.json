@@ -16,7 +16,7 @@
         "required": false,
         "parameters": "0x84",
         "nonvolatile": true,
-        "extensions": ["sav"],
+        "extensions": ["sav", "srm"],
         "address": "0x20000000",
         "size_maximum": "0x20000"
       }
