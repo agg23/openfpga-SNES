@@ -22,7 +22,7 @@ Core supports four players/controllers via the Analogue Dock. To enable four pla
 
 The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), DSP (Super Mario Kart), and CX4 (Mega Man X 2). Additional chip support will come in the future once several new firmware features are released.
 
-**NOTE:** The SDD1 chip was dropped in release 0.2.0 due to sizing and popularity issues. Support will resume in a future release.
+**NOTE:** The S-DD1 chip was dropped in release 0.2.0 due to sizing and popularity issues. Support will resume in a future release. In the meantime, you can [use this hack to remove the S-DD1 requirement](https://www.romhacking.net/hacks/614/).
 
 ### Video Modes
 
