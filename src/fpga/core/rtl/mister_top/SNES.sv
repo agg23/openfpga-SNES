@@ -6,6 +6,8 @@ module MAIN_SNES (
 
     // Settings
     input wire multitap_enabled,
+    input wire lightgun_enabled,
+    input wire lightgun_type,
 
     // Inputs
     input wire p1_button_a,
@@ -20,6 +22,9 @@ module MAIN_SNES (
     input wire p1_dpad_down,
     input wire p1_dpad_left,
     input wire p1_dpad_right,
+
+    input wire [7:0] p1_lstick_x,
+    input wire [7:0] p1_lstick_y,
 
     input wire p2_button_a,
     input wire p2_button_b,
@@ -136,8 +141,8 @@ module MAIN_SNES (
   wire [63:0] status = 0;
   wire [5:0] ioctl_index = 0;  // TODO
   wire GUN_BTN = status[27];
-  wire [1:0] GUN_MODE = status[26:25];
-  wire GUN_TYPE = status[34];
+  wire [1:0] GUN_MODE = 2'd1;//status[26:25];
+  wire GUN_TYPE = 0;//status[34];
   wire GSU_TURBO = status[18];
   wire BLEND = ~status[16];
   wire [1:0] mouse_mode = status[6:5];
@@ -293,9 +298,14 @@ module MAIN_SNES (
 
   wire vblank_n;
   wire hblank_n;
+  wire dotclk;
 
   assign vblank = ~vblank_n;
   assign hblank = ~hblank_n;
+  
+  wire [7:0] R;
+  wire [7:0] G;
+  wire [7:0] B;
 
   main main (
       .RESET_N(RESET_N),
@@ -350,14 +360,14 @@ module MAIN_SNES (
       .ARAM_OE_N(ARAM_OE_N),
       .ARAM_WE_N(ARAM_WE_N),
 
-      .R(video_r),
-      .G(video_g),
-      .B(video_b),
+      .R(R),
+      .G(G),
+      .B(B),
 
       // .FIELD(FIELD), // TODO
       // .INTERLACE(INTERLACE),
       // .HIGH_RES(HIGH_RES),
-      // .DOTCLK(DOTCLK_out),
+      .DOTCLK(dotclk),
 
       .HBLANKn(hblank_n),
       .VBLANKn(vblank_n),
@@ -428,6 +438,10 @@ module MAIN_SNES (
     RFSH <= !div;
 
     if (div == 2) RESET_N <= ~reset;
+
+   video_r <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[0]}} : R;
+   video_g <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[1]}} : G;
+   video_b <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[2]}} : B;
   end
 
   ////////////////////////////  MEMORY  ///////////////////////////////////
@@ -781,40 +795,40 @@ module MAIN_SNES (
       // .MOUSE_EN(mouse_mode[1])
   );
 
-  wire                         LG_P6_out;
-  // wire [1:0] LG_DO;
-  // wire [2:0] LG_TARGET;
-  // wire       LG_T = ((GUN_MODE[0]&joy0[6]) | (GUN_MODE[1]&joy1[6])); // always from joysticks
+  wire LG_P6_out;
+  wire [1:0] LG_DO;
+  wire [2:0] LG_TARGET;
 
-  // lightgun lightgun
-  // (
-  // 	.CLK(clk_sys),
-  // 	.RESET(reset),
+  lightgun lightgun (
+    .CLK(clk_sys),
+    .RESET(reset),
 
-  // 	.MOUSE(ps2_mouse),
-  // 	.MOUSE_XY(&GUN_MODE),
+    .JOY_X(p1_lstick_x),
+    .JOY_Y(p1_lstick_y),
 
-  // 	.JOY_X(GUN_MODE[0] ? joy0_x : joy1_x),
-  // 	.JOY_Y(GUN_MODE[0] ? joy0_y : joy1_y),
+    .F(p1_button_a),
+    .C(p1_button_b),
+    .T(p1_button_x),
+    .P(p1_button_y),
 
-  // 	.F(GUN_BTN ? ps2_mouse[0] : ((GUN_MODE[0]&(joy0[4]|joy0[9]) | (GUN_MODE[1]&(joy1[4]|joy1[9]))))),
-  // 	.C(GUN_BTN ? ps2_mouse[1] : ((GUN_MODE[0]&(joy0[5]|joy0[8]) | (GUN_MODE[1]&(joy1[5]|joy0[8]))))),
-  // 	.T(LG_T), // always from joysticks
-  // 	.P(ps2_mouse[2] | ((GUN_MODE[0]&joy0[7]) | (GUN_MODE[1]&joy1[7]))), // always from joysticks and mouse
+    .UP(p1_dpad_up),
+    .DOWN(p1_dpad_down),
+    .LEFT(p1_dpad_left),
+    .RIGHT(p1_dpad_right),
 
-  // 	.HDE(~HBlank),
-  // 	.VDE(~VBlank),
-  // 	.CLKPIX(DOTCLK),
+    .HDE(hblank_n),
+    .VDE(vblank_n),
+    .CLKPIX(dotclk),
 
-  // 	.TARGET(LG_TARGET),
-  // 	.SIZE(status[28]),
-  // 	.GUN_TYPE(GUN_TYPE),
+    .TARGET(LG_TARGET),
+    .SIZE(0),
+    .GUN_TYPE(lightgun_type),
 
-  // 	.PORT_LATCH(JOY_STRB),
-  // 	.PORT_CLK(JOY2_CLK),
-  // 	.PORT_P6(LG_P6_out),
-  // 	.PORT_DO(LG_DO)
-  // );
+    .PORT_LATCH(JOY_STRB),
+    .PORT_CLK(JOY2_CLK),
+    .PORT_P6(LG_P6_out),
+    .PORT_DO(LG_DO)
+  );
 
   // 1 [oooo|ooo) 7 - 1:+5V  2:Clk  3:Strobe   4:D0  5:D1  6: I/O  7:Gnd
 

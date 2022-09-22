@@ -334,6 +334,10 @@ module core_top (
         32'h00000100: begin
           multitap_enabled <= bridge_wr_data[0];
         end
+        32'h00000104: begin
+          lightgun_enabled <= bridge_wr_data[0];
+          lightgun_type    <= bridge_wr_data[1];
+        end
       endcase
     end
   end
@@ -583,6 +587,7 @@ module core_top (
   wire [15:0] cont2_key_s;
   wire [15:0] cont3_key_s;
   wire [15:0] cont4_key_s;
+  wire [31:0] cont1_joy_s;
 
   synch_3 #(
       .WIDTH(32)
@@ -615,11 +620,21 @@ module core_top (
       cont4_key_s,
       clk_sys_21_48
   );
+  
+  synch_3 #(
+      .WIDTH(32)
+  ) joy1_s (
+      cont1_joy,
+      cont1_joy_s,
+      clk_sys_21_48
+  );
 
   wire PAL;
 
   // Settings
   reg  multitap_enabled;
+  reg  lightgun_enabled;
+  reg  lightgun_type;
 
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
@@ -629,6 +644,8 @@ module core_top (
 
       // Settings
       .multitap_enabled(multitap_enabled),
+      .lightgun_enabled(lightgun_enabled),
+      .lightgun_type(lightgun_type),
 
       // Input
       .p1_button_a(cont1_key_s[4]),
@@ -643,6 +660,9 @@ module core_top (
       .p1_dpad_down(cont1_key_s[1]),
       .p1_dpad_left(cont1_key_s[2]),
       .p1_dpad_right(cont1_key_s[3]),
+
+      .p1_lstick_x(cont1_joy_s[7:0]),
+      .p1_lstick_y(cont1_joy_s[15:8]),
 
       .p2_button_a(cont2_key_s[4]),
       .p2_button_b(cont2_key_s[5]),

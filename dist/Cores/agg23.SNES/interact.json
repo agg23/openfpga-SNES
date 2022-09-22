@@ -12,6 +12,46 @@
         "writeonly": true,
         "defaultval": 0,
         "value": 1
+      },
+      {
+        "name": "Lightgun Options",
+        "id": 30,
+        "type": "action",
+        "enabled": false
+      },
+      {
+        "name": "No Lightgun",
+        "id": 31,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 1,
+        "value": "0x0"
+      },
+      {
+        "name": "Use Super Scope",
+        "id": 32,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "writeonly": true,
+        "persist": true,
+        "value": "0x1"
+      },
+      {
+        "name": "Use Justifier",
+        "id": 33,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "writeonly": true,
+        "persist": true,
+        "value": "0x3"
       }
     ],
     "messages": []
