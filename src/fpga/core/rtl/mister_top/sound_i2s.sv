@@ -57,9 +57,15 @@ module sound_i2s #(
 
   // generate SCLK = 3.072mhz by dividing MCLK by 4
   reg [1:0] aud_mclk_divider;
+  reg prev_audio_mclk;
   wire audgen_sclk = aud_mclk_divider[1]  /* synthesis keep*/;
-  always @(posedge audio_mclk) begin
-    aud_mclk_divider <= aud_mclk_divider + 1'b1;
+
+  always @(posedge clk_74a) begin
+    if (audio_mclk && ~prev_audio_mclk) begin
+      aud_mclk_divider <= aud_mclk_divider + 1'b1;
+    end
+
+    prev_audio_mclk <= audio_mclk;
   end
 
   // shift out audio data as I2S
@@ -94,7 +100,7 @@ module sound_i2s #(
       .WIDTH(32)
   ) sync_fifo (
       .clk_write(clk_audio),
-      .clk_read (audgen_sclk),
+      .clk_read (clk_74a),
 
       .write_en(write_en),
       .data_in (audgen_sampdata),
@@ -119,26 +125,31 @@ module sound_i2s #(
 
   wire [31:0] audgen_sampdata_s;
 
-  reg  [31:0] audgen_sampshift;
-  reg  [ 4:0] audio_lrck_cnt;
-  always @(negedge audgen_sclk) begin
-    // output the next bit
-    audio_dac <= audgen_sampshift[31];
+  reg [31:0] audgen_sampshift;
+  reg [4:0] audio_lrck_cnt;
+  reg prev_audgen_sclk;
+  always @(posedge clk_74a) begin
+    if (prev_audgen_sclk && ~audgen_sclk) begin
+      // output the next bit
+      audio_dac <= audgen_sampshift[31];
 
-    // 48khz * 64
-    audio_lrck_cnt <= audio_lrck_cnt + 1'b1;
-    if (audio_lrck_cnt == 31) begin
-      // switch channels
-      audio_lrck <= ~audio_lrck;
+      // 48khz * 64
+      audio_lrck_cnt <= audio_lrck_cnt + 1'b1;
+      if (audio_lrck_cnt == 31) begin
+        // switch channels
+        audio_lrck <= ~audio_lrck;
 
-      // Reload sample shifter
-      if (~audio_lrck) begin
-        audgen_sampshift <= audgen_sampdata_s;
+        // Reload sample shifter
+        if (~audio_lrck) begin
+          audgen_sampshift <= audgen_sampdata_s;
+        end
+      end else if (audio_lrck_cnt < 16) begin
+        // only shift for 16 clocks per channel
+        audgen_sampshift <= {audgen_sampshift[30:0], 1'b0};
       end
-    end else if (audio_lrck_cnt < 16) begin
-      // only shift for 16 clocks per channel
-      audgen_sampshift <= {audgen_sampshift[30:0], 1'b0};
     end
+
+    prev_audgen_sclk <= audgen_sclk;
   end
 
   initial begin
