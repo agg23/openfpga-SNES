@@ -22,7 +22,9 @@ entity P65C816 is
 		  VPA 		: out std_logic;
 		  VDA 		: out std_logic;
 		  MLB 		: out std_logic;
-		  VPB 		: out std_logic
+		  VPB 		: out std_logic;
+
+			DEBUG_PC : out std_logic_vector(23 downto 0)
     );
 end P65C816;
 
@@ -74,6 +76,13 @@ architecture rtl of P65C816 is
 	signal JSR_FOUND : std_logic;
 	
 begin
+	process(CLK)
+	begin
+		if rising_edge(CLK) and STATE = "0000" then
+			DEBUG_PC <= PBR & PC;
+		end if;
+	end process;
+
 	EN <= RDY_IN and CE and not WAIExec and not STPExec;
 	
 	IsBranchCycle1 <= '1' when IR(4 downto 0) = "10000" and STATE = "0001" else '0';

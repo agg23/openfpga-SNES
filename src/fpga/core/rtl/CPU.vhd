@@ -43,7 +43,8 @@ entity SCPU is
 
 		TURBO				: in std_logic;
 		
-		DBG_CPU_EN		: in std_logic
+		DBG_CPU_EN		: in std_logic;
+		DEBUG_PC : out std_logic_vector(23 downto 0)
 	);
 end SCPU;
 
@@ -361,7 +362,9 @@ begin
 		IRQ_N       => P65_IRQ_N,
 		ABORT_N     => '1',
 		VPA      	=> P65_VPA,
-		VDA      	=> P65_VDA
+		VDA      	=> P65_VDA,
+
+		DEBUG_PC => DEBUG_PC
 	); 
 
 	process(P65_A, P65_VPA, P65_VDA)

@@ -234,29 +234,38 @@ module core_top (
 
   // cart is unused, so set all level translators accordingly
   // directions are 0:IN, 1:OUT
-  assign cart_tran_bank3         = 8'hzz;
+  assign cart_tran_bank3         = 8'hzz;  // these pins are not used, make them inputs
   assign cart_tran_bank3_dir     = 1'b0;
-  assign cart_tran_bank2         = 8'hzz;
+
+  assign cart_tran_bank2         = 8'hzz;  // these pins are not used, make them inputs
   assign cart_tran_bank2_dir     = 1'b0;
-  assign cart_tran_bank1         = 8'hzz;
+
+  assign cart_tran_bank1         = 8'hzz;  // these pins are not used, make them inputs
   assign cart_tran_bank1_dir     = 1'b0;
-  assign cart_tran_bank0         = 4'hf;
+
+  assign cart_tran_bank0         = {1'b0, TXDATA, 1'b0, 1'b0};  // LED and TXD hook up here
   assign cart_tran_bank0_dir     = 1'b1;
-  assign cart_tran_pin30         = 1'b0;  // reset or cs2, we let the hw control it by itself
-  assign cart_tran_pin30_dir     = 1'bz;
-  assign cart_pin30_pwroff_reset = 1'b0;  // hardware can control this
-  assign cart_tran_pin31         = 1'bz;  // input
+
+  assign cart_tran_pin30         = 1'bz;  // this pin is not used, make it an input
+  assign cart_tran_pin30_dir     = 1'b0;
+  assign cart_pin30_pwroff_reset = 1'b1;
+
+  assign cart_tran_pin31         = 1'bz;  // this pin is an input
   assign cart_tran_pin31_dir     = 1'b0;  // input
 
+  // UART
+  wire TXDATA;  // your UART transmit data hooks up here
+  wire RXDATA = cart_tran_pin31;  // your UART RX data shows up here
+
   // link port is input only
-  assign port_tran_so            = 1'bz;
-  assign port_tran_so_dir        = 1'b0;  // SO is output only
-  assign port_tran_si            = 1'bz;
-  assign port_tran_si_dir        = 1'b0;  // SI is input only
-  assign port_tran_sck           = 1'bz;
-  assign port_tran_sck_dir       = 1'b0;  // clock direction can change
-  assign port_tran_sd            = 1'bz;
-  assign port_tran_sd_dir        = 1'b0;  // SD is input and not used
+  assign port_tran_so      = 1'bz;
+  assign port_tran_so_dir  = 1'b0;  // SO is output only
+  assign port_tran_si      = 1'bz;
+  assign port_tran_si_dir  = 1'b0;  // SI is input only
+  assign port_tran_sck     = 1'bz;
+  assign port_tran_sck_dir = 1'b0;  // clock direction can change
+  assign port_tran_sd      = 1'bz;
+  assign port_tran_sd_dir  = 1'b0;  // SD is input and not used
 
   // tie off the rest of the pins we are not using
   //   assign cram0_a                 = 'h0;
@@ -293,17 +302,17 @@ module core_top (
   //   assign dram_cas_n              = 'h1;
   //   assign dram_we_n               = 'h1;
 
-  assign sram_a                  = 'h0;
-  assign sram_dq                 = {16{1'bZ}};
-  assign sram_oe_n               = 1;
-  assign sram_we_n               = 1;
-  assign sram_ub_n               = 1;
-  assign sram_lb_n               = 1;
+  assign sram_a            = 'h0;
+  assign sram_dq           = {16{1'bZ}};
+  assign sram_oe_n         = 1;
+  assign sram_we_n         = 1;
+  assign sram_ub_n         = 1;
+  assign sram_lb_n         = 1;
 
-  assign dbg_tx                  = 1'bZ;
-  assign user1                   = 1'bZ;
-  assign aux_scl                 = 1'bZ;
-  assign vpll_feed               = 1'bZ;
+  assign dbg_tx            = 1'bZ;
+  assign user1             = 1'bZ;
+  assign aux_scl           = 1'bZ;
+  assign vpll_feed         = 1'bZ;
 
 
   // for bridge write data, we just broadcast it to all bus devices
@@ -574,6 +583,102 @@ module core_top (
     end
   end
 
+  // UART
+
+  reg write;
+  reg write_mem;
+  reg [7:0] data;
+  reg [1:0] byte_index = 0;
+  wire [23:0] DEBUG_PC;
+  reg [23:0] prev_debug_pc;
+
+  wire busy;
+
+  wire [23:0] mem_out;
+
+  parameter WORD_COUNT = 16384 * 2;
+
+  spram_sz #(
+      .addr_width(15),
+      .data_width(24),
+      .numwords  (WORD_COUNT)
+  ) spram_sz (
+      .clock(clk_mem_85_9),
+      .address(pc_addr),
+      .data(DEBUG_PC),
+      .wren(write_mem),
+      .q(mem_out)
+  );
+
+  // reg [15:0] rom[16383];
+  reg [14:0] pc_addr = 0;
+  reg finished = 0;
+  reg finished_uart = 0;
+
+  // 21.48 / 921600.0
+  uart_tx #(24) uart_tx (
+      .i_Clock(clk_sys_21_48),
+      .i_Tx_DV(write),
+      .i_Tx_Byte(data),
+      .o_Tx_Active(busy),
+      .o_Tx_Serial(TXDATA),
+      //   .o_Tx_Done(ready),
+  );
+
+
+  reg read_delay = 0;
+  reg [31:0] instruction_delay = 32'h2000;
+
+  // Very simple and dumb (no state machine) way of capturing PC and bank and
+  // shoveling it out over UART. Requires 921,600 baud rate
+  always @(posedge clk_sys_21_48) begin
+    write <= 0;
+    write_mem <= 0;
+
+    if (finished) begin
+      if (~busy && ~write) begin
+        if (pc_addr == WORD_COUNT - 1) begin
+          finished_uart <= 1;
+        end else if (read_delay) begin
+          read_delay <= 0;
+        end else if (byte_index == 2) begin
+          // Need to write lower byte
+          write <= 1;
+          data <= mem_out[7:0];
+
+          pc_addr <= pc_addr + 1;
+          read_delay <= 1;
+          byte_index <= 0;
+        end else if (byte_index == 1) begin
+          // Need to write middle byte
+          write <= 1;
+          data <= mem_out[15:8];
+
+          byte_index <= 2;
+        end else begin
+          // New data
+          write <= 1;
+          data <= mem_out[23:16];
+          byte_index <= 1;
+        end
+      end
+    end else if (pc_addr == WORD_COUNT - 1) begin
+      finished <= 1;
+      pc_addr <= 0;
+      read_delay <= 1;
+    end else if (prev_debug_pc != DEBUG_PC) begin
+      if (instruction_delay == 0) begin
+        write_mem <= 1;
+
+        pc_addr   <= pc_addr + 1;
+      end else begin
+        instruction_delay <= instruction_delay - 1;
+      end
+
+      prev_debug_pc <= DEBUG_PC;
+    end
+  end
+
   wire [15:0] audio_l;
   wire [15:0] audio_r;
 
@@ -751,7 +856,9 @@ module core_top (
 
       // Audio
       .audio_l(audio_l),
-      .audio_r(audio_r)
+      .audio_r(audio_r),
+
+      .DEBUG_PC(DEBUG_PC)
   );
 
   // Video

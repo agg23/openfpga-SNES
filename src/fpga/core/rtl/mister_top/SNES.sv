@@ -129,7 +129,9 @@ module MAIN_SNES (
 
     // Audio
     output wire [15:0] audio_l,
-    output wire [15:0] audio_r
+    output wire [15:0] audio_r,
+
+    output wire [23:0] DEBUG_PC
 );
 
   // Hardcoded wires
@@ -414,7 +416,9 @@ module MAIN_SNES (
       .MSU_ENABLE(0),  // TODO
 
       .AUDIO_L(audio_l),
-      .AUDIO_R(audio_r)
+      .AUDIO_R(audio_r),
+
+      .DEBUG_PC(DEBUG_PC)
   );
 
   wire reset = core_reset | cart_download | spc_download | bk_loading | clearing_ram | msu_data_download | parser_delay != 0;

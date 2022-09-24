@@ -108,15 +108,17 @@ module main (
     input         MSU_ENABLE,
 
     output [15:0] AUDIO_L,
-    output [15:0] AUDIO_R
+    output [15:0] AUDIO_R,
+
+    output [23:0] DEBUG_PC
 );
 
   parameter USE_DLH = 1'b1;
-  parameter USE_CX4 = 1'b1;
+  parameter USE_CX4 = 1'b0;
   parameter USE_SDD1 = 1'b0;
   parameter USE_GSU = 1'b1;
-  parameter USE_SA1 = 1'b1;
-  parameter USE_DSPn = 1'b1;
+  parameter USE_SA1 = 1'b0;
+  parameter USE_DSPn = 1'b0;
   parameter USE_SPC7110 = 1'b0;
   parameter USE_BSX = 1'b0;
   parameter USE_MSU = 1'b0;
@@ -228,7 +230,9 @@ module main (
       .turbo(TURBO),
 
       .audio_l(AUDIO_L),
-      .audio_r(AUDIO_R)
+      .audio_r(AUDIO_R),
+
+      .DEBUG_PC(DEBUG_PC)
   );
 
   wire [7:0] MSU_DO;
