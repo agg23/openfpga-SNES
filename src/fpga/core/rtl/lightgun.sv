@@ -14,6 +14,7 @@ module lightgun
 	input        DOWN,
 	input        LEFT,
 	input        RIGHT,
+	input [7:0]  DPAD_AIM_SPEED,
 
 	input        HDE,VDE,
 	input        CLKPIX,
@@ -82,7 +83,6 @@ reg [7:0] old_joy_x;
 reg [7:0] old_joy_y;
 reg [8:0] j_x;
 reg [8:0] j_y;
-parameter move = 8'd3;
 
 reg offscreen = 0, draw = 0;
 reg [21:0] port_p6_sr;
@@ -139,8 +139,22 @@ always @(posedge CLK) begin
 				j_x <= JOY_X[7:0];
 				j_y <= JOY_Y[7:0];
 			end else begin
-				j_x <= LEFT ? j_x - move : (RIGHT ? j_x + move : j_x);
-				j_y <= UP ? j_y - move : (DOWN ? j_y + move : j_y);
+				if(LEFT) begin
+					if (j_x >= DPAD_AIM_SPEED) j_x <= j_x - DPAD_AIM_SPEED;
+					else j_x <= 0;
+				end
+				if(RIGHT) begin
+					if(lg_x <= 8'd255 - DPAD_AIM_SPEED) j_x <= j_x + DPAD_AIM_SPEED;
+					else j_x <= 8'd255;
+				end
+				if(UP) begin
+					if (j_y >= DPAD_AIM_SPEED) j_y <= j_y - DPAD_AIM_SPEED;
+					else j_y <= 0;
+				end
+				if(DOWN) begin
+					if (j_y < vtotal - DPAD_AIM_SPEED) j_y <= j_y + DPAD_AIM_SPEED;
+					else j_y <= vtotal;
+				end
 			end
 		
 			x  <= lg_x;

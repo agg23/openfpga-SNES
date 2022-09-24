@@ -29,3 +29,9 @@ The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GS
 The Analogue Pocket framework doesn't currently allow for customizing video modes directly, so if you dislike the default 8:7 aspect ratio/want to change to 4:3, you can change it by modifying `Cores/agg23.SNES/video.json` and rearranging the config objects.
 
 Proper PAL support also requires editing these files to have an expanded vertical pixel height.
+
+### Lightguns
+
+Core supports virtual lightguns by enabling the "Use Super Scope" or "Use Justifier" settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the d-pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad AIm Speed" setting.
+
+**NOTE:** Joystick support for aiming only appears to work when a controller is paired over Bluetooth and not connected to the Analogue Dock directly by USB.

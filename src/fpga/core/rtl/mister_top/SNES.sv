@@ -8,6 +8,7 @@ module MAIN_SNES (
     input wire multitap_enabled,
     input wire lightgun_enabled,
     input wire lightgun_type,
+    input wire [7:0] lightgun_dpad_aim_speed,
 
     // Inputs
     input wire p1_button_a,
@@ -438,10 +439,12 @@ module MAIN_SNES (
     RFSH <= !div;
 
     if (div == 2) RESET_N <= ~reset;
+  end
 
-   video_r <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[0]}} : R;
-   video_g <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[1]}} : G;
-   video_b <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[2]}} : B;
+  always @(posedge clk_sys) begin
+    video_r <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[0]}} : R;
+    video_g <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[1]}} : G;
+    video_b <= (LG_TARGET && lightgun_enabled) ? {8{LG_TARGET[2]}} : B;
   end
 
   ////////////////////////////  MEMORY  ///////////////////////////////////
@@ -815,6 +818,7 @@ module MAIN_SNES (
     .DOWN(p1_dpad_down),
     .LEFT(p1_dpad_left),
     .RIGHT(p1_dpad_right),
+    .DPAD_AIM_SPEED(lightgun_dpad_aim_speed),
 
     .HDE(hblank_n),
     .VDE(vblank_n),

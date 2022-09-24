@@ -29,7 +29,7 @@
         "persist": true,
         "writeonly": true,
         "defaultval": 1,
-        "value": "0x0"
+        "value": 0
       },
       {
         "name": "Use Super Scope",
@@ -40,7 +40,7 @@
         "address": "0x00000104",
         "writeonly": true,
         "persist": true,
-        "value": "0x1"
+        "value": 1
       },
       {
         "name": "Use Justifier",
@@ -51,7 +51,24 @@
         "address": "0x00000104",
         "writeonly": true,
         "persist": true,
-        "value": "0x3"
+        "value": 3
+      },
+      {
+        "name": "D-Pad Aim Speed",
+        "id": 34,
+        "type": "slider_u32",
+        "enabled": true,
+        "address": "0x00000108",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 3,
+        "graphical": {
+          "signed": false,
+          "min": 1,
+          "max": 10,
+          "adjust_small": 1,
+          "adjust_large": 4
+        }
       }
     ],
     "messages": []

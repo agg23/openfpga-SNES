@@ -338,6 +338,9 @@ module core_top (
           lightgun_enabled <= bridge_wr_data[0];
           lightgun_type    <= bridge_wr_data[1];
         end
+        32'h00000108: begin
+        lightgun_dpad_aim_speed <= bridge_wr_data[7:0];
+        end
       endcase
     end
   end
@@ -635,6 +638,7 @@ module core_top (
   reg  multitap_enabled;
   reg  lightgun_enabled;
   reg  lightgun_type;
+  reg [7:0] lightgun_dpad_aim_speed;
 
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
@@ -646,6 +650,7 @@ module core_top (
       .multitap_enabled(multitap_enabled),
       .lightgun_enabled(lightgun_enabled),
       .lightgun_type(lightgun_type),
+      .lightgun_dpad_aim_speed(lightgun_dpad_aim_speed),
 
       // Input
       .p1_button_a(cont1_key_s[4]),
