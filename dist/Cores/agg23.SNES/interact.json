@@ -12,6 +12,17 @@
         "writeonly": true,
         "defaultval": 0,
         "value": 1
+      },
+      {
+        "name": "Use 4:3 video",
+        "id": 30,
+        "type": "check",
+        "enabled": true,
+        "address": "0x00000200",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 0,
+        "value": 1
       }
     ],
     "messages": []

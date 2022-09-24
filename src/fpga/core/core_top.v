@@ -334,6 +334,9 @@ module core_top (
         32'h00000100: begin
           multitap_enabled <= bridge_wr_data[0];
         end
+        32'h00000200: begin
+          use_4_3_video <= bridge_wr_data[0];
+        end
       endcase
     end
   end
@@ -620,6 +623,7 @@ module core_top (
 
   // Settings
   reg  multitap_enabled;
+  reg  use_4_3_video;
 
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
@@ -777,16 +781,23 @@ module core_top (
   reg hs_prev;
   reg [2:0] hs_delay;
   reg vs_prev;
+  reg de_prev;
+
+  wire de = ~(h_blank || v_blank);
+  wire [23:0] video_slot_rgb = {9'b0, PAL, use_4_3_video, 10'b0, 3'b0};
 
   always @(posedge clk_video_5_37) begin
     video_hs_reg  <= 0;
     video_de_reg  <= 0;
     video_rgb_reg <= 24'h0;
 
-    if (~(h_blank || v_blank)) begin
+    if (de) begin
       video_de_reg  <= 1;
 
       video_rgb_reg <= video_rgb_snes;
+    end else if (de_prev && ~de) begin
+      // Last clock was last pixel. Set end of line bits
+      video_rgb_reg <= video_slot_rgb;
     end
 
     // Set VSync to be high for a single cycle on the rising edge of the VSync coming out of the core
@@ -794,6 +805,7 @@ module core_top (
     video_vs_reg <= ~vs_prev && video_vs_snes;
     hs_prev <= video_hs_snes;
     vs_prev <= video_vs_snes;
+    de_prev <= de;
   end
 
   sound_i2s #(
