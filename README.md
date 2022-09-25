@@ -32,6 +32,6 @@ Proper PAL support also requires editing these files to have an expanded vertica
 
 ### Lightguns
 
-Core supports virtual lightguns by enabling the "Use Super Scope" or "Use Justifier" settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the d-pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad AIm Speed" setting.
+Core supports virtual lightguns by enabling the "Use Super Scope" or "Use Justifier" settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
 
 **NOTE:** Joystick support for aiming only appears to work when a controller is paired over Bluetooth and not connected to the Analogue Dock directly by USB.
