@@ -4,11 +4,17 @@ module lightgun
 	input        CLK,
 	input        RESET,
 
-	input [24:0] MOUSE,
-	input        MOUSE_XY,
+	//input [24:0] MOUSE,
+	//input        MOUSE_XY,
 
 	input  [7:0] JOY_X,JOY_Y,
 	input        F,C,T,P,
+
+	input        UP,
+	input        DOWN,
+	input        LEFT,
+	input        RIGHT,
+	input [7:0]  DPAD_AIM_SPEED,
 
 	input        HDE,VDE,
 	input        CLKPIX,
@@ -23,7 +29,7 @@ module lightgun
 	output [1:0] PORT_DO
 );
 
-parameter CROSS_SZ = 8'd3;
+parameter CROSS_SZ = 8'd4;
 
 assign PORT_DO = {1'b1, GUN_TYPE ? JUSTIFIER_LATCH[31] : JOY_LATCH0[7]};
 assign TARGET  = {{2{~Ttr & ~offscreen & draw}}, Ttr & ~offscreen & draw};
@@ -69,11 +75,14 @@ end
 
 reg  [8:0] lg_x, lg_y, x, y;
 
-wire [9:0] new_x = {lg_x[8],lg_x} + {{2{MOUSE[4]}},MOUSE[15:8]};
-wire [9:0] new_y = {lg_y[8],lg_y} - {{2{MOUSE[5]}},MOUSE[23:16]};
+wire [9:0] new_x = {lg_x[8],lg_x};// + {{2{MOUSE[4]}},MOUSE[15:8]};
+wire [9:0] new_y = {lg_y[8],lg_y};// - {{2{MOUSE[5]}},MOUSE[23:16]};
 
-wire [8:0] j_x = {~JOY_X[7], JOY_X[6:0]};
-wire [8:0] j_y = {~JOY_Y[7], JOY_Y[6:0]};
+// HACK
+reg [7:0] old_joy_x;
+reg [7:0] old_joy_y;
+reg [8:0] j_x;
+reg [8:0] j_y;
 
 reg offscreen = 0, draw = 0;
 reg [21:0] port_p6_sr;
@@ -89,7 +98,7 @@ always @(posedge CLK) begin
 	jy1 <= {8'd0, j_y} * vtotal;
 	jy2 <= jy1;
 	
-	old_ms <= MOUSE[24];
+	/*old_ms <= MOUSE[24];
 	if(MOUSE_XY) begin
 		if(old_ms ^ MOUSE[24]) begin
 			if(new_x[9]) lg_x <= 0;
@@ -101,11 +110,11 @@ always @(posedge CLK) begin
 			else lg_y <= new_y[8:0];
 		end
 	end
-	else begin
+	else begin*/
 		lg_x <= j_x;
 		lg_y <= jy2[16:8];
 		if(jy2[16:8] > vtotal) lg_y <= vtotal;
-	end
+	//end
 
 	old_pix <= CLKPIX;
 	if(~old_pix & CLKPIX) begin
@@ -123,6 +132,31 @@ always @(posedge CLK) begin
 		
 		old_vde <= VDE;
 		if(~old_vde & VDE) begin
+		
+			old_joy_x <= JOY_X;
+			old_joy_y <= JOY_Y;
+			if(old_joy_x != JOY_X || old_joy_y != JOY_Y) begin
+				j_x <= JOY_X[7:0];
+				j_y <= JOY_Y[7:0];
+			end else begin
+				if(LEFT) begin
+					if (j_x >= DPAD_AIM_SPEED) j_x <= j_x - DPAD_AIM_SPEED;
+					else j_x <= 0;
+				end
+				if(RIGHT) begin
+					if(lg_x <= 8'd255 - DPAD_AIM_SPEED) j_x <= j_x + DPAD_AIM_SPEED;
+					else j_x <= 8'd255;
+				end
+				if(UP) begin
+					if (j_y >= DPAD_AIM_SPEED) j_y <= j_y - DPAD_AIM_SPEED;
+					else j_y <= 0;
+				end
+				if(DOWN) begin
+					if (j_y < vtotal - DPAD_AIM_SPEED) j_y <= j_y + DPAD_AIM_SPEED;
+					else j_y <= vtotal;
+				end
+			end
+		
 			x  <= lg_x;
 			y  <= lg_y;
 			xm <= lg_x - CROSS_SZ;

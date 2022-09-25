@@ -14,8 +14,65 @@
         "value": 1
       },
       {
-        "name": "Use 4:3 video",
+        "name": "Lightgun Options",
         "id": 30,
+        "type": "action",
+        "enabled": false
+      },
+      {
+        "name": "No Lightgun",
+        "id": 31,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 1,
+        "value": 0
+      },
+      {
+        "name": "Use Super Scope",
+        "id": 32,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "writeonly": true,
+        "persist": true,
+        "value": 1
+      },
+      {
+        "name": "Use Justifier",
+        "id": 33,
+        "group": 3,
+        "type": "radio",
+        "enabled": true,
+        "address": "0x00000104",
+        "writeonly": true,
+        "persist": true,
+        "value": 3
+      },
+      {
+        "name": "D-Pad Aim Speed",
+        "id": 34,
+        "type": "slider_u32",
+        "enabled": true,
+        "address": "0x00000108",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 3,
+        "graphical": {
+          "signed": false,
+          "min": 1,
+          "max": 10,
+          "adjust_small": 1,
+          "adjust_large": 4
+        }
+      },
+      {
+        "name": "Use 4:3 video",
+        "id": 40,
         "type": "check",
         "enabled": true,
         "address": "0x00000200",
