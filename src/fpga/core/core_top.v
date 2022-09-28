@@ -329,8 +329,15 @@ module core_top (
   end
 
   always @(posedge clk_74a) begin
+    if (reset_delay > 0) begin
+      reset_delay <= reset_delay - 1;
+    end
+
     if (bridge_wr) begin
       casex (bridge_addr)
+        32'h00000050: begin
+          reset_delay <= 32'h100000;
+        end
         32'h00000100: begin
           multitap_enabled <= bridge_wr_data[0];
         end
@@ -626,7 +633,7 @@ module core_top (
       cont4_key_s,
       clk_sys_21_48
   );
-  
+
   synch_3 #(
       .WIDTH(32)
   ) joy1_s (
@@ -638,17 +645,19 @@ module core_top (
   wire PAL;
 
   // Settings
-  reg  multitap_enabled;
-  reg  lightgun_enabled;
-  reg  lightgun_type;
+  reg multitap_enabled;
+  reg lightgun_enabled;
+  reg lightgun_type;
   reg [7:0] lightgun_dpad_aim_speed;
-  reg  use_4_3_video;
+  reg use_4_3_video;
+
+  reg [31:0] reset_delay = 0;
 
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
 
-      .core_reset(~pll_core_locked),
+      .core_reset(~pll_core_locked || reset_delay > 0),
 
       // Settings
       .multitap_enabled(multitap_enabled),

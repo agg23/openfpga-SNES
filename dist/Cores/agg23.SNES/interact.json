@@ -3,6 +3,14 @@
     "magic": "APF_VER_1",
     "variables": [
       {
+        "name": "Reset core",
+        "id": 10,
+        "type": "action",
+        "enabled": true,
+        "address": "0x00000050",
+        "value": 1
+      },
+      {
         "name": "Use Multitap",
         "id": 20,
         "type": "check",
@@ -16,42 +24,26 @@
       {
         "name": "Lightgun Options",
         "id": 30,
-        "type": "action",
-        "enabled": false
-      },
-      {
-        "name": "No Lightgun",
-        "id": 31,
-        "group": 3,
-        "type": "radio",
+        "type": "list",
         "enabled": true,
         "address": "0x00000104",
         "persist": true,
         "writeonly": true,
-        "defaultval": 1,
-        "value": 0
-      },
-      {
-        "name": "Use Super Scope",
-        "id": 32,
-        "group": 3,
-        "type": "radio",
-        "enabled": true,
-        "address": "0x00000104",
-        "writeonly": true,
-        "persist": true,
-        "value": 1
-      },
-      {
-        "name": "Use Justifier",
-        "id": 33,
-        "group": 3,
-        "type": "radio",
-        "enabled": true,
-        "address": "0x00000104",
-        "writeonly": true,
-        "persist": true,
-        "value": 3
+        "defaultval": 0,
+        "options": [
+          {
+            "name": "No Lightgun",
+            "value": 0
+          },
+          {
+            "name": "Use Super Scope",
+            "value": 1
+          },
+          {
+            "name": "Use Justifier",
+            "value": 2
+          }
+        ]
       },
       {
         "name": "D-Pad Aim Speed",
