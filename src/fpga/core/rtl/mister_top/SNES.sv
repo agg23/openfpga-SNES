@@ -142,8 +142,7 @@ module MAIN_SNES (
   wire [63:0] status = 0;
   wire [5:0] ioctl_index = 0;  // TODO
   wire GUN_BTN = status[27];
-  wire [1:0] GUN_MODE = 2'd1;//status[26:25];
-  wire GUN_TYPE = 0;//status[34];
+  wire [1:0] GUN_MODE = lightgun_enabled ? 2'd1 : 0;
   wire GSU_TURBO = status[18];
   wire BLEND = ~status[16];
   wire [1:0] mouse_mode = status[6:5];
@@ -303,7 +302,7 @@ module MAIN_SNES (
 
   assign vblank = ~vblank_n;
   assign hblank = ~hblank_n;
-  
+
   wire [7:0] R;
   wire [7:0] G;
   wire [7:0] B;
@@ -803,35 +802,35 @@ module MAIN_SNES (
   wire [2:0] LG_TARGET;
 
   lightgun lightgun (
-    .CLK(clk_sys),
-    .RESET(reset),
+      .CLK  (clk_sys),
+      .RESET(reset),
 
-    .JOY_X(p1_lstick_x),
-    .JOY_Y(p1_lstick_y),
+      .JOY_X(p1_lstick_x),
+      .JOY_Y(p1_lstick_y),
 
-    .F(p1_button_a),
-    .C(p1_button_b),
-    .T(p1_button_x),
-    .P(p1_button_y),
+      .F(p1_button_a),
+      .C(p1_button_b),
+      .T(p1_button_x),
+      .P(p1_button_y),
 
-    .UP(p1_dpad_up),
-    .DOWN(p1_dpad_down),
-    .LEFT(p1_dpad_left),
-    .RIGHT(p1_dpad_right),
-    .DPAD_AIM_SPEED(lightgun_dpad_aim_speed),
+      .UP(p1_dpad_up),
+      .DOWN(p1_dpad_down),
+      .LEFT(p1_dpad_left),
+      .RIGHT(p1_dpad_right),
+      .DPAD_AIM_SPEED(lightgun_dpad_aim_speed),
 
-    .HDE(hblank_n),
-    .VDE(vblank_n),
-    .CLKPIX(dotclk),
+      .HDE(hblank_n),
+      .VDE(vblank_n),
+      .CLKPIX(dotclk),
 
-    .TARGET(LG_TARGET),
-    .SIZE(0),
-    .GUN_TYPE(lightgun_type),
+      .TARGET(LG_TARGET),
+      .SIZE(0),
+      .GUN_TYPE(lightgun_type),
 
-    .PORT_LATCH(JOY_STRB),
-    .PORT_CLK(JOY2_CLK),
-    .PORT_P6(LG_P6_out),
-    .PORT_DO(LG_DO)
+      .PORT_LATCH(JOY_STRB),
+      .PORT_CLK(JOY2_CLK),
+      .PORT_P6(LG_P6_out),
+      .PORT_DO(LG_DO)
   );
 
   // 1 [oooo|ooo) 7 - 1:+5V  2:Clk  3:Strobe   4:D0  5:D1  6: I/O  7:Gnd
