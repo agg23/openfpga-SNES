@@ -22,7 +22,7 @@
         "value": 1
       },
       {
-        "name": "Lightgun Options",
+        "name": "Controller Options",
         "id": 30,
         "type": "list",
         "enabled": true,
@@ -32,16 +32,20 @@
         "defaultval": 0,
         "options": [
           {
-            "name": "No Lightgun",
+            "name": "Gamepad",
             "value": 0
           },
           {
-            "name": "Use Super Scope",
+            "name": "Super Scope",
             "value": 1
           },
           {
-            "name": "Use Justifier",
-            "value": 2
+            "name": "Justifier",
+            "value": 3
+          },
+          {
+            "name": "Mouse",
+            "value": 4
           }
         ]
       },

@@ -344,9 +344,10 @@ module core_top (
         32'h00000104: begin
           lightgun_enabled <= bridge_wr_data[0];
           lightgun_type    <= bridge_wr_data[1];
+          mouse_enabled    <= bridge_wr_data[2];
         end
         32'h00000108: begin
-          lightgun_dpad_aim_speed <= bridge_wr_data[7:0];
+          dpad_aim_speed <= bridge_wr_data[7:0];
         end
         32'h00000200: begin
           use_4_3_video <= bridge_wr_data[0];
@@ -648,7 +649,8 @@ module core_top (
   reg multitap_enabled;
   reg lightgun_enabled;
   reg lightgun_type;
-  reg [7:0] lightgun_dpad_aim_speed;
+  reg [7:0] dpad_aim_speed;
+  reg mouse_enabled;
   reg use_4_3_video;
 
   reg [31:0] reset_delay = 0;
@@ -663,7 +665,8 @@ module core_top (
       .multitap_enabled(multitap_enabled),
       .lightgun_enabled(lightgun_enabled),
       .lightgun_type(lightgun_type),
-      .lightgun_dpad_aim_speed(lightgun_dpad_aim_speed),
+      .dpad_aim_speed(dpad_aim_speed),
+      .mouse_enabled(mouse_enabled),
 
       // Input
       .p1_button_a(cont1_key_s[4]),

@@ -15,7 +15,8 @@ module ioport
 	input	[11:0] JOYSTICK3,
 	input	[11:0] JOYSTICK4,
 
-	input	[24:0] MOUSE,
+	input [7:0]  DPAD_AIM_SPEED,
+
 	input        MOUSE_EN
 );
 
@@ -57,13 +58,6 @@ always @(posedge CLK) begin
 	else if (~old_clk & PORT_CLK) JOY_LATCH1 <= JOY_LATCH1 << 1;
 end
 
-reg  [10:0] curdx;
-reg  [10:0] curdy;
-wire [10:0] newdx = curdx + {{3{MOUSE[4]}},MOUSE[15:8]}  + ((speed == 2) ? {{3{MOUSE[4]}},MOUSE[15:8]}  : (speed == 1) ? {{4{MOUSE[4]}},MOUSE[15:9]}  : 11'd0);
-wire [10:0] newdy = curdy + {{3{MOUSE[5]}},MOUSE[23:16]} + ((speed == 2) ? {{3{MOUSE[5]}},MOUSE[23:16]} : (speed == 1) ? {{4{MOUSE[5]}},MOUSE[23:17]} : 11'd0);
-wire  [6:0] dx = curdx[10] ? -curdx[6:0] : curdx[6:0];
-wire  [6:0] dy = curdy[10] ? -curdy[6:0] : curdy[6:0];
-
 reg  [1:0] speed = 0;
 reg [31:0] MS_LATCH;
 always @(posedge CLK) begin
@@ -74,25 +68,7 @@ always @(posedge CLK) begin
 	old_latch <= PORT_LATCH;
 
 	if(old_latch & ~PORT_LATCH) begin
-		MS_LATCH <= ~{8'h00, MOUSE[1:0],speed,4'b0001,sdy,dy,sdx,dx};
-		curdx <= 0;
-		curdy <= 0;
-	end
-	else begin
-		old_stb <= MOUSE[24];
-		if(old_stb != MOUSE[24]) begin
-			if($signed(newdx) > $signed(10'd127)) curdx <= 10'd127;
-			else if($signed(newdx) < $signed(-10'd127)) curdx <= -10'd127;
-			else curdx <= newdx;
-			
-			sdx <= newdx[10];
-
-			if($signed(newdy) > $signed(10'd127)) curdy <= 10'd127;
-			else if($signed(newdy) < $signed(-10'd127)) curdy <= -10'd127;
-			else curdy <= newdy;
-
-			sdy <= ~newdy[10];
-		end;
+		MS_LATCH <= ~{8'h00, JOYSTICK1[5:4],speed,4'b0001,JOYSTICK1[3],JOYSTICK1[3] | JOYSTICK1[2] ? DPAD_AIM_SPEED[6:0] : 7'd0,JOYSTICK1[1],JOYSTICK1[0] | JOYSTICK1[1] ? DPAD_AIM_SPEED[6:0] : 7'd0};
 	end
 
 	if(~old_clk & PORT_CLK) begin
