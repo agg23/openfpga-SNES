@@ -335,6 +335,9 @@ module core_top (
 
     if (bridge_wr) begin
       casex (bridge_addr)
+        32'h00000000: begin
+          ioctl_download <= bridge_wr_data[0];
+        end
         32'h00000050: begin
           reset_delay <= 32'h100000;
         end
@@ -475,8 +478,8 @@ module core_top (
   always @(posedge clk_74a) begin
     dataslot_allcomplete_prev <= dataslot_allcomplete;
 
-    if (dataslot_requestwrite) ioctl_download <= 1;
-    else if (dataslot_allcomplete) ioctl_download <= 0;
+    // if (dataslot_requestwrite) ioctl_download <= 1;
+    // else if (dataslot_allcomplete) ioctl_download <= 0;
 
     if (dataslot_requestread || dataslot_requestwrite) save_download <= 1;
     else if (dataslot_allcomplete && ~dataslot_allcomplete_prev) save_download <= 0;

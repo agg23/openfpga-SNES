@@ -6,10 +6,17 @@ constant rambuf = 0x1b00
 
 constant dataslot = 0
 
+// Host init command
+constant host_init = 0x4002
+
 // Error vector (0x0)
 jp error_handler
 
 // Init vector (0x2)
+// Choose core
+ld r0,#0
+core r0
+
 ld r1,#dataslot // populate data slot
 open r1,r2
 close
@@ -22,10 +29,23 @@ ld r2,#0x200 // SMC header offset
 adjfo r1,r2
 
 dont_adjust_for_header:
+ld r1,#0 // Set address for write
+ld r2,#1 // Downloading start
+pmpw r1,r2 // Write ioctl_download = 1
+
 ld r1,#dataslot
 ld r14,#load_err_msg
-loadf r1
+loadf r1 // Load ROM
 jp nz,print
+
+ld r1,#0 // Set address for write
+ld r2,#0 // Downloading end
+pmpw r1,r2 // Write ioctl_download = 0
+
+// Start core
+ld r0,#host_init
+host r0,r0
+
 exit 0
 
 // Error handling
