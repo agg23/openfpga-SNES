@@ -47,6 +47,6 @@ Core supports virtual lightguns by selecting the "Super Scope" or "Justifier" op
 
 ### SNES Mouse
 
-Core supports a virtual SNES mouse by selecting "Mouse" under "Controller Options". The mouse can be moved with the D-Pad and left and right clicks can be performed by pressing the A and B buttons respectively. Mouse D-Pad movement sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+Core supports a virtual SNES mouse by selecting "Mouse" under "Controller Options". The mouse can be moved with the D-Pad or left joystick and left and right clicks can be performed by pressing the A and B buttons respectively. Mouse D-Pad movement sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
 
-**Note:** The dock firmware doesn't currently support a USB mouse.
+**NOTE:** The dock firmware doesn't currently support a USB mouse.

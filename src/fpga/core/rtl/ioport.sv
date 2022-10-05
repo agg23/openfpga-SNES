@@ -15,6 +15,9 @@ module ioport
 	input	[11:0] JOYSTICK3,
 	input	[11:0] JOYSTICK4,
 
+	input [7:0]  JOY_X,
+	input [7:0]  JOY_Y,
+
 	input [7:0]  DPAD_AIM_SPEED,
 
 	input        MOUSE_EN
@@ -40,6 +43,7 @@ wire [15:0] JOY1 = {JOYSTICK[{JOYn,1'b1}][5],  JOYSTICK[{JOYn,1'b1}][7],
                     JOYSTICK[{JOYn,1'b1}][4],  JOYSTICK[{JOYn,1'b1}][6],
                     JOYSTICK[{JOYn,1'b1}][8],  JOYSTICK[{JOYn,1'b1}][9], 4'b0000};
 
+// Gamepads
 reg [15:0] JOY_LATCH0;
 always @(posedge CLK) begin
 	reg old_clk, old_n;
@@ -58,6 +62,18 @@ always @(posedge CLK) begin
 	else if (~old_clk & PORT_CLK) JOY_LATCH1 <= JOY_LATCH1 << 1;
 end
 
+// Mouse
+wire dpad_mouse_sdy = JOYSTICK1[3];
+wire dpad_mouse_sdx = JOYSTICK1[1];
+wire [6:0] dpad_mouse_dy = JOYSTICK1[3] | JOYSTICK1[2] ? DPAD_AIM_SPEED[6:0] : 7'd0;
+wire [6:0] dpad_mouse_dx = JOYSTICK1[0] | JOYSTICK1[1] ? DPAD_AIM_SPEED[6:0] : 7'd0;
+wire joy_mouse_sdy = ~JOY_Y[7];
+wire joy_mouse_sdx = ~JOY_X[7];
+wire [6:0] joy_mouse_dy = joy_mouse_sdy ? (8'd128-JOY_Y) >> 4 : (JOY_Y[6:0]) >> 4;
+wire [6:0] joy_mouse_dx = joy_mouse_sdx ? (8'd128-JOY_X) >> 4 : (JOY_X[6:0]) >> 4;
+wire mouse_left = JOYSTICK1[5];
+wire mouse_right = JOYSTICK1[4];
+
 reg  [1:0] speed = 0;
 reg [31:0] MS_LATCH;
 always @(posedge CLK) begin
@@ -68,7 +84,11 @@ always @(posedge CLK) begin
 	old_latch <= PORT_LATCH;
 
 	if(old_latch & ~PORT_LATCH) begin
-		MS_LATCH <= ~{8'h00, JOYSTICK1[5:4],speed,4'b0001,JOYSTICK1[3],JOYSTICK1[3] | JOYSTICK1[2] ? DPAD_AIM_SPEED[6:0] : 7'd0,JOYSTICK1[1],JOYSTICK1[0] | JOYSTICK1[1] ? DPAD_AIM_SPEED[6:0] : 7'd0};
+		if(joy_mouse_dy + joy_mouse_dx > 0) begin
+			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, joy_mouse_sdy, joy_mouse_dy, joy_mouse_sdx, joy_mouse_dx};
+		end else begin
+			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, dpad_mouse_sdy, dpad_mouse_dy, dpad_mouse_sdx, dpad_mouse_dx};
+		end
 	end
 
 	if(~old_clk & PORT_CLK) begin

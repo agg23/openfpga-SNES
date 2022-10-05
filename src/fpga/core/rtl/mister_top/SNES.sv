@@ -771,6 +771,8 @@ module MAIN_SNES (
       .PORT_DO(JOY1_DO_t),
 
       .JOYSTICK1(joy_swap ? joy1 : joy0),
+      .JOY_X(p1_lstick_x),
+      .JOY_Y(p1_lstick_y),
 
       .DPAD_AIM_SPEED(dpad_aim_speed),
       .MOUSE_EN(mouse_enabled)
