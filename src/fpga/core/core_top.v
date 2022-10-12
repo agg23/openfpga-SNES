@@ -344,9 +344,13 @@ module core_top (
         32'h00000104: begin
           lightgun_enabled <= bridge_wr_data[0];
           lightgun_type    <= bridge_wr_data[1];
+          mouse_enabled    <= bridge_wr_data[2];
         end
         32'h00000108: begin
-          lightgun_dpad_aim_speed <= bridge_wr_data[7:0];
+          dpad_aim_speed <= bridge_wr_data[7:0];
+        end
+        32'h0000010C: begin
+          joystick_deadzone <= bridge_wr_data[7:0];
         end
         32'h00000200: begin
           use_4_3_video <= bridge_wr_data[0];
@@ -602,6 +606,14 @@ module core_top (
   wire [15:0] cont4_key_s;
   wire [31:0] cont1_joy_s;
 
+  wire [15:0] cont1_joy_x = cont1_joy_s[7:0];
+  wire [15:0] cont1_joy_y = cont1_joy_s[15:8];
+  wire [15:0] cont1_joy_dx = cont1_joy_x[7] ? cont1_joy_x[6:0] : 8'd128 - cont1_joy_x[6:0];
+  wire [15:0] cont1_joy_dy = cont1_joy_y[7] ? cont1_joy_y[6:0] : 8'd128 - cont1_joy_y[6:0];
+  wire [16:0] cont1_joy_total = cont1_joy_dx  + cont1_joy_dy;
+  wire [15:0] cont1_joy_x_calibrated = cont1_joy_total > joystick_deadzone ? cont1_joy_x : 8'd128;
+  wire [15:0] cont1_joy_y_calibrated = cont1_joy_total > joystick_deadzone ? cont1_joy_y : 8'd128;
+
   synch_3 #(
       .WIDTH(32)
   ) cont1_s (
@@ -648,7 +660,9 @@ module core_top (
   reg multitap_enabled;
   reg lightgun_enabled;
   reg lightgun_type;
-  reg [7:0] lightgun_dpad_aim_speed;
+  reg [7:0] dpad_aim_speed;
+  reg [7:0] joystick_deadzone;
+  reg mouse_enabled;
   reg use_4_3_video;
 
   reg [31:0] reset_delay = 0;
@@ -663,7 +677,8 @@ module core_top (
       .multitap_enabled(multitap_enabled),
       .lightgun_enabled(lightgun_enabled),
       .lightgun_type(lightgun_type),
-      .lightgun_dpad_aim_speed(lightgun_dpad_aim_speed),
+      .dpad_aim_speed(dpad_aim_speed),
+      .mouse_enabled(mouse_enabled),
 
       // Input
       .p1_button_a(cont1_key_s[4]),
@@ -679,8 +694,8 @@ module core_top (
       .p1_dpad_left(cont1_key_s[2]),
       .p1_dpad_right(cont1_key_s[3]),
 
-      .p1_lstick_x(cont1_joy_s[7:0]),
-      .p1_lstick_y(cont1_joy_s[15:8]),
+      .p1_lstick_x(cont1_joy_x_calibrated),
+      .p1_lstick_y(cont1_joy_y_calibrated),
 
       .p2_button_a(cont2_key_s[4]),
       .p2_button_b(cont2_key_s[5]),

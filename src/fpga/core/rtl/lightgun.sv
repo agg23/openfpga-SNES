@@ -78,7 +78,6 @@ reg  [8:0] lg_x, lg_y, x, y;
 wire [9:0] new_x = {lg_x[8],lg_x};// + {{2{MOUSE[4]}},MOUSE[15:8]};
 wire [9:0] new_y = {lg_y[8],lg_y};// - {{2{MOUSE[5]}},MOUSE[23:16]};
 
-// HACK
 reg [7:0] old_joy_x;
 reg [7:0] old_joy_y;
 reg [8:0] j_x;

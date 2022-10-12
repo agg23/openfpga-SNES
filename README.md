@@ -39,8 +39,23 @@ The Analogue Pocket framework doesn't currently allow for customizing video mode
 
 Proper PAL support also requires editing these files to have an expanded vertical pixel height.
 
+### Controller Options
+
+There are several options provided for selecting which type of controller the core will emulate.
+
+* `Gamepad` - The standard SNES controller used with most games.
+* `Super Scope` - The Super Scope lightgun that's used with most lightgun games. See Lightguns for more details.
+* `Justifier` - The Justifier lightgun that's used with Lethal Enforcers. See Lightguns for more details.
+* `Mouse` - The SNES mouse that's used with Mario Paint and several other games. See SNES Mouse for more details.
+
 ### Lightguns
 
-Core supports virtual lightguns by enabling the "Use Super Scope" or "Use Justifier" settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+Core supports virtual lightguns by selecting the "Super Scope" or "Justifier" options under "Controller Options". Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
 
 **NOTE:** Joystick support for aiming only appears to work when a controller is paired over Bluetooth and not connected to the Analogue Dock directly by USB.
+
+### SNES Mouse
+
+Core supports a virtual SNES mouse by selecting "Mouse" under "Controller Options". The mouse can be moved with the D-Pad or left joystick and left and right clicks can be performed by pressing the A and B buttons respectively. Mouse D-Pad movement sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+
+**NOTE:** The dock firmware doesn't currently support a USB mouse.

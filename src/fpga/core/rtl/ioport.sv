@@ -15,7 +15,11 @@ module ioport
 	input	[11:0] JOYSTICK3,
 	input	[11:0] JOYSTICK4,
 
-	input	[24:0] MOUSE,
+	input [7:0]  JOY_X,
+	input [7:0]  JOY_Y,
+
+	input [7:0]  DPAD_AIM_SPEED,
+
 	input        MOUSE_EN
 );
 
@@ -39,6 +43,7 @@ wire [15:0] JOY1 = {JOYSTICK[{JOYn,1'b1}][5],  JOYSTICK[{JOYn,1'b1}][7],
                     JOYSTICK[{JOYn,1'b1}][4],  JOYSTICK[{JOYn,1'b1}][6],
                     JOYSTICK[{JOYn,1'b1}][8],  JOYSTICK[{JOYn,1'b1}][9], 4'b0000};
 
+// Gamepads
 reg [15:0] JOY_LATCH0;
 always @(posedge CLK) begin
 	reg old_clk, old_n;
@@ -57,13 +62,19 @@ always @(posedge CLK) begin
 	else if (~old_clk & PORT_CLK) JOY_LATCH1 <= JOY_LATCH1 << 1;
 end
 
-reg  [10:0] curdx;
-reg  [10:0] curdy;
-wire [10:0] newdx = curdx + {{3{MOUSE[4]}},MOUSE[15:8]}  + ((speed == 2) ? {{3{MOUSE[4]}},MOUSE[15:8]}  : (speed == 1) ? {{4{MOUSE[4]}},MOUSE[15:9]}  : 11'd0);
-wire [10:0] newdy = curdy + {{3{MOUSE[5]}},MOUSE[23:16]} + ((speed == 2) ? {{3{MOUSE[5]}},MOUSE[23:16]} : (speed == 1) ? {{4{MOUSE[5]}},MOUSE[23:17]} : 11'd0);
-wire  [6:0] dx = curdx[10] ? -curdx[6:0] : curdx[6:0];
-wire  [6:0] dy = curdy[10] ? -curdy[6:0] : curdy[6:0];
+// Mouse
+wire dpad_mouse_sdy = JOYSTICK1[3];
+wire dpad_mouse_sdx = JOYSTICK1[1];
+wire [6:0] dpad_mouse_dy = JOYSTICK1[3] | JOYSTICK1[2] ? DPAD_AIM_SPEED[6:0] : 7'd0;
+wire [6:0] dpad_mouse_dx = JOYSTICK1[0] | JOYSTICK1[1] ? DPAD_AIM_SPEED[6:0] : 7'd0;
+wire joy_mouse_sdy = ~JOY_Y[7];
+wire joy_mouse_sdx = ~JOY_X[7];
+wire [6:0] joy_mouse_dy = joy_mouse_sdy ? (8'd128-JOY_Y) >> 4 : (JOY_Y[6:0]) >> 4;
+wire [6:0] joy_mouse_dx = joy_mouse_sdx ? (8'd128-JOY_X) >> 4 : (JOY_X[6:0]) >> 4;
+wire mouse_left = JOYSTICK1[5];
+wire mouse_right = JOYSTICK1[4];
 
+reg joystick_detected = 0;
 reg  [1:0] speed = 0;
 reg [31:0] MS_LATCH;
 always @(posedge CLK) begin
@@ -73,26 +84,15 @@ always @(posedge CLK) begin
 	old_clk <= PORT_CLK;
 	old_latch <= PORT_LATCH;
 
+	if (JOY_Y || JOY_X)
+		joystick_detected <= 1'b1;
+
 	if(old_latch & ~PORT_LATCH) begin
-		MS_LATCH <= ~{8'h00, MOUSE[1:0],speed,4'b0001,sdy,dy,sdx,dx};
-		curdx <= 0;
-		curdy <= 0;
-	end
-	else begin
-		old_stb <= MOUSE[24];
-		if(old_stb != MOUSE[24]) begin
-			if($signed(newdx) > $signed(10'd127)) curdx <= 10'd127;
-			else if($signed(newdx) < $signed(-10'd127)) curdx <= -10'd127;
-			else curdx <= newdx;
-			
-			sdx <= newdx[10];
-
-			if($signed(newdy) > $signed(10'd127)) curdy <= 10'd127;
-			else if($signed(newdy) < $signed(-10'd127)) curdy <= -10'd127;
-			else curdy <= newdy;
-
-			sdy <= ~newdy[10];
-		end;
+		if(joystick_detected && (joy_mouse_dy + joy_mouse_dx > 0)) begin
+			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, joy_mouse_sdy, joy_mouse_dy, joy_mouse_sdx, joy_mouse_dx};
+		end else begin
+			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, dpad_mouse_sdy, dpad_mouse_dy, dpad_mouse_sdx, dpad_mouse_dx};
+		end
 	end
 
 	if(~old_clk & PORT_CLK) begin
