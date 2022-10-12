@@ -74,6 +74,7 @@ wire [6:0] joy_mouse_dx = joy_mouse_sdx ? (8'd128-JOY_X) >> 4 : (JOY_X[6:0]) >> 
 wire mouse_left = JOYSTICK1[5];
 wire mouse_right = JOYSTICK1[4];
 
+reg joystick_detected = 0;
 reg  [1:0] speed = 0;
 reg [31:0] MS_LATCH;
 always @(posedge CLK) begin
@@ -83,8 +84,11 @@ always @(posedge CLK) begin
 	old_clk <= PORT_CLK;
 	old_latch <= PORT_LATCH;
 
+	if (JOY_Y || JOY_X)
+		joystick_detected <= 1'b1;
+
 	if(old_latch & ~PORT_LATCH) begin
-		if(joy_mouse_dy + joy_mouse_dx > 0) begin
+		if(joystick_detected && (joy_mouse_dy + joy_mouse_dx > 0)) begin
 			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, joy_mouse_sdy, joy_mouse_dy, joy_mouse_sdx, joy_mouse_dx};
 		end else begin
 			MS_LATCH <= ~{8'h00, mouse_left, mouse_right, speed, 4'b0001, dpad_mouse_sdy, dpad_mouse_dy, dpad_mouse_sdx, dpad_mouse_dx};
