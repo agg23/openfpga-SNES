@@ -67,6 +67,23 @@
         }
       },
       {
+        "name": "Joystick Deadzone",
+        "id": 35,
+        "type": "slider_u32",
+        "enabled": true,
+        "address": "0x0000010C",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 8,
+        "graphical": {
+          "signed": false,
+          "min": 0,
+          "max": 64,
+          "adjust_small": 1,
+          "adjust_large": 10
+        }
+      },
+      {
         "name": "Use 4:3 video",
         "id": 40,
         "type": "check",
