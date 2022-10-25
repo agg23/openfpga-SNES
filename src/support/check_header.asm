@@ -1,3 +1,6 @@
+constant base_address = 0x1900
+constant output_address = 0x1904
+
 constant rambuf = 0x1b00 // Starts at 0xZZZBD in ROM
 constant header_start_mem = rambuf + 0x3 // Offset to 0xZZZC0
 
@@ -20,83 +23,109 @@ constant checksum_addr = header_start_mem + 0x1E // FDE/F
 // r12: chip_type (stored 1)
 // r13: score     (stored 0)
 
-macro check_header(variable address, variable output_address) {
+// Function
+// Input: r1 - Address, r2 - Output address
+// Clobbers r1, r2, r10, r11, r12, r13
+macro check_header(variable base_address_input, variable output_address_input) {
+  ld r1,#base_address_input
+  ld r2,#output_address_input
+  ld.w (base_address),r1 // Store base_address into RAM
+  ld.w (output_address),r2 // Store output_address into RAM
+
   log_string("Starting header at:")
-  log_hex(address)
-  load_header_values_into_mem(address)
+  log_hex(base_address_input)
+  call load_header_values_into_mem
 
   log_string("Loaded header data")
 
   // Score is stored in r13
   ld r13,#0
-  validate_checksum()
-  validate_mapping_mode(address)
-  validate_simple_values()
-  choose_ramsz()
-  choose_chip_type()
-  choose_region()
+  call validate_checksum
+  validate_mapping_mode(base_address_input)
+  call validate_simple_values
+  call choose_ramsz
+  call choose_chip_type
+  call choose_region
 
   log_string("Storing header data at:")
-  ld r1,#output_address
+  ld.w r1,(output_address)
   hex.w r1
 
-  ld.b (r1),r13
+  ld.b (r1),r13 // score
   add r1,#1
-  ld.b (r1),r12
+  ld.b (r1),r12 // chip_type
   add r1,#1
-  ld.b (r1),r11
+  ld.b (r1),r11 // ramsz
   add r1,#1
-  ld.b (r1),r10
+  ld.b (r1),r10 // PAL
 
-  log_string("Finished header")
+  log_string("Finished header. Score:")
+  hex.b r13
 }
 
-macro validate_checksum() {
+validate_checksum:
   // if (checksum != 0 && checksum_compliment != 0 && checksum + checksum_compliment == 'hFFFF)
   log_string("Checking checksum")
   ld.w r1,(checksum_addr) // Load checksum
-  jp z, skip // If checksum 0, skip
+  jp z, finish_checksum // If checksum 0, skip
 
   ld.w r2,(checksum_complement_addr) // Load checksum complement
-  jp z, skip // If complement 0, skip
+  jp z, finish_checksum // If complement 0, skip
 
   add r1,r2 // Add checksum and complement
   cmp r1,#0xFFFF // Compare against 0xFFFF
-  jp nz, skip // If not equal, skip
+  jp nz, finish_checksum // If not equal, skip
 
   // Increment score
   add r13,#4
   log_string("Score checksum +4")
 
-  skip:
+  finish_checksum:
   log_string("Finished checksum")
-}
+  ret
 
-macro validate_mapping_mode(variable base_address) {
+macro validate_mapping_mode(variable address) {
   log_string("Checking mapping mode")
   ld.w r1,(mapping_mode_addr)
 
-  if (base_address == 0x7FBC) {
+  if (address == 0x7FBC) {
     cmp r1,#0x20 // Compare against mapper 0x20 (LoROM)
-    jp nz, noscore
+    jp nz, noscore{#}
     cmp r1,#0x22 // Compare against mapper 0x22 (SDD1)
-    jp nz, noscore
-  } else if (base_address == 0xFFBC) {
+    jp nz, noscore{#}
+  } else if (address == 0xFFBC) {
     cmp r1,#0x21 // Compare against mapper 0x21 (HiROM)
-    jp nz, noscore
-  }  else if (base_address == 0x40FFBC) {
+    jp nz, noscore{#}
+  }  else if (address == 0x40FFBC) {
     cmp r1,#0x25 // Compare against mapper 0x25 (ExHiROM)
-    jp nz, noscore
+    jp nz, noscore{#}
   }
 
   add r13,#2 // Add 2 to score
   log_string("Score mapper +2")
 
-  noscore:
+  noscore{#}:
   log_string("Finished mapping mode")
 }
 
-macro validate_simple_values() {
+macro check_simple_value_inequality(variable address, variable less_than, define name) {
+  // Check address < less_than
+  ld.b r1,(address)
+  cmp r1,#less_than // r1 - less_than
+  jp nc, end_inequality{#} // If carry set, address < less_than
+
+  add r15,#1
+  log_string("Score {name} +1")
+
+  end_inequality{#}:
+}
+
+macro check_value_equality(variable address, variable compare) {
+  ld.b r1,(address)
+  cmp r1,#compare
+}
+
+validate_simple_values:
   log_string("Checking simple values")
 
   // Check dev id is 0x33
@@ -114,9 +143,9 @@ macro validate_simple_values() {
   check_simple_value_inequality(region_addr, 14, region)
 
   log_string("Finished simple values")
-}
+  ret
 
-macro choose_ramsz() {
+choose_ramsz:
   log_string("Checking RAMSZ")
   ld.b r11,(sram_size_addr) // ramsz is stored in r11
 
@@ -130,9 +159,9 @@ macro choose_ramsz() {
 
   end_choose_ramsz:
   log_string("Finished RAMSZ")
-}
+  ret
 
-macro choose_chip_type() {
+choose_chip_type:
   log_string("Checking chip type")
   ld r12,#0 // chip_type is stored in r12
 
@@ -337,9 +366,10 @@ macro choose_chip_type() {
   log_string("Finished chip type, ramsz:")
   hex.b r12
   hex.b r11
-}
 
-macro choose_region() {
+  ret
+
+choose_region:
   log_string("Checking region")
   // if ((region >= 'h02 && region <= 'h0C) || region == 'h11) begin
   check_value_equality(region_addr, 0x2)
@@ -360,34 +390,15 @@ macro choose_region() {
   end_region:
   log_string("Finished region:")
   hex.b r10
-}
-
-macro check_simple_value_inequality(variable address, variable less_than, name) {
-  // Check address < less_than
-  ld.b r1,(address)
-  cmp r1,#less_than // r1 - less_than
-  jp nc, {name}_end // If carry set, address < less_than
-
-  add r15,#1
-  log_string("Score {name} +1")
-
-  {name}_end:
-  nop
-}
-
-macro check_value_equality(variable address, variable compare) {
-  ld.b r1,(address)
-  cmp r1,#compare
-}
+  ret
 
 // Load all header values from file into memory
-macro load_header_values_into_mem(variable address) {
-  ld r1,#address
+load_header_values_into_mem:
   seek()
   ld r1,#0x44 // Load 0x44 bytes
   ld r2,#rambuf // Read into read_space memory
   read()
-}
+  ret
 
 // Fetch a header byte value into register
 //macro fetch_header_byte(variable address) {
