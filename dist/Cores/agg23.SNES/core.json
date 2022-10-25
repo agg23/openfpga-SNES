@@ -26,9 +26,14 @@
     },
     "cores": [
       {
-        "name": "default",
+        "name": "main",
         "id": 0,
         "filename": "snes_main.rev"
+      },
+      {
+        "name": "SPCSDD1",
+        "id": 1,
+        "filename": "snes_spc.rev"
       }
     ]
   }

@@ -338,6 +338,18 @@ module core_top (
         32'h00000000: begin
           ioctl_download <= bridge_wr_data[0];
         end
+        32'h00000004: begin
+          rom_size <= bridge_wr_data[3:0];
+        end
+        32'h00000008: begin
+          rom_type <= bridge_wr_data[7:0];
+        end
+        32'h0000000C: begin
+          ram_size <= bridge_wr_data[3:0];
+        end
+        32'h00000010: begin
+          PAL <= bridge_wr_data[0];
+        end
         32'h00000050: begin
           reset_delay <= 32'h100000;
         end
@@ -485,6 +497,11 @@ module core_top (
     else if (dataslot_allcomplete && ~dataslot_allcomplete_prev) save_download <= 0;
   end
 
+  reg [7:0] rom_type;
+  reg [3:0] rom_size;
+  reg [3:0] ram_size;
+  reg PAL;
+
   wire save_download_s;
 
   synch_3 save_s (
@@ -564,33 +581,18 @@ module core_top (
       .read_data(sd_buff_din)
   );
 
-  reg [ 2:0] datatable_div = 0;
-  reg [31:0] rom_file_size = 0;
-
   always @(posedge clk_74a or negedge pll_core_locked) begin
     if (~pll_core_locked) begin
       datatable_addr <= 0;
       datatable_data <= 0;
       datatable_wren <= 0;
     end else begin
-      if (datatable_div > 4) begin
-        // Write sram size half of the time
-        datatable_wren <= 1;
-        // sram_size is the size of the config value in the ROM. Convert to actual size
-        datatable_data <= sram_size ? 32'd1024 << sram_size : 32'h0;
-        // Data slot index 1, not id 1
-        datatable_addr <= 1 * 2 + 1;
-      end else begin
-        datatable_wren <= 0;
-        // Read ROM size rest of the time
-        datatable_addr <= 1;
-
-        if (datatable_div == 4) begin
-          rom_file_size <= datatable_q;
-        end
-      end
-
-      datatable_div <= datatable_div + 1;
+      // Write sram size half of the time
+      datatable_wren <= 1;
+      // sram_size is the size of the config value in the ROM. Convert to actual size
+      datatable_data <= sram_size ? 32'd1024 << sram_size : 32'h0;
+      // Data slot index 1, not id 1
+      datatable_addr <= 1 * 2 + 1;
     end
   end
 
@@ -644,8 +646,6 @@ module core_top (
       cont1_joy_s,
       clk_sys_21_48
   );
-
-  wire PAL;
 
   // Settings
   reg multitap_enabled;
@@ -725,11 +725,15 @@ module core_top (
       .p4_dpad_right(cont4_key_s[3]),
 
       // ROM loading
-      .rom_file_size(rom_file_size),
       .ioctl_download(ioctl_download),
       .ioctl_wr(ioctl_wr),
       .ioctl_addr(ioctl_addr),
       .ioctl_dout(ioctl_dout),
+
+      .rom_type(rom_type),
+      .rom_size(rom_size),
+      .ram_size(ram_size),
+      .PAL(PAL),
 
       // Save input/output
       .save_download(save_download_s),
@@ -787,8 +791,6 @@ module core_top (
       .video_r(video_rgb_snes[23:16]),
       .video_g(video_rgb_snes[15:8]),
       .video_b(video_rgb_snes[7:0]),
-
-      .PAL(PAL),
 
       // Audio
       .audio_l(audio_l),

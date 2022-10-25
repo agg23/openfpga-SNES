@@ -55,6 +55,24 @@
         "parameters": "0x109",
         "extensions": ["smc", "sfc"],
         "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Star Ocean (J) [!].smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Far East of Eden Zero (J).smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
       }
     ]
   }

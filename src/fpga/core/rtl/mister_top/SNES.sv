@@ -67,11 +67,15 @@ module MAIN_SNES (
     input wire p4_dpad_right,
 
     // ROM loading
-    input wire [31:0] rom_file_size,
     input wire ioctl_download,
     input wire ioctl_wr,
     input wire [24:0] ioctl_addr,
     input wire [15:0] ioctl_dout,
+
+    input wire [7:0] rom_type,
+    input wire [3:0] rom_size,
+    input wire [3:0] ram_size,
+    input wire PAL,
 
     // Saves
     input wire save_download,
@@ -131,8 +135,6 @@ module MAIN_SNES (
     output wire [7:0] video_g,
     output wire [7:0] video_b,
 
-    output reg PAL,
-
     // Audio
     output wire [15:0] audio_l,
     output wire [15:0] audio_r
@@ -187,27 +189,6 @@ module MAIN_SNES (
 
   //////////////////////////  ROM DETECT  /////////////////////////////////
 
-  wire [3:0] rom_size;
-  wire [3:0] ram_size;
-  wire has_header;
-
-  rom_parser rom_parser (
-      .clk_mem(clk_sys_21_48),
-
-      .rom_file_size(rom_file_size),
-
-      .addr(ioctl_addr),
-      .data(ioctl_dout),
-      .downloading(ioctl_download),
-
-      .has_header(has_header),
-      .parsed_rom_type(rom_type),
-      .parsed_rom_size(rom_size),
-      .parsed_sram_size(ram_size),
-      .pal(PAL)
-  );
-
-  wire [7:0] rom_type;
   reg [23:0] rom_mask, ram_mask;
   // Replaced by rom_parser
   // always @(posedge clk_sys) begin
@@ -493,13 +474,11 @@ module MAIN_SNES (
   wire [15:0] ROM_D;
   wire [15:0] ROM_Q;
 
-  wire [24:0] addr_download = has_header ? ioctl_addr - 10'd512 : ioctl_addr;
-
   sdram sdram (
       .init(0),  //~clock_locked),
       .clk(clk_mem),
 
-      .addr(cart_download ? addr_download : ROM_ADDR),
+      .addr(cart_download ? ioctl_addr : ROM_ADDR),
       .din (cart_download ? ioctl_dout : ROM_D),
       .dout(ROM_Q),
       .rd  (~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),

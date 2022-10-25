@@ -306,7 +306,7 @@ choose_chip_type:
 
   sdd1: // if (mapping_mode == 'h32 && (rom_type == 'h43 || rom_type == 'h45) && rom_size < 14) begin
   log_string("Checking SDD1")
-  check_value_equality(mapping_mode_addr, 0x23)
+  check_value_equality(mapping_mode_addr, 0x32)
   jp nz, sa1
   check_value_equality(rom_size_addr, 14) // Only mark SDD1 if rom_size < 14
   jp nc, sa1
@@ -371,6 +371,7 @@ choose_chip_type:
 
 choose_region:
   log_string("Checking region")
+  ld r10,#0
   // if ((region >= 'h02 && region <= 'h0C) || region == 'h11) begin
   check_value_equality(region_addr, 0x2)
   jp c, region_11 // If region < 2, jump to region_11
