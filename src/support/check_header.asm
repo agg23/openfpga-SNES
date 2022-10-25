@@ -14,6 +14,11 @@ constant version_number_addr = header_start_mem + 0x1B // FDB
 constant checksum_complement_addr = header_start_mem + 0x1C // FDC/D
 constant checksum_addr = header_start_mem + 0x1E // FDE/F
 
+// Registers:
+// r10: PAL
+// r11: ramsz
+// r12: chip_type
+
 macro check_header(variable address) {
   log_string("Starting header at:")
   log_hex(address)
@@ -27,6 +32,7 @@ macro check_header(variable address) {
   validate_mapping_mode(address)
   validate_simple_values()
   choose_chip_type()
+  choose_region()
 
   log_string("Finished header")
 }
@@ -302,6 +308,29 @@ macro choose_chip_type() {
   log_string("Finished chip type, ramsz:")
   hex.b r12
   hex.b r11
+}
+
+macro choose_region() {
+  log_string("Checking region")
+  // if ((region >= 'h02 && region <= 'h0C) || region == 'h11) begin
+  check_value_equality(region_addr, 0x2)
+  jp c, region_11 // If region < 2, jump to region_11
+
+  ld r2,#0xC
+  cmp r2,r1
+  jp c, region_11 // If region > 0xC, jump to region_11
+  jp set_pal // It's PAL
+
+  region_11:
+  cmp r1,#0x11 // If region == 0x11
+  jp nz, end_region
+
+  set_pal:
+  ld r10,#1
+
+  end_region:
+  log_string("Finished region:")
+  hex.b r10
 }
 
 macro check_simple_value_inequality(variable address, variable less_than, name) {

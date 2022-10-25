@@ -1,6 +1,7 @@
 *.rbf_r
 *.zip
 dist/**/*.rev
+src/**/*.bin
 src/sim/work/
 src/sim/*.hex
 src/sim/*.mem
