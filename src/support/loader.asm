@@ -10,7 +10,9 @@ constant dataslot = 0
 constant host_init = 0x4002
 
 // Addresses
-constant small_header = 0x007FBD
+constant lorom_header_seek = 0x007FBD
+
+constant lorom_ouput = 0x1A00
 
 // Error vector (0x0)
 jp error_handler
@@ -29,7 +31,7 @@ start:
 ld r1,#dataslot // populate data slot
 open r1,r2
 
-check_header(small_header)
+check_header(lorom_header_seek, lorom_ouput)
 
 error_handler:
 ld r14,#test_err_msg

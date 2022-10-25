@@ -15,11 +15,12 @@ constant checksum_complement_addr = header_start_mem + 0x1C // FDC/D
 constant checksum_addr = header_start_mem + 0x1E // FDE/F
 
 // Registers:
-// r10: PAL
-// r11: ramsz
-// r12: chip_type
+// r10: PAL       (stored 3)
+// r11: ramsz     (stored 2)
+// r12: chip_type (stored 1)
+// r13: score     (stored 0)
 
-macro check_header(variable address) {
+macro check_header(variable address, variable output_address) {
   log_string("Starting header at:")
   log_hex(address)
   load_header_values_into_mem(address)
@@ -31,8 +32,21 @@ macro check_header(variable address) {
   validate_checksum()
   validate_mapping_mode(address)
   validate_simple_values()
+  choose_ramsz()
   choose_chip_type()
   choose_region()
+
+  log_string("Storing header data at:")
+  ld r1,#output_address
+  hex.w r1
+
+  ld.b (r1),r13
+  add r1,#1
+  ld.b (r1),r12
+  add r1,#1
+  ld.b (r1),r11
+  add r1,#1
+  ld.b (r1),r10
 
   log_string("Finished header")
 }
@@ -102,9 +116,24 @@ macro validate_simple_values() {
   log_string("Finished simple values")
 }
 
+macro choose_ramsz() {
+  log_string("Checking RAMSZ")
+  ld.b r11,(sram_size_addr) // ramsz is stored in r11
+
+  ld r1,#8
+  cmp r11,r1 // r11 - 8
+  jp nc, zero_sram // If r11 >= 8
+  jp end_choose_ramsz
+
+  zero_sram:
+  ld r11,#0
+
+  end_choose_ramsz:
+  log_string("Finished RAMSZ")
+}
+
 macro choose_chip_type() {
   log_string("Checking chip type")
-  ld r11,#0 // ramsz is stored in r11
   ld r12,#0 // chip_type is stored in r12
 
   // if (mapping_mode == 'h20 && rom_type == 'h03) begin
