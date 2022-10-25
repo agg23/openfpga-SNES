@@ -21,7 +21,8 @@
       "hardware": {
         "link_port": false,
         "cartridge_adapter": -1
-      }
+      },
+      "chip32_vm": "loader.bin"
     },
     "cores": [
       {
