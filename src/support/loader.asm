@@ -3,7 +3,6 @@ output "loader.bin", create
 
 constant DEBUG = 1
 
-// we will put data into here that we're working on.  It's the last 1K of the 8K chip32 memory
 constant dataslot = 0
 
 // Host init command

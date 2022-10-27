@@ -3,11 +3,11 @@
     "magic": "APF_VER_1",
     "data_slots": [
       {
-        "name": "SMC",
+        "name": "Cartridge",
         "id": 0,
         "required": true,
         "parameters": "0x109",
-        "extensions": ["smc", "sfc"],
+        "extensions": ["smc", "sfc", "bs"],
         "address": "0x10000000"
       },
       {
