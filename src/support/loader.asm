@@ -68,6 +68,8 @@ ld r2,#0x1000000 // Max ROM size
 ld.l r3,(rom_file_size) // ROM file size
 
 rom_size_loop:
+cmp r1,#0
+jp z, finished_rom_size // If romsz == 0
 cmp r2,r3
 jp c, finished_rom_size // If size > r2
 asl r3,#1 // Else shift size left 1
@@ -118,24 +120,25 @@ ld.b r3,(exhirom_output + 3) // Get PAL
 // Set core
 set_core:
 log_string("Setting core")
-and r1,#0xF0 // Get only the high nibble
+ld r4,r1 // Copy chip type to r4
+and r4,#0xF0 // Get only the high nibble
 
 ld r8,#0
 core r8 // Default to the main core
 
-cmp r1,#0xD0 // Check if SPC7110
+cmp r4,#0xD0 // Check if SPC7110
 jp nz, bit_sdd1
 log_string("Using SPC7110")
 jp expansion_core // It's SPC7110
 
 bit_sdd1:
-cmp r1,#0x50 // Check if SDD1
+cmp r4,#0x50 // Check if SDD1
 jp nz, bit_bsx
 log_string("Using SDD1")
 jp expansion_core // It's SDD1
 
 bit_bsx:
-cmp r1,#0x30 // Check if BSX
+cmp r4,#0x30 // Check if BSX
 jp nz, send_chip
 log_string("Using BSX")
 // It's BSX
