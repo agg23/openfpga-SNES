@@ -1,7 +1,7 @@
 architecture chip32.vm
 output "loader.bin", create
 
-constant DEBUG = 1
+constant DEBUG = 0
 
 constant rom_dataslot = 0
 constant save_dataslot = 10
