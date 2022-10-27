@@ -3,7 +3,8 @@ output "loader.bin", create
 
 constant DEBUG = 1
 
-constant dataslot = 0
+constant rom_dataslot = 0
+constant save_dataslot = 10
 
 // Host init command
 constant host_init = 0x4002
@@ -35,7 +36,7 @@ include "check_header.asm"
 align(2)
 
 start:
-ld r1,#dataslot // populate data slot
+ld r1,#rom_dataslot // populate data slot
 open r1,r2
 
 ld.l (rom_file_size),r2
@@ -166,8 +167,20 @@ ld r1,#0 // Set address for write
 ld r2,#1 // Downloading start
 pmpw r1,r2 // Write ioctl_download = 1
 
-ld r1,#dataslot
+ld r1,#rom_dataslot
 loadf r1 // Load ROM
+
+ld r1,#0 // Set address for write
+ld r2,#0 // Downloading end
+pmpw r1,r2 // Write ioctl_download = 0
+
+// Load save
+ld r1,#0 // Set address for write
+ld r2,#1 // Downloading start
+pmpw r1,r2 // Write ioctl_download = 1
+
+ld r1,#save_dataslot
+loadf r1 // Load Save
 
 ld r1,#0 // Set address for write
 ld r2,#0 // Downloading end
