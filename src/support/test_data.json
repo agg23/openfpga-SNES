@@ -14,6 +14,15 @@
       {
         "name": "SMC",
         "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Super Mario World With Header.smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
         "filename": "C:/Users/adam/Downloads/SNES/Super Mario World 2 - Yoshi's Island.smc",
         "required": true,
         "parameters": "0x109",

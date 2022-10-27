@@ -11,6 +11,7 @@ constant host_init = 0x4002
 
 // Addresses
 constant rom_file_size = 0x1000
+constant header_offset_addr = 0x1004
 
 constant lorom_header_seek = 0x007FBD
 constant hirom_header_seek = 0x00FFBD
@@ -40,7 +41,16 @@ ld r1,#rom_dataslot // populate data slot
 open r1,r2
 
 ld.l (rom_file_size),r2
+and r2,#0x200 // AND with 0x200, which implies SMC header
+jp z, no_header // If empty, no header
+log_string("File has header")
+jp store_header
 
+no_header:
+log_string("File doesn't have header")
+
+store_header:
+ld.w (header_offset_addr),r2 // Store header offset
 check_header(lorom_header_seek, lorom_output)
 
 // Check headers at 0xFFBD
@@ -171,6 +181,8 @@ ld r2,#1 // Downloading start
 pmpw r1,r2 // Write ioctl_download = 1
 
 ld r1,#rom_dataslot
+ld.w r2,(header_offset_addr) // Get header offset
+adjfo r1,r2 // Offset by header offset
 loadf r1 // Load ROM
 
 ld r1,#0 // Set address for write

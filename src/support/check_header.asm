@@ -24,16 +24,21 @@ constant checksum_addr = header_start_mem + 0x1E // FDE/F
 // r13: score     (stored 0)
 
 // Function
-// Input: r1 - Address, r2 - Output address
-// Clobbers r1, r2, r10, r11, r12, r13
+// Input: r3 - SMC header status
+// Clobbers r1, r2, r3, r10, r11, r12, r13
 macro check_header(variable base_address_input, variable output_address_input) {
   ld r1,#base_address_input
   ld r2,#output_address_input
+
+  ld.w r3,(header_offset_addr) // Get header offset
+  add r1,r3 // Add offset to base address
+
   ld.w (base_address),r1 // Store base_address into RAM
   ld.w (output_address),r2 // Store output_address into RAM
 
   log_string("Starting header at:")
-  log_hex(base_address_input)
+  hex.l r1
+  hex.l r3
   call load_header_values_into_mem
 
   log_string("Loaded header data")
