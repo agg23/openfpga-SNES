@@ -687,7 +687,7 @@ module core_top (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
 
-      .core_reset(~pll_core_locked || reset_delay > 0),
+      .core_reset(~pll_core_locked || pal_transitioning || reset_delay > 0),
 
       .rtc(rtc),
 
@@ -900,6 +900,9 @@ module core_top (
 
   wire pll_core_locked;
 
+  wire [63:0] reconfig_to_pll;
+  wire [63:0] reconfig_from_pll;
+
   mf_pllbase mp1 (
       .refclk(clk_74a),
       .rst   (0),
@@ -909,7 +912,76 @@ module core_top (
       .outclk_2(clk_video_5_37),
       .outclk_3(clk_video_5_37_90deg),
 
-      .locked(pll_core_locked)
+      .locked(pll_core_locked),
+
+      .reconfig_to_pll  (reconfig_to_pll),
+      .reconfig_from_pll(reconfig_from_pll)
   );
+
+  wire        cfg_waitrequest;
+  reg         cfg_write;
+  reg  [ 5:0] cfg_address;
+  reg  [31:0] cfg_data;
+
+  pll_reconfig pll_reconfig (
+      .mgmt_clk(clk_74a),
+      .mgmt_reset(0),
+      .mgmt_waitrequest(cfg_waitrequest),
+      .mgmt_read(0),
+      // .mgmt_readdata(),
+      .mgmt_write(cfg_write),
+      .mgmt_address(cfg_address),
+      .mgmt_writedata(cfg_data),
+      .reconfig_to_pll(reconfig_to_pll),
+      .reconfig_from_pll(reconfig_from_pll)
+  );
+
+  localparam PLL_MODE = 1;
+  localparam PLL_MIF_ADDR = 3;
+  localparam PLL_START = 5;
+
+  reg [2:0] pal_state = 0;
+
+  wire pal_transitioning = pal_state > 0 || cfg_waitrequest || cfg_write || ~pll_core_locked /* synthesis keep */;
+
+  always @(posedge clk_74a) begin
+    reg pald = 0, pald2 = 0;
+
+    pald <= PAL;
+    pald2 <= pald;
+
+    cfg_write <= 0;
+    if (pald2 != pald) begin
+      // Begin fractional PLL reconfig
+      pal_state <= 1;
+    end
+
+    if (~cfg_waitrequest) begin
+      if (pal_state > 0) pal_state <= pal_state + 1;
+
+      case (pal_state)
+        PLL_MODE: begin
+          // Set mode to waitrequest
+          cfg_address <= 0;
+          cfg_data <= 0;
+          cfg_write <= 1;
+        end
+        PLL_MIF_ADDR: begin
+          cfg_address <= 6'b11111;
+          cfg_data <= 0;
+          cfg_write <= 1;
+        end
+        PLL_START: begin
+          pal_state <= 0;
+
+          // Start PLL reconfig
+          cfg_address <= 2;
+          cfg_data <= 0;
+          cfg_write <= 1;
+
+        end
+      endcase
+    end
+  end
 
 endmodule

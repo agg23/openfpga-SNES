@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="pll_reconfig"
+ megafunction_name="ALTERA_PLL_RECONFIG"
+ intended_family="Cyclone V"
+ specifies="all_ports">
+ <global>
+  <pin name="mgmt_clk" direction="input" scope="external" />
+  <pin name="mgmt_reset" direction="input" scope="external" />
+  <pin name="mgmt_waitrequest" direction="output" scope="external" />
+  <pin name="mgmt_read" direction="input" scope="external" />
+  <pin name="mgmt_write" direction="input" scope="external" />
+  <pin name="mgmt_readdata[31..0]" direction="output" scope="external" />
+  <pin name="mgmt_address[5..0]" direction="input" scope="external" />
+  <pin name="mgmt_writedata[31..0]" direction="input" scope="external" />
+  <pin name="reconfig_to_pll[63..0]" direction="output" scope="external" />
+  <pin name="reconfig_from_pll[63..0]" direction="input" scope="external" />
+ </global>
+</pinplan>

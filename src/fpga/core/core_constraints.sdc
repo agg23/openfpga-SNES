@@ -8,10 +8,10 @@ set_clock_groups -asynchronous \
  -group { bridge_spiclk } \
  -group { clk_74a } \
  -group { clk_74b } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[2].gpll~PLL_OUTPUT_COUNTER|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|general[3].gpll~PLL_OUTPUT_COUNTER|divclk }
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[0].*|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[1].*|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[2].*|divclk } \
+ -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[3].*|divclk }
 
 create_generated_clock -name GSU_CACHE_CLK -source [get_pins -compatibility_mode {*|mp1|mf_pllbase_inst|altera_pll_i|*[1].*|divclk}] \
 							  -invert [get_pins {ic|snes|main|GSUMap|GSU|CACHE|altsyncram_component|auto_generated|*|clk0}]
