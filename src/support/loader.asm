@@ -76,6 +76,8 @@ close // Close file since we won't be seeking anymore
 ld r1,#15
 ld r2,#0x1000000 // Max ROM size
 ld.l r3,(rom_file_size) // ROM file size
+ld.w r4,(header_offset_addr) // Header offset
+sub r3,r4 // Remove header offset from size for calculation
 
 rom_size_loop:
 cmp r1,#0
