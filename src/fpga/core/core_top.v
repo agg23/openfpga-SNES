@@ -874,9 +874,11 @@ module core_top (
   wire [63:0] reconfig_to_pll;
   wire [63:0] reconfig_from_pll;
 
+  reg pll_reset = 0;
+
   mf_pllbase mp1 (
       .refclk(clk_74a),
-      .rst   (0),
+      .rst   (pll_reset),
 
       .outclk_0(clk_mem_85_9),
       .outclk_1(clk_sys_21_48),
@@ -908,10 +910,13 @@ module core_top (
   );
 
   localparam PLL_MODE = 1;
-  localparam PLL_MIF_ADDR = 3;
-  localparam PLL_START = 5;
+  localparam PLL_MIF_ADDR = PLL_MODE + 2;
+  localparam PLL_START = PLL_MIF_ADDR + 2;
+  localparam PLL_RECONFIG = PLL_START + 2;
+  localparam PLL_RESET_START = PLL_RECONFIG + 1;
+  localparam PLL_RESET_END = PLL_RESET_START + 20;
 
-  reg [2:0] pal_state = 0;
+  reg [7:0] pal_state = 0;
 
   wire pal_transitioning = pal_state > 0 || cfg_waitrequest || cfg_write || ~pll_core_locked /* synthesis keep */;
 
@@ -927,32 +932,43 @@ module core_top (
       pal_state <= 1;
     end
 
-    if (~cfg_waitrequest) begin
-      if (pal_state > 0) pal_state <= pal_state + 1;
+    if (pal_state > 0) pal_state <= pal_state + 1;
 
-      case (pal_state)
-        PLL_MODE: begin
-          // Set mode to waitrequest
-          cfg_address <= 0;
-          cfg_data <= 0;
-          cfg_write <= 1;
-        end
-        PLL_MIF_ADDR: begin
-          cfg_address <= 6'b11111;
-          cfg_data <= 0;
-          cfg_write <= 1;
-        end
-        PLL_START: begin
-          pal_state <= 0;
+    case (pal_state)
+      PLL_MODE: begin
+        // Set mode to waitrequest
+        cfg_address <= 0;
+        cfg_data <= 0;
+        cfg_write <= 1;
+      end
+      PLL_MIF_ADDR: begin
+        cfg_address <= 6'b11111;
+        cfg_data <= 0;
+        cfg_write <= 1;
+      end
+      PLL_START: begin
+        // Start PLL reconfig
+        cfg_address <= 2;
+        cfg_data <= 0;
+        cfg_write <= 1;
+      end
+      PLL_RECONFIG: begin
+        pal_state <= PLL_RECONFIG;
 
-          // Start PLL reconfig
-          cfg_address <= 2;
-          cfg_data <= 0;
-          cfg_write <= 1;
-
+        // Wait for reconfig end
+        if (~cfg_waitrequest) begin
+          pal_state <= PLL_RESET_START;
         end
-      endcase
-    end
+      end
+      PLL_RESET_START: begin
+        pll_reset <= 1;
+      end
+      PLL_RESET_END: begin
+        pal_state <= 0;
+
+        pll_reset <= 0;
+      end
+    endcase
   end
 
 endmodule
