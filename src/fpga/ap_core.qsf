@@ -741,6 +741,9 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name ALM_REGISTER_PACKING_EFFORT LOW
 set_global_assignment -name ROUTER_REGISTER_DUPLICATION ON
 set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
+set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/scanline_filler.sv
+set_global_assignment -name SYSTEMVERILOG_FILE core/core_top.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/sync_fifo.sv
 set_global_assignment -name MIF_FILE core/rtl/chip/DSP/dsp11b23410_p.mif
 set_global_assignment -name MIF_FILE core/rtl/chip/DSP/dsp11b23410_d.mif
@@ -772,7 +775,6 @@ set_global_assignment -name VHDL_FILE core/rtl/CEGen.vhd
 set_global_assignment -name VHDL_FILE core/rtl/bram.vhd
 set_global_assignment -name QIP_FILE core/rtl/chip/chip.qip
 set_global_assignment -name QIP_FILE apf/apf.qip
-set_global_assignment -name VERILOG_FILE core/core_top.v
 set_global_assignment -name VERILOG_FILE core/core_bridge_cmd.v
 set_global_assignment -name SDC_FILE core/core_constraints.sdc
 set_global_assignment -name SIGNALTAP_FILE core/stp1.stp
