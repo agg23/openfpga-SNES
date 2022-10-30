@@ -1,0 +1,88 @@
+{
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Super Mario World (U) [!].smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Super Mario World With Header.smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Super Mario World 2 - Yoshi's Island.smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Pilotwings (U) [!].smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Asterix (Europe) (En,Fr,De,Es).sfc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Super Mario Kart.smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Tales of Phantasia.smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Star Ocean (J) [!].smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      },
+      {
+        "name": "SMC",
+        "id": 0,
+        "filename": "C:/Users/adam/Downloads/SNES/Far East of Eden Zero (J).smc",
+        "required": true,
+        "parameters": "0x109",
+        "extensions": ["smc", "sfc"],
+        "address": "0x10000000"
+      }
+    ]
+  }
+}
