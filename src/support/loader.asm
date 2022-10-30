@@ -97,7 +97,10 @@ ld.b (romsz_addr),r1
 ld.b r1,(lorom_output) // Get LoROM score
 ld.b r2,(hirom_output) // Get HiROM score
 ld.b r3,(exhirom_output) // Get ExHiROM score
+jp z,compare_scores // If ExHiROM has a score
+add r3,#4 // Add 4 to score to give weight if ExHiROM exists
 
+compare_scores:
 cmp r1,r2 // r1 - r2
 jp c, check_hirom_score // Jp if hirom >= lorom
 cmp r1,r3 // Else lorom >= hirom, so r1 - r3
