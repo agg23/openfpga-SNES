@@ -364,7 +364,7 @@ module MAIN_SNES (
       .JOY2_P6(JOY2_P6),
       .JOY2_P6_in(JOY2_P6_DI),
 
-      .EXT_RTC(RTC),
+      // .EXT_RTC(RTC),
 
       .GG_EN(status[24]),
       .GG_CODE(gg_code),
