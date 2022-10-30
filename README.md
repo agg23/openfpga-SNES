@@ -6,11 +6,7 @@ Please report any issues encountered to this repo. Most likely any problems are 
 
 ## Usage
 
-**NOTE:** ROM files must not contain a SMC header. If a ROM isn't loading and you think it should, check if it has a header with a tool like [Advanced SNES ROM Utility](https://www.romhacking.net/utilities/1638/) and remove it if so.
-
-ROMs should be placed in `/Assets/snes/common`
-
-PAL ROMs should boot, but there may be timing issues as the core currently doesn't properly support PAL (proper support coming soon).
+ROMs should be placed in `/Assets/snes/common`. Both headered and unheadered ROMs are now supported.
 
 ## Features
 
@@ -20,9 +16,11 @@ Core supports four players/controllers via the Analogue Dock. To enable four pla
 
 ### Expansion Chips
 
-The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), DSP (Super Mario Kart), and CX4 (Mega Man X 2). Additional chip support will come in the future once several new firmware features are released.
+All original expansion chips are supported. The full list is: SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), DSP (Super Mario Kart), CX4 (Mega Man X 2), S-DD1 (Star Ocean), SPC7110 (Far East of Eden), and BSX (Satellaview). The homebrew MSU expansion chip is not currently supported.
 
-**NOTE:** The S-DD1 chip was dropped in release 0.2.0 due to sizing and popularity issues. Support will resume in a future release. In the meantime, you can [use this hack to remove the S-DD1 requirement](https://www.romhacking.net/hacks/614/).
+#### BSX
+
+BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supported
 
 ### Video Modes
 
