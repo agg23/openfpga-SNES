@@ -834,47 +834,11 @@ module core_top (
   wire video_vs_snes;
   wire [23:0] video_rgb_snes;
 
-  reg video_de_reg;
-  reg video_hs_reg;
-  reg video_vs_reg;
-  reg [23:0] video_rgb_reg;
-
   assign video_rgb_clock = clk_video_5_37;
   assign video_rgb_clock_90 = clk_video_5_37_90deg;
-  // assign video_de = video_de_reg;
-  // assign video_hs = video_hs_reg;
-  // assign video_vs = video_vs_reg;
-  // assign video_rgb = video_rgb_reg;
+  assign video_rgb = rgb;
+  assign video_de = de;
 
-  // reg hs_prev;
-  // reg [2:0] hs_delay;
-  // reg vs_prev;
-  // reg de_prev;
-
-  // wire de = ~(h_blank || v_blank);
-  // wire [23:0] video_slot_rgb = {9'b0, PAL, use_4_3_video, 10'b0, 3'b0};
-
-  // always @(posedge clk_video_5_37) begin
-  //   video_hs_reg  <= 0;
-  //   video_de_reg  <= 0;
-  //   video_rgb_reg <= 24'h0;
-
-  //   if (de) begin
-  //     video_de_reg  <= 1;
-
-  //     video_rgb_reg <= video_rgb_snes;
-  //   end else if (de_prev && ~de) begin
-  //     // Last clock was last pixel. Set end of line bits
-  //     video_rgb_reg <= video_slot_rgb;
-  //   end
-
-  //   // Set VSync to be high for a single cycle on the rising edge of the VSync coming out of the core
-  //   video_hs_reg <= ~hs_prev && video_hs_snes;
-  //   video_vs_reg <= ~vs_prev && video_vs_snes;
-  //   hs_prev <= video_hs_snes;
-  //   vs_prev <= video_vs_snes;
-  //   de_prev <= de;
-  // end
   reg de;
   reg [23:0] rgb;
   wire [7:0] snap_index;
@@ -926,9 +890,6 @@ module core_top (
       rgb <= rgb_out;
     end
   end
-
-  assign video_rgb = rgb;
-  assign video_de  = de;
 
   sound_i2s #(
       .CHANNEL_WIDTH(16),
