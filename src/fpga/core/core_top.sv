@@ -691,6 +691,8 @@ module core_top (
 
       .rtc(rtc),
 
+      .rtc(rtc),
+
       // Settings
       .multitap_enabled(multitap_enabled),
       .lightgun_enabled(lightgun_enabled),
