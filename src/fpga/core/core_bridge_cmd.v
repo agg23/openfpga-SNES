@@ -45,6 +45,10 @@ input   wire            dataslot_requestwrite_ok,
 
 output  reg             dataslot_allcomplete,
 
+output  reg     [31:0]  rtc_seconds,
+output  reg     [31:0]  rtc_date,
+output  reg     [31:0]  rtc_time,
+
 input   wire            savestate_supported,
 input   wire    [31:0]  savestate_addr,
 input   wire    [31:0]  savestate_size,
@@ -323,6 +327,13 @@ always @(posedge clk) begin
         16'h008F: begin
             // Data slot access all complete
             dataslot_allcomplete <= 1;
+            hstate <= ST_DONE_OK;
+        end
+        16'h0090: begin
+            // RTC
+            rtc_seconds <= host_20;
+            rtc_date    <= host_24;
+            rtc_time    <= host_28;
             hstate <= ST_DONE_OK;
         end
         16'h00A0: begin

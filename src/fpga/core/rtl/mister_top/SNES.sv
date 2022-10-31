@@ -4,6 +4,8 @@ module MAIN_SNES (
 
     input wire core_reset,
 
+    input [64:0] rtc,
+
     // Settings
     input wire multitap_enabled,
     input wire lightgun_enabled,
@@ -364,7 +366,7 @@ module MAIN_SNES (
       .JOY2_P6(JOY2_P6),
       .JOY2_P6_in(JOY2_P6_DI),
 
-      .EXT_RTC(RTC),
+      .EXT_RTC(rtc),
 
       .GG_EN(status[24]),
       .GG_CODE(gg_code),

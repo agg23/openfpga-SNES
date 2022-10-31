@@ -414,6 +414,9 @@ module core_top (
 
   wire osnotify_inmenu;
 
+  wire [31:0] rtc_date;
+  wire [31:0] rtc_time;
+
   // bridge target commands
   // synchronous to clk_74a
 
@@ -453,6 +456,9 @@ module core_top (
 
       .dataslot_allcomplete(dataslot_allcomplete),
 
+      .rtc_date(rtc_date),
+      .rtc_time(rtc_time),
+
       .savestate_supported  (savestate_supported),
       .savestate_addr       (savestate_addr),
       .savestate_size       (savestate_size),
@@ -475,8 +481,7 @@ module core_top (
       .datatable_addr(datatable_addr),
       .datatable_wren(datatable_wren),
       .datatable_data(datatable_data),
-      .datatable_q   (datatable_q),
-
+      .datatable_q   (datatable_q)
   );
 
   reg ioctl_download = 0;
@@ -656,11 +661,35 @@ module core_top (
 
   reg [31:0] reset_delay = 0;
 
+  reg new_rtc = 0;
+  reg [31:0] prev_time = 0;
+
+  always @(posedge clk_74a) begin
+    if (rtc_time != prev_time) begin
+      prev_time <= rtc_time;
+      new_rtc   <= ~new_rtc;
+    end
+  end
+
+  wire [64:0] rtc = {
+    new_rtc,
+    8'b0,  // Empty
+    8'b1,  // Week day (not supported)
+    rtc_date[23:16],  // Year (lower byte)
+    rtc_date[15:8],  // Month
+    rtc_date[7:0],  // Day
+    rtc_time[23:16],  // Hour
+    rtc_time[15:8],  // Minute
+    rtc_time[7:0]  // Second
+  };
+
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
 
       .core_reset(~pll_core_locked || reset_delay > 0),
+
+      .rtc(rtc),
 
       // Settings
       .multitap_enabled(multitap_enabled),
