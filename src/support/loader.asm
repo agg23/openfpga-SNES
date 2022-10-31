@@ -21,7 +21,7 @@ constant lorom_output = 0x1A00
 constant hirom_output = 0x1A10
 constant exhirom_output = 0x1A20
 
-constant romsz_addr = 0x1900
+constant romsz_addr = 0x1800
 
 // Error vector (0x0)
 jp error_handler
@@ -51,6 +51,28 @@ log_string("File doesn't have header")
 
 store_header:
 ld.w (header_offset_addr),r2 // Store header offset
+
+// Calculate romsz
+ld r1,#15
+ld r2,#0x1000000 // Max ROM size
+ld.l r3,(rom_file_size) // ROM file size
+ld.w r4,(header_offset_addr) // Header offset
+sub r3,r4 // Remove header offset from size for calculation
+
+rom_size_loop:
+cmp r1,#0
+jp z, finished_rom_size // If romsz == 0
+cmp r2,r3
+jp c, finished_rom_size // If size > r2
+asl r3,#1 // Else shift size left 1
+sub r1,#1 // Subtract 1 from rom size
+jp rom_size_loop
+
+finished_rom_size:
+ld.b (romsz_addr),r1
+log_string("Calculated ROM size:")
+hex.b r1
+
 check_header(lorom_header_seek, lorom_output)
 
 // Check headers at 0xFFBD
@@ -72,27 +94,6 @@ check_header(exhirom_header_seek, exhirom_output)
 // All headers checked, compare scores
 finished_checking_headers:
 close // Close file since we won't be seeking anymore
-// Calculate romsz
-ld r1,#15
-ld r2,#0x1000000 // Max ROM size
-ld.l r3,(rom_file_size) // ROM file size
-ld.w r4,(header_offset_addr) // Header offset
-sub r3,r4 // Remove header offset from size for calculation
-
-rom_size_loop:
-cmp r1,#0
-jp z, finished_rom_size // If romsz == 0
-cmp r2,r3
-jp c, finished_rom_size // If size > r2
-asl r3,#1 // Else shift size left 1
-sub r1,#1 // Subtract 1 from rom size
-jp rom_size_loop
-
-finished_rom_size:
-log_string("Calculated ROM size:")
-hex.b r1
-
-ld.b (romsz_addr),r1
 
 ld.b r1,(lorom_output) // Get LoROM score
 ld.b r2,(hirom_output) // Get HiROM score
