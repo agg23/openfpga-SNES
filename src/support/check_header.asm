@@ -313,7 +313,7 @@ choose_chip_type:
   log_string("Checking SDD1")
   check_value_equality(mapping_mode_addr, 0x32)
   jp nz, sa1
-  check_value_equality(rom_size_addr, 14) // Only mark SDD1 if rom_size < 14
+  check_value_equality(romsz_addr, 14) // Only mark SDD1 if romsz < 14
   jp nc, sa1
   check_value_equality(rom_type_addr, 0x43)
   jp z, set_sdd1
