@@ -12,7 +12,7 @@
 # or its authorized distributors. Please refer to the applicable 
 # agreement for further details.
 
-# ACDS 21.1 850 win32 2022.10.28.07:55:18
+# ACDS 21.1 850 win32 2022.11.01.09:50:14
 
 # ----------------------------------------
 # vcs - auto-generated simulation script
@@ -20,7 +20,7 @@
 # ----------------------------------------
 # This script provides commands to simulate the following IP detected in
 # your Quartus project:
-#     pll_reconfig
+#     mf_pllbase_pal
 # 
 # Altera recommends that you source this Quartus-generated IP simulation
 # script from your own customized top-level script, and avoid editing this
@@ -83,7 +83,7 @@
 # 
 # IP SIMULATION SCRIPT
 # ----------------------------------------
-# If pll_reconfig is one of several IP cores in your
+# If mf_pllbase_pal is one of several IP cores in your
 # Quartus project, you can generate a simulation script
 # suitable for inclusion in your top-level simulation
 # script by running the following command line:
@@ -94,10 +94,10 @@
 # within the Quartus project, and generate a unified
 # script which supports all the Altera IP within the design.
 # ----------------------------------------
-# ACDS 21.1 850 win32 2022.10.28.07:55:18
+# ACDS 21.1 850 win32 2022.11.01.09:50:14
 # ----------------------------------------
 # initialize variables
-TOP_LEVEL_NAME="pll_reconfig"
+TOP_LEVEL_NAME="mf_pllbase_pal"
 QSYS_SIMDIR="./../../"
 QUARTUS_INSTALL_DIR="C:/intelfpga_lite/21.1/quartus/"
 SKIP_FILE_COPY=0
@@ -143,11 +143,7 @@ vcs -lca -timescale=1ps/1ps -sverilog +verilog2001ext+.v -ntb_opts dtm $ELAB_OPT
   -v $QUARTUS_INSTALL_DIR/eda/sim_lib/cyclonev_hssi_atoms.v \
   -v $QUARTUS_INSTALL_DIR/eda/sim_lib/synopsys/cyclonev_pcie_hip_atoms_ncrypt.v \
   -v $QUARTUS_INSTALL_DIR/eda/sim_lib/cyclonev_pcie_hip_atoms.v \
-  $QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_top.v \
-  $QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_mif_reader.v \
-  $QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_core.v \
-  $QSYS_SIMDIR/altera_pll_reconfig/altera_std_synchronizer.v \
-  $QSYS_SIMDIR/pll_reconfig.v \
+  $QSYS_SIMDIR/mf_pllbase_pal.vo \
   -top $TOP_LEVEL_NAME
 # ----------------------------------------
 # simulate

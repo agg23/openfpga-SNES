@@ -12,7 +12,7 @@
 # or its authorized distributors. Please refer to the applicable 
 # agreement for further details.
 
-# ACDS 21.1 850 win32 2022.10.28.07:55:18
+# ACDS 21.1 850 win32 2022.11.01.09:50:14
 
 # ----------------------------------------
 # vcsmx - auto-generated simulation script
@@ -20,7 +20,7 @@
 # ----------------------------------------
 # This script provides commands to simulate the following IP detected in
 # your Quartus project:
-#     pll_reconfig
+#     mf_pllbase_pal
 # 
 # Altera recommends that you source this Quartus-generated IP simulation
 # script from your own customized top-level script, and avoid editing this
@@ -96,7 +96,7 @@
 # 
 # IP SIMULATION SCRIPT
 # ----------------------------------------
-# If pll_reconfig is one of several IP cores in your
+# If mf_pllbase_pal is one of several IP cores in your
 # Quartus project, you can generate a simulation script
 # suitable for inclusion in your top-level simulation
 # script by running the following command line:
@@ -107,10 +107,10 @@
 # within the Quartus project, and generate a unified
 # script which supports all the Altera IP within the design.
 # ----------------------------------------
-# ACDS 21.1 850 win32 2022.10.28.07:55:18
+# ACDS 21.1 850 win32 2022.11.01.09:50:14
 # ----------------------------------------
 # initialize variables
-TOP_LEVEL_NAME="pll_reconfig"
+TOP_LEVEL_NAME="mf_pllbase_pal"
 QSYS_SIMDIR="./../../"
 QUARTUS_INSTALL_DIR="C:/intelfpga_lite/21.1/quartus/"
 SKIP_FILE_COPY=0
@@ -147,7 +147,6 @@ fi
 # ----------------------------------------
 # create compilation libraries
 mkdir -p ./libraries/work/
-mkdir -p ./libraries/pll_reconfig/
 mkdir -p ./libraries/altera_ver/
 mkdir -p ./libraries/lpm_ver/
 mkdir -p ./libraries/sgate_ver/
@@ -180,11 +179,7 @@ fi
 # ----------------------------------------
 # compile design files in correct order
 if [ $SKIP_COM -eq 0 ]; then
-  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_top.v"        -work pll_reconfig
-  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_mif_reader.v" -work pll_reconfig
-  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/altera_pll_reconfig/altera_pll_reconfig_core.v"       -work pll_reconfig
-  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/altera_pll_reconfig/altera_std_synchronizer.v"        -work pll_reconfig
-  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/pll_reconfig.v"                                                         
+  vlogan +v2k $USER_DEFINED_VERILOG_COMPILE_OPTIONS $USER_DEFINED_COMPILE_OPTIONS "$QSYS_SIMDIR/mf_pllbase_pal.vo"
 fi
 
 # ----------------------------------------

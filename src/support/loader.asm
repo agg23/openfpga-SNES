@@ -155,13 +155,21 @@ jp expansion_core // It's SDD1
 
 bit_bsx:
 cmp r4,#0x30 // Check if BSX
-jp nz, send_chip
+jp nz, check_pal
 log_string("Using BSX")
 // It's BSX
 
 expansion_core:
 ld r8,#1
 core r8 // Boot SPC7110/SDD1/BSX core
+jp send_chip
+
+check_pal:
+cmp r3,#1 // Check if PAL
+jp nz, send_chip
+// It's PAL
+ld r8,#2
+core r8
 
 send_chip:
 log_string("Sending chip type")

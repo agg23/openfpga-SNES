@@ -1,12 +1,12 @@
 module main #(
-    parameter USE_CX4 = 1'b0,
-    parameter USE_SDD1 = 1'b0,
-    parameter USE_GSU = 1'b0,
-    parameter USE_SA1 = 1'b0,
-    parameter USE_DSPn = 1'b0,
-    parameter USE_SPC7110 = 1'b0,
-    parameter USE_BSX = 1'b0,
-    parameter USE_MSU = 1'b0
+    parameter reg USE_CX4 = 1'b0,
+    parameter reg USE_SDD1 = 1'b0,
+    parameter reg USE_GSU = 1'b0,
+    parameter reg USE_SA1 = 1'b0,
+    parameter reg USE_DSPn = 1'b0,
+    parameter reg USE_SPC7110 = 1'b0,
+    parameter reg USE_BSX = 1'b0,
+    parameter reg USE_MSU = 1'b0
 ) (
     input RESET_N,
 

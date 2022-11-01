@@ -9,7 +9,6 @@ DEFINE ncinternal            $CDS_ROOT/tools/inca/files/NCINTERNAL/
 DEFINE ncmodels              $CDS_ROOT/tools/inca/files/NCMODELS/      
 DEFINE cds_assertions        $CDS_ROOT/tools/inca/files/CDS_ASSERTIONS/
 DEFINE work                  ./libraries/work/                         
-DEFINE pll_reconfig          ./libraries/pll_reconfig/                 
 DEFINE altera_ver            ./libraries/altera_ver/                   
 DEFINE lpm_ver               ./libraries/lpm_ver/                      
 DEFINE sgate_ver             ./libraries/sgate_ver/                    
