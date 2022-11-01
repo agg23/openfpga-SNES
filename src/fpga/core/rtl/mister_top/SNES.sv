@@ -141,6 +141,26 @@ module MAIN_SNES (
     output wire [15:0] audio_l,
     output wire [15:0] audio_r
 );
+  parameter USE_CX4 = 1'b0;
+  parameter USE_SDD1 = 1'b0;
+  parameter USE_GSU = 1'b0;
+  parameter USE_SA1 = 1'b0;
+  parameter USE_DSPn = 1'b0;
+  parameter USE_SPC7110 = 1'b0;
+  parameter USE_BSX = 1'b0;
+  parameter USE_MSU = 1'b0;
+
+  initial begin
+    $info("Selected chips");
+    $info("CX4 %d", USE_CX4);
+    $info("SDD1 %d", USE_SDD1);
+    $info("GSU %d", USE_GSU);
+    $info("SA1 %d", USE_SA1);
+    $info("DSPn %d", USE_DSPn);
+    $info("SPC7110 %d", USE_SPC7110);
+    $info("BSX %d", USE_BSX);
+    $info("MSU %d", USE_MSU);
+  end
 
   // Hardcoded wires
   wire [63:0] status = 0;
@@ -290,7 +310,16 @@ module MAIN_SNES (
   wire [7:0] G;
   wire [7:0] B;
 
-  main main (
+  main #(
+      .USE_CX4(USE_CX4),
+      .USE_SDD1(USE_SDD1),
+      .USE_GSU(USE_GSU),
+      .USE_SA1(USE_SA1),
+      .USE_DSPn(USE_DSPn),
+      .USE_SPC7110(USE_SPC7110),
+      .USE_BSX(USE_BSX),
+      .USE_MSU(USE_MSU)
+  ) main (
       .RESET_N(RESET_N),
 
       .MCLK(clk_sys),  // 21.47727 / 21.28137

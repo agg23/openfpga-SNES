@@ -683,6 +683,16 @@ module core_top (
     rtc_time[7:0]  // Second
   };
 
+  // initial begin
+  //   $info("Instantiated PSRAM with the following settings:");
+  //   $info("Value", TEST_PARAM);
+  //   if (TEST_PARAM == 1'b1) begin
+  //     $error("Test param set");
+  //   end else begin
+  //     $error("Test param unset");
+  //   end
+  // end
+
   MAIN_SNES snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
