@@ -1,7 +1,7 @@
 architecture chip32.vm
 output "loader.bin", create
 
-constant DEBUG = 0
+constant DEBUG = 1
 
 constant rom_dataslot = 0
 constant save_dataslot = 10
@@ -13,9 +13,9 @@ constant host_init = 0x4002
 constant rom_file_size = 0x1000
 constant header_offset_addr = 0x1004
 
-constant lorom_header_seek = 0x007FBD
-constant hirom_header_seek = 0x00FFBD
-constant exhirom_header_seek = 0x40FFBD
+constant lorom_header_seek = 0x007FB2
+constant hirom_header_seek = 0x00FFB2
+constant exhirom_header_seek = 0x40FFB2
 
 constant lorom_output = 0x1A00
 constant hirom_output = 0x1A10

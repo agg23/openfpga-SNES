@@ -1,11 +1,11 @@
 constant base_address = 0x1900
 constant output_address = 0x1904
 
-constant rambuf = 0x1b00 // Starts at 0xZZZBD in ROM
-constant header_start_mem = rambuf + 0x3 // Offset to 0xZZZC0
+constant rambuf = 0x1b00 // Starts at 0xZZZB2 in ROM
+constant header_start_mem = rambuf + 14 // Offset to 0xZZZC0
 
 // Address into header/ROM
-constant gsu_ramz_addr = rambuf // FBC
+constant gsu_ramz_addr = rambuf + 11 // FBD
 
 constant mapping_mode_addr = header_start_mem + 0x15 // FD5
 constant rom_type_addr = header_start_mem + 0x16 // FD6
@@ -50,6 +50,7 @@ macro check_header(variable base_address_input, variable output_address_input) {
   call validate_simple_values
   call choose_ramsz
   call choose_chip_type
+  call check_bsx
   call choose_region
 
   log_string("Storing header data at:")
@@ -398,10 +399,52 @@ choose_region:
   hex.b r10
   ret
 
+check_bsx:
+  log_string("Checking BSX")
+  // buf[addr - 14] == 'Z' && buf[addr - 11] == 'J' &&
+  check_value_equality(rambuf, 0x5A) // Check if 'Z'
+  jp nz, not_bsx
+  check_value_equality(rambuf + 3, 0x4A) // Check if 'J'
+  jp nz, not_bsx
+
+  // ((buf[addr - 13] >= 'A' && buf[addr - 13] <= 'Z') || (buf[addr - 13] >= '0' && buf[addr - 13] <= '9')) &&
+  // Condition one
+  check_value_equality(rambuf + 1, 0x41) // 'A'
+  jp c, condition_two
+  check_value_equality(rambuf + 1, 0x5A) // 'Z'
+  jp c, condition_three // Carry or Zero means <=
+  jp z, condition_three
+
+  condition_two:
+  check_value_equality(rambuf + 1, 0x30) // '0'
+  jp c, not_bsx
+  check_value_equality(rambuf + 1, 0x39) // '9'
+  jp c, condition_three // Carry or Zero means <=
+  jp z, condition_three
+
+  // (buf[addr + Company] == 0x33 || (buf[addr - 10] == 0x00 && buf[addr - 4] == 0x00))
+  condition_three:
+  check_value_equality(dev_id_addr, 0x33)
+  jp z, is_bsx
+
+  check_value_equality(rambuf + 4, 0)
+  jp nz, not_bsx
+  check_value_equality(rambuf + 10, 0)
+  jp nz, not_bsx
+
+  is_bsx:
+  // Set chip_type lower nibble to 3
+  or r12,#3
+
+  not_bsx:
+  log_string("Finished BSX:")
+  hex.b r12
+  ret
+
 // Load all header values from file into memory
 load_header_values_into_mem:
   seek()
-  ld r1,#0x44 // Load 0x44 bytes
+  ld r1,#0x50 // Load 0x50 bytes
   ld r2,#rambuf // Read into read_space memory
   read()
   ret
