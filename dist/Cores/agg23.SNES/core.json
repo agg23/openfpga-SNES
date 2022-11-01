@@ -34,6 +34,11 @@
         "name": "SPCSDD1",
         "id": 1,
         "filename": "snes_spc.rev"
+      },
+      {
+        "name": "PAL",
+        "id": 2,
+        "filename": "snes_pal.rev"
       }
     ]
   }
