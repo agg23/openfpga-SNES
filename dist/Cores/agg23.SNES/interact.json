@@ -7,7 +7,29 @@
         "id": 10,
         "type": "action",
         "enabled": true,
-        "address": "0x00000050",
+        "address": "0x50",
+        "value": 1
+      },
+      {
+        "name": "CPU Turbo",
+        "id": 15,
+        "type": "check",
+        "enabled": true,
+        "address": "0x80",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 0,
+        "value": 1
+      },
+      {
+        "name": "SuperFX Turbo",
+        "id": 16,
+        "type": "check",
+        "enabled": true,
+        "address": "0x84",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 0,
         "value": 1
       },
       {
@@ -15,7 +37,7 @@
         "id": 20,
         "type": "check",
         "enabled": true,
-        "address": "0x00000100",
+        "address": "0x100",
         "persist": true,
         "writeonly": true,
         "defaultval": 0,
@@ -26,7 +48,7 @@
         "id": 30,
         "type": "list",
         "enabled": true,
-        "address": "0x00000104",
+        "address": "0x104",
         "persist": true,
         "writeonly": true,
         "defaultval": 0,
@@ -50,7 +72,7 @@
         "id": 34,
         "type": "slider_u32",
         "enabled": true,
-        "address": "0x00000108",
+        "address": "0x108",
         "persist": true,
         "writeonly": true,
         "defaultval": 3,
@@ -63,14 +85,25 @@
         }
       },
       {
-        "name": "Use 4:3 video",
+        "name": "Use 4:3 Video",
         "id": 40,
         "type": "check",
         "enabled": true,
-        "address": "0x00000200",
+        "address": "0x200",
         "persist": true,
         "writeonly": true,
         "defaultval": 0,
+        "value": 1
+      },
+      {
+        "name": "Pseudo Transparency",
+        "id": 41,
+        "type": "check",
+        "enabled": true,
+        "address": "0x204",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 1,
         "value": 1
       }
     ],

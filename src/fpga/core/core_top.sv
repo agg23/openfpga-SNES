@@ -335,36 +335,45 @@ module core_top (
 
     if (bridge_wr) begin
       casex (bridge_addr)
-        32'h00000000: begin
+        32'h0: begin
           ioctl_download <= bridge_wr_data[0];
         end
-        32'h00000004: begin
+        32'h4: begin
           rom_size <= bridge_wr_data[3:0];
         end
-        32'h00000008: begin
+        32'h8: begin
           rom_type <= bridge_wr_data[7:0];
         end
-        32'h0000000C: begin
+        32'hC: begin
           ram_size <= bridge_wr_data[3:0];
         end
-        32'h00000010: begin
+        32'h10: begin
           PAL <= bridge_wr_data[0];
         end
-        32'h00000050: begin
+        32'h50: begin
           reset_delay <= 32'h100000;
         end
-        32'h00000100: begin
+        32'h80: begin
+          cpu_turbo_enabled <= bridge_wr_data[0];
+        end
+        32'h84: begin
+          gsu_turbo_enabled <= bridge_wr_data[0];
+        end
+        32'h100: begin
           multitap_enabled <= bridge_wr_data[0];
         end
-        32'h00000104: begin
+        32'h104: begin
           lightgun_enabled <= bridge_wr_data[0];
           lightgun_type    <= bridge_wr_data[1];
         end
-        32'h00000108: begin
+        32'h108: begin
           lightgun_dpad_aim_speed <= bridge_wr_data[7:0];
         end
-        32'h00000200: begin
+        32'h200: begin
           use_4_3_video <= bridge_wr_data[0];
+        end
+        32'h204: begin
+          blend_enabled <= bridge_wr_data[0];
         end
       endcase
     end
@@ -653,13 +662,61 @@ module core_top (
   );
 
   // Settings
-  reg multitap_enabled;
-  reg lightgun_enabled;
-  reg lightgun_type;
-  reg [7:0] lightgun_dpad_aim_speed;
-  reg use_4_3_video;
-
   reg [31:0] reset_delay = 0;
+  wire reset_button = reset_delay > 0;
+
+  reg cpu_turbo_enabled = 0;
+  reg gsu_turbo_enabled = 0;
+
+  reg multitap_enabled = 0;
+  reg lightgun_enabled = 0;
+  reg lightgun_type = 0;
+  reg [7:0] lightgun_dpad_aim_speed = 0;
+
+  reg use_4_3_video = 0;
+  reg blend_enabled = 0;
+
+  // Settings sync
+  wire reset_button_s;
+
+  wire cpu_turbo_enabled_s;
+  wire gsu_turbo_enabled_s;
+
+  wire multitap_enabled_s;
+  wire lightgun_enabled_s;
+  wire lightgun_type_s;
+  wire [7:0] lightgun_dpad_aim_speed_s;
+
+  wire use_4_3_video_s;
+  wire blend_enabled_s;
+
+  synch_3 #(
+      .WIDTH(16)
+  ) settings_s (
+      {
+        reset_button,
+        cpu_turbo_enabled,
+        gsu_turbo_enabled,
+        multitap_enabled,
+        lightgun_enabled,
+        lightgun_type,
+        lightgun_dpad_aim_speed,
+        use_4_3_video,
+        blend_enabled
+      },
+      {
+        reset_button_s,
+        cpu_turbo_enabled_s,
+        gsu_turbo_enabled_s,
+        multitap_enabled_s,
+        lightgun_enabled_s,
+        lightgun_type_s,
+        lightgun_dpad_aim_speed_s,
+        use_4_3_video_s,
+        blend_enabled_s
+      },
+      clk_sys_21_48
+  );
 
   reg new_rtc = 0;
   reg [31:0] prev_time = 0;
@@ -687,15 +744,20 @@ module core_top (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
 
-      .core_reset(~pll_core_locked),
+      .core_reset(~pll_core_locked || reset_button_s),
 
       .rtc(rtc),
 
       // Settings
-      .multitap_enabled(multitap_enabled),
-      .lightgun_enabled(lightgun_enabled),
-      .lightgun_type(lightgun_type),
-      .lightgun_dpad_aim_speed(lightgun_dpad_aim_speed),
+      .cpu_turbo_enabled(cpu_turbo_enabled_s),
+      .gsu_turbo_enabled(gsu_turbo_enabled_s),
+
+      .multitap_enabled(multitap_enabled_s),
+      .lightgun_enabled(lightgun_enabled_s),
+      .lightgun_type(lightgun_type_s),
+      .lightgun_dpad_aim_speed(lightgun_dpad_aim_speed_s),
+
+      .blend_enabled(blend_enabled_s),
 
       // Input
       .p1_button_a(cont1_key_s[4]),
@@ -884,7 +946,7 @@ module core_top (
 
     if (~de_out && prev_de) begin
       // Write video slot
-      rgb <= {9'b0, ~latched_snap_index[0], use_4_3_video, 10'b0, 3'b0};
+      rgb <= {9'b0, ~latched_snap_index[0], use_4_3_video_s, 10'b0, 3'b0};
     end else if (de_out) begin
       de  <= 1;
       rgb <= rgb_out;
