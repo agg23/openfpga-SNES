@@ -7,10 +7,15 @@ module MAIN_SNES (
     input [64:0] rtc,
 
     // Settings
+    input wire cpu_turbo_enabled,
+    input wire gsu_turbo_enabled,
+
     input wire multitap_enabled,
     input wire lightgun_enabled,
     input wire lightgun_type,
     input wire [7:0] lightgun_dpad_aim_speed,
+
+    input wire blend_enabled,
 
     // Inputs
     input wire p1_button_a,
@@ -167,8 +172,6 @@ module MAIN_SNES (
   wire [5:0] ioctl_index = 0;  // TODO
   wire GUN_BTN = status[27];
   wire [1:0] GUN_MODE = lightgun_enabled ? 2'd1 : 0;
-  wire GSU_TURBO = status[18];
-  wire BLEND = ~status[16];
   wire [1:0] mouse_mode = status[6:5];
   wire joy_swap = status[7] | piano;
 
@@ -278,7 +281,7 @@ module MAIN_SNES (
     if (parser_delay == 1) begin
       // Set up masks before core starts
       rom_mask  <= (24'd1024 << rom_size) - 1'd1;
-      ram_mask  <= ram_size ? (24'd1024 << ram_size) - 1'd1 : 24'd0;
+      ram_mask  <= ram_size > 0 ? (24'd1024 << ram_size) - 1'd1 : 24'd0;
 
       sram_size <= ram_size;
     end
@@ -293,7 +296,6 @@ module MAIN_SNES (
 
   ////////////////////////////  SYSTEM  ///////////////////////////////////
 
-  wire GSU_ACTIVE;
   wire turbo_allow;
 
   reg [15:0] main_audio_l;
@@ -325,14 +327,14 @@ module MAIN_SNES (
       .MCLK(clk_sys),  // 21.47727 / 21.28137
       .ACLK(clk_sys),
 
-      .GSU_ACTIVE(GSU_ACTIVE),
-      .GSU_TURBO (GSU_TURBO),
+      // .GSU_ACTIVE(GSU_ACTIVE),
+      .GSU_TURBO(gsu_turbo_enabled),
 
       .ROM_TYPE(rom_type),
       .ROM_MASK(rom_mask),
       .RAM_MASK(ram_mask),
       .PAL(PAL),
-      .BLEND(BLEND),
+      .BLEND(blend_enabled),
 
       .ROM_ADDR(ROM_ADDR),
       .ROM_D(ROM_D),
@@ -408,7 +410,7 @@ module MAIN_SNES (
       .IO_DAT (ioctl_dout),
       .IO_WR  (spc_download & ioctl_wr),
 
-      .TURBO(status[4] & turbo_allow),
+      .TURBO(cpu_turbo_enabled & turbo_allow),
       .TURBO_ALLOW(turbo_allow),
 
 `ifdef DEBUG_BUILD

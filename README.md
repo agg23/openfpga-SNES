@@ -21,7 +21,7 @@ ROMs should be placed in `/Assets/snes/common`. Both headered and unheadered ROM
 
 ### Dock Support
 
-Core supports four players/controllers via the Analogue Dock. To enable four player mode, turn on "Use Multitap" setting.
+Core supports four players/controllers via the Analogue Dock. To enable four player mode, turn on `Use Multitap` setting.
 
 ### Expansion Chips
 
@@ -31,14 +31,18 @@ All original expansion chips supported by MiSTer are also supported on the Pocke
 
 BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supported
 
-### Video Modes
+### Video
 
-The Analogue Pocket framework doesn't currently allow for customizing video modes directly, so if you dislike the default 8:7 aspect ratio/want to change to 4:3, you can change it by modifying `Cores/agg23.SNES/video.json` and rearranging the config objects.
+* `Use 4:3 Video` - The internal resolution of the SNES is a 8:7 aspect ratio, which is much taller than the 4:3 CRTs that were used at the time. Some games are designed to be displayed at 8:7, and others at 4:3. The `Use 4:3 Video` option is provided to switch to a 4:3 aspect ratio.
+* `Pseudo Transparency` - Enable blending of adjacent pixels, used in some games to simulate transparency
 
-Proper PAL support also requires editing these files to have an expanded vertical pixel height.
+### Turbo
+
+* `CPU Turbo` - Applies a speed increase to the main SNES CPU. **NOTE:** This has different compatibility with different games. See the [MiSTer list of games](https://github.com/MiSTer-devel/SNES_MiSTer/blob/master/SNES_Turbo.md) that this feature works with
+* `SuperFX Turbo` - Applies a speed increase to the GSU (SuperFX) chip. Can be used in addition to the `CPU Turbo` option in games like Star Fox to maintain a higher frame rate.
 
 ### Lightguns
 
-Core supports virtual lightguns by enabling the "Use Super Scope" or "Use Justifier" settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+Core supports virtual lightguns by enabling the `Use Super Scope` or `Use Justifier` settings. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
 
 **NOTE:** Joystick support for aiming only appears to work when a controller is paired over Bluetooth and not connected to the Analogue Dock directly by USB.
