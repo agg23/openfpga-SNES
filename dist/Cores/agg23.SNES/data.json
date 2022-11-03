@@ -7,7 +7,7 @@
         "id": 0,
         "required": true,
         "parameters": "0x109",
-        "extensions": ["smc", "sfc", "bs"],
+        "extensions": ["smc", "sfc", "bs", "spc"],
         "address": "0x10000000"
       },
       {

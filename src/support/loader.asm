@@ -36,7 +36,13 @@ align(2)
 include "check_header.asm"
 align(2)
 
+include "spc.asm"
+align(2)
+
 start:
+// Check SPC
+call check_spc
+
 ld r1,#rom_dataslot // populate data slot
 open r1,r2
 

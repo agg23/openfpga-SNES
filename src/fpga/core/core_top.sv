@@ -350,6 +350,9 @@ module core_top (
         32'h10: begin
           PAL <= bridge_wr_data[0];
         end
+        32'h14: begin
+          spc_download <= bridge_wr_data[0];
+        end
         32'h50: begin
           reset_delay <= 32'h100000;
         end
@@ -494,6 +497,7 @@ module core_top (
   );
 
   reg ioctl_download = 0;
+  reg spc_download = 0;
   wire ioctl_wr;
   wire [24:0] ioctl_addr;
   wire [15:0] ioctl_dout;
@@ -816,7 +820,8 @@ module core_top (
       .p4_dpad_right(cont4_key_s[3]),
 
       // ROM loading
-      .ioctl_download(ioctl_download),
+      .cart_download(ioctl_download),
+      .spc_download(spc_download),
       .ioctl_wr(ioctl_wr),
       .ioctl_addr(ioctl_addr),
       .ioctl_dout(ioctl_dout),
