@@ -621,6 +621,7 @@ module MAIN_SNES (
 
   // wire [24:0] addr_download = ioctl_addr - 24'd512;
   wire [24:0] addr_download = ioctl_addr - 24'h100;
+  wire spc_combined = spc_download && addr_download < 25'h10000;
 
   dpram_dif #(16, 8, 15, 16) aram (
       .clock(clk_sys),
@@ -630,9 +631,9 @@ module MAIN_SNES (
       .q_A(ARAM_Q),
 
       // clear the RAM on loading
-      .address_b(spc_download ? addr_download[15:1] : mem_fill_addr[15:1]),
-      .data_b(spc_download ? ioctl_dout : {2{aram_fill_data}}),
-      .wren_b(spc_download ? ioctl_wr : clearing_ram)
+      .address_b(spc_combined ? addr_download[15:1] : mem_fill_addr[15:1]),
+      .data_b(spc_combined ? ioctl_dout : {2{aram_fill_data}}),
+      .wren_b(spc_combined ? ioctl_wr : clearing_ram)
   );
 
   // wire [15:0] psram_aram_addr = spc_download ? addr_download[15:0] :

@@ -608,7 +608,7 @@ module core_top (
       // Write sram size half of the time
       datatable_wren <= 1;
       // sram_size is the size of the config value in the ROM. Convert to actual size
-      datatable_data <= sram_size ? 32'd1024 << sram_size : 32'h0;
+      datatable_data <= sram_size > 0 ? 32'd1024 << sram_size : 32'h0;
       // Data slot index 1, not id 1
       datatable_addr <= 1 * 2 + 1;
     end
