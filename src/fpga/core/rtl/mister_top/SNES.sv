@@ -615,67 +615,67 @@ module MAIN_SNES (
   wire        ARAM_WE_N;
   wire [7:0] ARAM_Q, ARAM_D;
 
-  // wire [15:0] aram_16_out;
+  wire [15:0] aram_16_out;
 
-  // assign ARAM_Q = psram_aram_addr[0] ? aram_16_out[15:8] : aram_16_out[7:0];
+  assign ARAM_Q = psram_aram_addr[0] ? aram_16_out[15:8] : aram_16_out[7:0];
 
   // wire [24:0] addr_download = ioctl_addr - 24'd512;
   wire [24:0] addr_download = ioctl_addr - 24'h100;
   wire spc_combined = spc_download && addr_download < 25'h10000;
 
-  dpram_dif #(16, 8, 15, 16) aram (
-      .clock(clk_sys),
-      .address_a(ARAM_ADDR),
-      .data_a(ARAM_D),
-      .wren_a(~ARAM_CE_N & ~ARAM_WE_N),
-      .q_A(ARAM_Q),
+  // dpram_dif #(16, 8, 15, 16) aram (
+  //     .clock(clk_sys),
+  //     .address_a(ARAM_ADDR),
+  //     .data_a(ARAM_D),
+  //     .wren_a(~ARAM_CE_N & ~ARAM_WE_N),
+  //     .q_A(ARAM_Q),
 
-      // clear the RAM on loading
-      .address_b(spc_combined ? addr_download[15:1] : mem_fill_addr[15:1]),
-      .data_b(spc_combined ? ioctl_dout : {2{aram_fill_data}}),
-      .wren_b(spc_combined ? ioctl_wr : clearing_ram)
-  );
-
-  // wire [15:0] psram_aram_addr = spc_download ? addr_download[15:0] :
-  //                               clearing_ram ? mem_fill_addr[15:0] : ARAM_ADDR;
-
-  // wire [7:0] aram_data = clearing_ram ? aram_fill_data : ARAM_D;
-  // wire [15:0] aram_16_data = spc_download ? ioctl_dout :
-  //                            psram_aram_addr[0] ? {aram_data, 8'h0} : {8'h0, aram_data};
-
-  // wire aram_wr = spc_download ? ioctl_wr : clearing_ram ? 1'b1 : ~ARAM_CE_N & ~ARAM_WE_N;
-
-  // psram #(
-  //     .CLOCK_SPEED(85.9)
-  // ) aram (
-  //     .clk(clk_mem_85_9),
-
-  //     .bank_sel(0),
-  //     // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
-  //     .addr(psram_aram_addr[15:1]),
-
-  //     .write_en(aram_wr),
-  //     .data_in(aram_16_data),
-  //     .write_high_byte(spc_download || psram_aram_addr[0]),
-  //     .write_low_byte(spc_download || ~psram_aram_addr[0]),
-
-  //     .read_en (spc_download ? 0 : ~ARAM_CE_N & ~ARAM_OE_N),
-  //     .data_out(aram_16_out),
-
-  //     // Actual PSRAM interface
-  //     .cram_a(cram1_a),
-  //     .cram_dq(cram1_dq),
-  //     .cram_wait(cram1_wait),
-  //     .cram_clk(cram1_clk),
-  //     .cram_adv_n(cram1_adv_n),
-  //     .cram_cre(cram1_cre),
-  //     .cram_ce0_n(cram1_ce0_n),
-  //     .cram_ce1_n(cram1_ce1_n),
-  //     .cram_oe_n(cram1_oe_n),
-  //     .cram_we_n(cram1_we_n),
-  //     .cram_ub_n(cram1_ub_n),
-  //     .cram_lb_n(cram1_lb_n)
+  //     // clear the RAM on loading
+  //     .address_b(spc_combined ? addr_download[15:1] : mem_fill_addr[15:1]),
+  //     .data_b(spc_combined ? ioctl_dout : {2{aram_fill_data}}),
+  //     .wren_b(spc_combined ? ioctl_wr : clearing_ram)
   // );
+
+  wire [15:0] psram_aram_addr = spc_combined ? addr_download[15:0] :
+                                clearing_ram ? mem_fill_addr[15:0] : ARAM_ADDR;
+
+  wire [7:0] aram_data = clearing_ram ? aram_fill_data : ARAM_D;
+  wire [15:0] aram_16_data = spc_combined ? ioctl_dout :
+                             psram_aram_addr[0] ? {aram_data, 8'h0} : {8'h0, aram_data};
+
+  wire aram_wr = spc_combined ? ioctl_wr : clearing_ram ? 1'b1 : ~ARAM_CE_N & ~ARAM_WE_N;
+
+  psram #(
+      .CLOCK_SPEED(85.9)
+  ) aram (
+      .clk(clk_mem_85_9),
+
+      .bank_sel(0),
+      // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
+      .addr(psram_aram_addr[15:1]),
+
+      .write_en(aram_wr),
+      .data_in(aram_16_data),
+      .write_high_byte(spc_combined || psram_aram_addr[0]),
+      .write_low_byte(spc_combined || ~psram_aram_addr[0]),
+
+      .read_en (spc_combined ? 0 : ~ARAM_CE_N & ~ARAM_OE_N),
+      .data_out(aram_16_out),
+
+      // Actual PSRAM interface
+      .cram_a(cram1_a),
+      .cram_dq(cram1_dq),
+      .cram_wait(cram1_wait),
+      .cram_clk(cram1_clk),
+      .cram_adv_n(cram1_adv_n),
+      .cram_cre(cram1_cre),
+      .cram_ce0_n(cram1_ce0_n),
+      .cram_ce1_n(cram1_ce1_n),
+      .cram_oe_n(cram1_oe_n),
+      .cram_we_n(cram1_we_n),
+      .cram_ub_n(cram1_ub_n),
+      .cram_lb_n(cram1_lb_n)
+  );
 
   localparam BSRAM_BITS = 17;  // 1Mbits
   wire [19:0] BSRAM_ADDR;
