@@ -7,8 +7,8 @@
       "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
       "author": "agg23",
       "url": "https://github.com/agg23/openfpga-snes",
-      "version": "0.3.2",
-      "date_release": "2022-10-10"
+      "version": "0.4.0",
+      "date_release": "2022-11-10"
     },
     "framework": {
       "target_product": "Analogue Pocket",
@@ -21,13 +21,24 @@
       "hardware": {
         "link_port": false,
         "cartridge_adapter": -1
-      }
+      },
+      "chip32_vm": "loader.bin"
     },
     "cores": [
       {
-        "name": "default",
+        "name": "main",
         "id": 0,
         "filename": "snes_main.rev"
+      },
+      {
+        "name": "SPCSDD1",
+        "id": 1,
+        "filename": "snes_spc.rev"
+      },
+      {
+        "name": "PAL",
+        "id": 2,
+        "filename": "snes_pal.rev"
       }
     ]
   }

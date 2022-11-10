@@ -4,12 +4,19 @@ module MAIN_SNES (
 
     input wire core_reset,
 
+    input [64:0] rtc,
+
     // Settings
+    input wire cpu_turbo_enabled,
+    input wire gsu_turbo_enabled,
+
     input wire multitap_enabled,
     input wire lightgun_enabled,
     input wire lightgun_type,
     input wire [7:0] dpad_aim_speed,
     input wire mouse_enabled,
+
+    input wire blend_enabled,
 
     // Inputs
     input wire p1_button_a,
@@ -68,11 +75,15 @@ module MAIN_SNES (
     input wire p4_dpad_right,
 
     // ROM loading
-    input wire [31:0] rom_file_size,
     input wire ioctl_download,
     input wire ioctl_wr,
     input wire [24:0] ioctl_addr,
     input wire [15:0] ioctl_dout,
+
+    input wire [7:0] rom_type,
+    input wire [3:0] rom_size,
+    input wire [3:0] ram_size,
+    input wire PAL,
 
     // Saves
     input wire save_download,
@@ -132,20 +143,36 @@ module MAIN_SNES (
     output wire [7:0] video_g,
     output wire [7:0] video_b,
 
-    output reg PAL,
-
     // Audio
     output wire [15:0] audio_l,
     output wire [15:0] audio_r
 );
+  parameter USE_CX4 = 1'b0;
+  parameter USE_SDD1 = 1'b0;
+  parameter USE_GSU = 1'b0;
+  parameter USE_SA1 = 1'b0;
+  parameter USE_DSPn = 1'b0;
+  parameter USE_SPC7110 = 1'b0;
+  parameter USE_BSX = 1'b0;
+  parameter USE_MSU = 1'b0;
+
+  initial begin
+    $info("Selected chips");
+    $info("CX4 %d", USE_CX4);
+    $info("SDD1 %d", USE_SDD1);
+    $info("GSU %d", USE_GSU);
+    $info("SA1 %d", USE_SA1);
+    $info("DSPn %d", USE_DSPn);
+    $info("SPC7110 %d", USE_SPC7110);
+    $info("BSX %d", USE_BSX);
+    $info("MSU %d", USE_MSU);
+  end
 
   // Hardcoded wires
   wire [63:0] status = 0;
   wire [5:0] ioctl_index = 0;  // TODO
   wire GUN_BTN = status[27];
   wire [1:0] GUN_MODE = lightgun_enabled ? 2'd1 : 0;
-  wire GSU_TURBO = status[18];
-  wire BLEND = ~status[16];
   wire [1:0] mouse_mode = status[6:5];
   wire joy_swap = status[7] | piano;
 
@@ -188,27 +215,6 @@ module MAIN_SNES (
 
   //////////////////////////  ROM DETECT  /////////////////////////////////
 
-  wire [3:0] rom_size;
-  wire [3:0] ram_size;
-  wire has_header;
-
-  rom_parser rom_parser (
-      .clk_mem(clk_sys_21_48),
-
-      .rom_file_size(rom_file_size),
-
-      .addr(ioctl_addr),
-      .data(ioctl_dout),
-      .downloading(ioctl_download),
-
-      .has_header(has_header),
-      .parsed_rom_type(rom_type),
-      .parsed_rom_size(rom_size),
-      .parsed_sram_size(ram_size),
-      .pal(PAL)
-  );
-
-  wire [7:0] rom_type;
   reg [23:0] rom_mask, ram_mask;
   // Replaced by rom_parser
   // always @(posedge clk_sys) begin
@@ -276,7 +282,7 @@ module MAIN_SNES (
     if (parser_delay == 1) begin
       // Set up masks before core starts
       rom_mask  <= (24'd1024 << rom_size) - 1'd1;
-      ram_mask  <= ram_size ? (24'd1024 << ram_size) - 1'd1 : 24'd0;
+      ram_mask  <= ram_size > 0 ? (24'd1024 << ram_size) - 1'd1 : 24'd0;
 
       sram_size <= ram_size;
     end
@@ -291,7 +297,6 @@ module MAIN_SNES (
 
   ////////////////////////////  SYSTEM  ///////////////////////////////////
 
-  wire GSU_ACTIVE;
   wire turbo_allow;
 
   reg [15:0] main_audio_l;
@@ -308,20 +313,29 @@ module MAIN_SNES (
   wire [7:0] G;
   wire [7:0] B;
 
-  main main (
+  main #(
+      .USE_CX4(USE_CX4),
+      .USE_SDD1(USE_SDD1),
+      .USE_GSU(USE_GSU),
+      .USE_SA1(USE_SA1),
+      .USE_DSPn(USE_DSPn),
+      .USE_SPC7110(USE_SPC7110),
+      .USE_BSX(USE_BSX),
+      .USE_MSU(USE_MSU)
+  ) main (
       .RESET_N(RESET_N),
 
       .MCLK(clk_sys),  // 21.47727 / 21.28137
       .ACLK(clk_sys),
 
-      .GSU_ACTIVE(GSU_ACTIVE),
-      .GSU_TURBO (GSU_TURBO),
+      // .GSU_ACTIVE(GSU_ACTIVE),
+      .GSU_TURBO(gsu_turbo_enabled),
 
       .ROM_TYPE(rom_type),
       .ROM_MASK(rom_mask),
       .RAM_MASK(ram_mask),
       .PAL(PAL),
-      .BLEND(BLEND),
+      .BLEND(blend_enabled),
 
       .ROM_ADDR(ROM_ADDR),
       .ROM_D(ROM_D),
@@ -384,7 +398,7 @@ module MAIN_SNES (
       .JOY2_P6(JOY2_P6),
       .JOY2_P6_in(JOY2_P6_DI),
 
-      .EXT_RTC(RTC),
+      .EXT_RTC(rtc),
 
       .GG_EN(status[24]),
       .GG_CODE(gg_code),
@@ -397,7 +411,7 @@ module MAIN_SNES (
       .IO_DAT (ioctl_dout),
       .IO_WR  (spc_download & ioctl_wr),
 
-      .TURBO(status[4] & turbo_allow),
+      .TURBO(cpu_turbo_enabled & turbo_allow),
       .TURBO_ALLOW(turbo_allow),
 
 `ifdef DEBUG_BUILD
@@ -494,13 +508,11 @@ module MAIN_SNES (
   wire [15:0] ROM_D;
   wire [15:0] ROM_Q;
 
-  wire [24:0] addr_download = has_header ? ioctl_addr - 10'd512 : ioctl_addr;
-
   sdram sdram (
       .init(0),  //~clock_locked),
       .clk(clk_mem),
 
-      .addr(cart_download ? addr_download : ROM_ADDR),
+      .addr(cart_download ? ioctl_addr : ROM_ADDR),
       .din (cart_download ? ioctl_dout : ROM_D),
       .dout(ROM_Q),
       .rd  (~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),

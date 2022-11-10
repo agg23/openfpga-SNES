@@ -15,29 +15,31 @@ To install the core, copy the `Assets`, `Cores`, and `Platform` folders over to 
 
 ## Usage
 
-**NOTE:** ROM files must not contain a SMC header. If a ROM isn't loading and you think it should, check if it has a header with a tool like [Advanced SNES ROM Utility](https://www.romhacking.net/utilities/1638/) and remove it if so.
-
-ROMs should be placed in `/Assets/snes/common`
-
-PAL ROMs should boot, but there may be timing issues as the core currently doesn't properly support PAL (proper support coming soon).
+ROMs should be placed in `/Assets/snes/common`. Both headered and unheadered ROMs are now supported.
 
 ## Features
 
 ### Dock Support
 
-Core supports four players/controllers via the Analogue Dock. To enable four player mode, turn on "Use Multitap" setting.
+Core supports four players/controllers via the Analogue Dock. To enable four player mode, turn on `Use Multitap` setting.
 
 ### Expansion Chips
 
-The currently supported expansion chips are SA-1 (Super Mario RPG), Super FX (GSU-1/2; Star Fox), DSP (Super Mario Kart), and CX4 (Mega Man X 2). Additional chip support will come in the future once several new firmware features are released.
+All original expansion chips supported by MiSTer are also supported on the Pocket. The full list is: SA-1 (Super Mario RPG), Super FX/GSU-1/2 (Star Fox), DSP (Super Mario Kart), CX4 (Mega Man X 2), S-DD1 (Star Ocean), SPC7110 (Far East of Eden), ST1010 (F1 Roc 2), and BSX (Satellaview). The Super Game Boy, ST011 (Hayazashi Nidan Morita Shougi), and ST018 (Hayazashi Nidan Morita Shougi 2) are not supported in the MiSTer core, and therefore are not supported here. Additionally, the homebrew MSU expansion chip is not currently supported.
 
-**NOTE:** The S-DD1 chip was dropped in release 0.2.0 due to sizing and popularity issues. Support will resume in a future release. In the meantime, you can [use this hack to remove the S-DD1 requirement](https://www.romhacking.net/hacks/614/).
+#### BSX
 
-### Video Modes
+BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supported
 
-The Analogue Pocket framework doesn't currently allow for customizing video modes directly, so if you dislike the default 8:7 aspect ratio/want to change to 4:3, you can change it by modifying `Cores/agg23.SNES/video.json` and rearranging the config objects.
+### Video
 
-Proper PAL support also requires editing these files to have an expanded vertical pixel height.
+* `Use 4:3 Video` - The internal resolution of the SNES is a 8:7 aspect ratio, which is much taller than the 4:3 CRTs that were used at the time. Some games are designed to be displayed at 8:7, and others at 4:3. The `Use 4:3 Video` option is provided to switch to a 4:3 aspect ratio.
+* `Pseudo Transparency` - Enable blending of adjacent pixels, used in some games to simulate transparency
+
+### Turbo
+
+* `CPU Turbo` - Applies a speed increase to the main SNES CPU. **NOTE:** This has different compatibility with different games. See the [MiSTer list of games](https://github.com/MiSTer-devel/SNES_MiSTer/blob/master/SNES_Turbo.md) that this feature works with
+* `SuperFX Turbo` - Applies a speed increase to the GSU (SuperFX) chip. Can be used in addition to the `CPU Turbo` option in games like Star Fox to maintain a higher frame rate.
 
 ### Controller Options
 
@@ -50,12 +52,12 @@ There are several options provided for selecting which type of controller the co
 
 ### Lightguns
 
-Core supports virtual lightguns by selecting the "Super Scope" or "Justifier" options under "Controller Options". Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+Core supports virtual lightguns by selecting the `Super Scope` or `Justifier` options under `Controller Options`. Most lightgun games user the Super Scope but Lethal Enforcers uses the Justifier. The crosshair can be controlled with the D-Pad or left joystick, using the A button to fire and the B button to reload. D-Pad aim sensitivity can be adjusted with the `D-Pad Aim Speed` setting.
 
 **NOTE:** Joystick support for aiming only appears to work when a controller is paired over Bluetooth and not connected to the Analogue Dock directly by USB.
 
 ### SNES Mouse
 
-Core supports a virtual SNES mouse by selecting "Mouse" under "Controller Options". The mouse can be moved with the D-Pad or left joystick and left and right clicks can be performed by pressing the A and B buttons respectively. Mouse D-Pad movement sensitivity can be adjusted with the "D-Pad Aim Speed" setting.
+Core supports a virtual SNES mouse by selecting `Mouse` under `Controller Options`. The mouse can be moved with the D-Pad or left joystick and left and right clicks can be performed by pressing the A and B buttons respectively. Mouse D-Pad movement sensitivity can be adjusted with the `D-Pad Aim Speed` setting.
 
 **NOTE:** The dock firmware doesn't currently support a USB mouse.
