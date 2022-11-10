@@ -13,7 +13,8 @@ module MAIN_SNES (
     input wire multitap_enabled,
     input wire lightgun_enabled,
     input wire lightgun_type,
-    input wire [7:0] lightgun_dpad_aim_speed,
+    input wire [7:0] dpad_aim_speed,
+    input wire mouse_enabled,
 
     input wire blend_enabled,
 
@@ -782,9 +783,11 @@ module MAIN_SNES (
       .PORT_DO(JOY1_DO_t),
 
       .JOYSTICK1(joy_swap ? joy1 : joy0),
+      .JOY_X(p1_lstick_x),
+      .JOY_Y(p1_lstick_y),
 
-      // .MOUSE(ps2_mouse),
-      // .MOUSE_EN(mouse_mode[0])
+      .DPAD_AIM_SPEED(dpad_aim_speed),
+      .MOUSE_EN(mouse_enabled)
   );
 
   wire [1:0] JOY2_DO;
@@ -829,7 +832,7 @@ module MAIN_SNES (
       .DOWN(p1_dpad_down),
       .LEFT(p1_dpad_left),
       .RIGHT(p1_dpad_right),
-      .DPAD_AIM_SPEED(lightgun_dpad_aim_speed),
+      .DPAD_AIM_SPEED(dpad_aim_speed),
 
       .HDE(hblank_n),
       .VDE(vblank_n),
