@@ -25,7 +25,18 @@ Core supports four players/controllers via the Analogue Dock. To enable four pla
 
 ### Expansion Chips
 
-All original expansion chips supported by MiSTer are also supported on the Pocket. The full list is: SA-1 (Super Mario RPG), Super FX/GSU-1/2 (Star Fox), DSP (Super Mario Kart), CX4 (Mega Man X 2), S-DD1 (Star Ocean), SPC7110 (Far East of Eden), ST1010 (F1 Roc 2), and BSX (Satellaview). The Super Game Boy, ST011 (Hayazashi Nidan Morita Shougi), and ST018 (Hayazashi Nidan Morita Shougi 2) are not supported in the MiSTer core, and therefore are not supported here. Additionally, the homebrew MSU expansion chip is not currently supported.
+All original expansion chips supported by MiSTer are also supported on the Pocket. The full list is:
+
+* SA-1 (Super Mario RPG)
+* Super FX/GSU-1/2 (Star Fox)
+* DSP (Super Mario Kart)
+* CX4 (Mega Man X 2)
+* S-DD1 (Star Ocean)
+* SPC7110 (Far East of Eden)
+* ST1010 (F1 Roc 2)
+* BSX (Satellaview)
+
+The Super Game Boy, ST011 (Hayazashi Nidan Morita Shougi), and ST018 (Hayazashi Nidan Morita Shougi 2) are not supported in the MiSTer core, and therefore are not supported here. Additionally, the homebrew MSU expansion chip is not currently supported.
 
 #### BSX
 
