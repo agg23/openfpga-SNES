@@ -374,7 +374,7 @@ module core_top (
           joystick_deadzone <= bridge_wr_data[7:0];
         end
         32'h200: begin
-          use_4_3_video <= bridge_wr_data[0];
+          use_square_pixels <= bridge_wr_data[0];
         end
         32'h204: begin
           blend_enabled <= bridge_wr_data[0];
@@ -687,7 +687,7 @@ module core_top (
   reg [7:0] joystick_deadzone;
   reg mouse_enabled;
 
-  reg use_4_3_video = 0;
+  reg use_square_pixels = 0;
   reg blend_enabled = 0;
 
   // Settings sync
@@ -703,7 +703,7 @@ module core_top (
   wire [7:0] joystick_deadzone_s;
   wire mouse_enabled_s;
 
-  wire use_4_3_video_s;
+  wire use_square_pixels_s;
   wire blend_enabled_s;
 
   synch_3 #(
@@ -719,7 +719,7 @@ module core_top (
         dpad_aim_speed,
         joystick_deadzone,
         mouse_enabled,
-        use_4_3_video,
+        use_square_pixels,
         blend_enabled
       },
       {
@@ -732,7 +732,7 @@ module core_top (
         dpad_aim_speed_s,
         joystick_deadzone_s,
         mouse_enabled_s,
-        use_4_3_video_s,
+        use_square_pixels_s,
         blend_enabled_s
       },
       clk_sys_21_48
@@ -967,7 +967,7 @@ module core_top (
 
     if (~de_out && prev_de) begin
       // Write video slot
-      rgb <= {9'b0, ~latched_snap_index[0], use_4_3_video_s, 10'b0, 3'b0};
+      rgb <= {9'b0, ~latched_snap_index[0], use_square_pixels_s, 10'b0, 3'b0};
     end else if (de_out) begin
       de  <= 1;
       rgb <= rgb_out;

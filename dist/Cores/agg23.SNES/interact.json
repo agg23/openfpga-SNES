@@ -3,7 +3,7 @@
     "magic": "APF_VER_1",
     "variables": [
       {
-        "name": "Reset core",
+        "name": "Reset Core",
         "id": 10,
         "type": "action",
         "enabled": true,
@@ -106,8 +106,8 @@
         }
       },
       {
-        "name": "Use 4:3 video",
-        "id": 40,
+        "name": "Square Pixels",
+        "id": 42,
         "type": "check",
         "enabled": true,
         "address": "0x200",

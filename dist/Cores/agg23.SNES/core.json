@@ -7,7 +7,7 @@
       "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
       "author": "agg23",
       "url": "https://github.com/agg23/openfpga-snes",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "date_release": "2022-12-10"
     },
     "framework": {

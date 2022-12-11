@@ -44,7 +44,7 @@ BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supp
 
 ### Video
 
-* `Use 4:3 Video` - The internal resolution of the SNES is a 8:7 aspect ratio, which is much taller than the 4:3 CRTs that were used at the time. Some games are designed to be displayed at 8:7, and others at 4:3. The `Use 4:3 Video` option is provided to switch to a 4:3 aspect ratio.
+* `Square Pixels` - The internal resolution of the SNES is a 8:7 pixel aspect ratio (wide pixels), which roughly corresponds to what users would see on 4:3 display aspect ratio CRTs. Some games are designed to be displayed at 8:7 PAR (the core's default), and others at 1:1 PAR (square pixels). The `Square Pixels` option is provided to switch to a 1:1 pixel aspect ratio
 * `Pseudo Transparency` - Enable blending of adjacent pixels, used in some games to simulate transparency
 
 ### Turbo
