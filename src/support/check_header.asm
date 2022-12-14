@@ -92,16 +92,17 @@ validate_checksum:
 macro validate_mapping_mode(variable address) {
   log_string("Checking mapping mode")
   ld.w r1,(mapping_mode_addr)
+  and r1,#0xEF // Mask off FastROM set bit
 
-  if (address == 0x7FBC) {
+  if (address == 0x7FBD) {
     cmp r1,#0x20 // Compare against mapper 0x20 (LoROM)
     jp nz, noscore{#}
     cmp r1,#0x22 // Compare against mapper 0x22 (SDD1)
     jp nz, noscore{#}
-  } else if (address == 0xFFBC) {
+  } else if (address == 0xFFBD) {
     cmp r1,#0x21 // Compare against mapper 0x21 (HiROM)
     jp nz, noscore{#}
-  }  else if (address == 0x40FFBC) {
+  } else if (address == 0x40FFBD) {
     cmp r1,#0x25 // Compare against mapper 0x25 (ExHiROM)
     jp nz, noscore{#}
   }
