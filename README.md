@@ -4,6 +4,11 @@ Ported from the original core developed by [srg320](https://github.com/srg320) (
 
 Please report any issues encountered to this repo. Most likely any problems are a result of my port, not the original core. Issues will be upstreamed as necessary.
 
+> **Warning**: Savestates/Memories/Sleep not supported
+>
+> Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
+> 
+> **Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
 ## Installation
 
 ### Easy mode
@@ -41,6 +46,14 @@ The Super Game Boy, ST011 (Hayazashi Nidan Morita Shougi), and ST018 (Hayazashi 
 #### BSX
 
 BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supported
+
+### Savestates/Memories/Sleep
+
+> **Warning**: Not supported
+
+Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
+
+**Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
 
 ### Video
 
