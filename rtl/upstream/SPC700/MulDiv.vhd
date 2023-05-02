@@ -29,18 +29,21 @@ architecture rtl of MulDiv is
 	signal mulRes, mulTemp  : unsigned(15 downto 0);
 	signal mulA  : unsigned(15 downto 0);
 	signal mulY  : unsigned(7 downto 0);
-	signal divTemp : unsigned(16 downto 0);
+	signal divt  : unsigned(15 downto 0);
+	signal quotient : unsigned(8 downto 0);
+	signal remainder : unsigned(15 downto 0);
 	
 begin
 	
 	process(CLK, RST_N)
-		variable divTemp_shifted: unsigned(16 downto 0);
 	begin
 		if RST_N = '0' then
 			mulA <= (others=>'0');
 			mulY <= (others=>'0');
 			mulRes <= (others=>'0');
-			divTemp <= (others=>'0');
+			divt <= (others=>'0');
+			remainder <= (others=>'0');
+			quotient <= (others=>'0');
 		elsif rising_edge(CLK) then 
 			if EN = '1' then
 				if CTRL.secOp = "1110" then
@@ -48,27 +51,26 @@ begin
 					mulA <= mulA(14 downto 0) & "0";
 					mulY <= "0" & mulY(7 downto 1);
 				elsif CTRL.secOp = "1111" then
-					if (divTemp(15 downto 0) & divTemp(16)) >= unsigned(X & "000000000") then 
-						divTemp_shifted := divTemp(15 downto 0) & not divTemp(16);
+					if remainder >= divt then 
+						remainder <= remainder - divt;
+						quotient <= quotient(7 downto 0) & "1"; 
 					else
-						divTemp_shifted := divTemp(15 downto 0) &     divTemp(16);
+						quotient <= quotient(7 downto 0) & "0"; 
 					end if;
-					if divTemp_shifted(0) = '1' then
-						divTemp <= divTemp_shifted - unsigned(X & "000000000");
-					else
-						divTemp <= divTemp_shifted;
-					end if;
+					divt <= "0" & divt(15 downto 1); 
 				else
 					mulA <= unsigned("00000000" & A);
 					mulY <= unsigned(Y);
 					mulRes <= (others=>'0');
-					divTemp <= unsigned("0" & Y & A);
+					divt <= unsigned(X & "00000000");
+					remainder <= unsigned(Y & A);
+					quotient <= (others=>'0');
 				end if;
 			end if;
 		end if;
 	end process;
 
-	process(CTRL, mulA, mulY, mulRes, mulTemp, divTemp)
+	process(CTRL, mulA, mulY, mulRes, mulTemp, quotient, remainder)
 	begin
 		mulTemp <= (others=>'0');
 		if CTRL.secOp = "1110" then
@@ -86,14 +88,14 @@ begin
 			tV <= '0';
 			tS <= mulTemp(15);
 		elsif CTRL.secOp = "1111" then
-			tResult <= std_logic_vector(divTemp(16 downto 9) & divTemp(7 downto 0));
-			if divTemp(7 downto 0) = 0 then
+			tResult <= std_logic_vector(remainder(7 downto 0) & quotient(7 downto 0));
+			if quotient(7 downto 0) = 0 then
 				tZ <= '1';
 			else
 				tZ <= '0';
 			end if;
-			tV <= divTemp(8);
-			tS <= divTemp(7);
+			tV <= quotient(8);
+			tS <= quotient(7);
 		else
 			tResult <= (others=>'0');
 			tZ <= '0';
