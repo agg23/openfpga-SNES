@@ -74,7 +74,6 @@ architecture rtl of P65C816 is
 	signal JSR_FOUND : std_logic;
 	
 begin
-	
 	EN <= RDY_IN and CE and not WAIExec and not STPExec;
 	
 	IsBranchCycle1 <= '1' when IR(4 downto 0) = "10000" and STATE = "0001" else '0';
@@ -130,7 +129,7 @@ begin
 					NextState <= "0000";
 				end if; 
 			when "101" => 
-				if DLNoZero = '1' then
+				if DLNoZero = '1' and EF = '0' then
 					NextState <= STATE + 1; 
 				else
 					NextState <= STATE + 2; 
@@ -273,7 +272,7 @@ begin
 				oldXF <= '1';
 			elsif EN = '1' then
 				if MC.LOAD_AXY = "110" then 
-					if MC.BYTE_SEL(1) = '1' and XF = '0' and EF = '0' then
+					if MC.BYTE_SEL(1) = '1' and XF = '0' and EF = '0' then 
 						X(15 downto 8) <= AluR(15 downto 8);
 						X(7 downto 0) <= AluR(7 downto 0);
 					elsif MC.BYTE_SEL(0) = '1' and (XF = '1' or EF = '1') then
@@ -315,7 +314,6 @@ begin
 						if EF = '0' then
 							SP <= std_logic_vector(unsigned(SP) + 1);
 						else
-							SP(15 downto 8) <= x"01";
 							SP(7 downto 0) <= std_logic_vector(unsigned(SP(7 downto 0)) + 1);
 						end if;
 					when "010" => 
@@ -323,7 +321,6 @@ begin
 							if EF = '0' then
 								SP <= std_logic_vector(unsigned(SP) + 1);
 							else
-								SP(15 downto 8) <= x"01";
 								SP(7 downto 0) <= std_logic_vector(unsigned(SP(7 downto 0)) + 1);
 							end if;
 						end if;
@@ -331,27 +328,20 @@ begin
 						if EF = '0' then
 							SP <= std_logic_vector(unsigned(SP) - 1);
 						else
-							SP(15 downto 8) <= x"01";
 							SP(7 downto 0) <= std_logic_vector(unsigned(SP(7 downto 0)) - 1);
 						end if;
 					when "100" => 
 						if EF = '0' then
 							SP <= A;
 						else
-							SP(15 downto 8) <= x"01";
-							SP(7 downto 0) <= A(7 downto 0);
+							SP <= x"01" & A(7 downto 0);
 						end if;
 					when "101" => 
 						if EF = '0' then
 							SP <= X;
 						else
-							SP(15 downto 8) <= x"01";
-							SP(7 downto 0) <= X(7 downto 0);
+							SP <= x"01" & X(7 downto 0);
 						end if;
-					when "110"=> 
-						SP <= std_logic_vector(unsigned(SP) + 1);
-					when "111" => 
-						SP <= std_logic_vector(unsigned(SP) - 1);
 					when others => null;
 				end case;
 			end if; 
@@ -373,7 +363,7 @@ begin
 							(MC.LOAD_AXY(1) = '0' and MC.BYTE_SEL(1) = '1' and (MF = '0' and EF = '0')) or	--A/Mem 16bit
 							(MC.LOAD_AXY(1) = '1' and MC.BYTE_SEL(1) = '1' and (XF = '0' and EF = '0')) or	--X/Y 16bit
 							(MC.LOAD_AXY(1) = '0' and MC.BYTE_SEL(1) = '1' and w16 = '1') or						--A/Mem 16bit
-							IR = x"EB" or IR = x"AB" or IR = x"5B" or IR = x"BA" then
+							IR = x"EB" or IR = x"AB" then
 							P(1 downto 0) <= ZO & CO; P(7 downto 6) <= SO & VO; -- ALU
 						end if;
 					when "010" => P(2) <= '1'; P(3) <= '0';		-- BRK/COP
@@ -480,21 +470,18 @@ begin
 			NMI_SYNC <= '0';
 			IRQ_SYNC <= '0';
 		elsif rising_edge(CLK) then
-			if RDY_IN = '1' and CE = '1' and IsResetInterrupt = '0' then
+			if CE = '1' and IsResetInterrupt = '0' then
 				OLD_NMI_N <= NMI_N;
 				if NMI_N = '0' and OLD_NMI_N = '1' and NMI_SYNC = '0' then
 					NMI_SYNC <= '1';
-				elsif LAST_CYCLE = '1' and NMI_SYNC = '1' and EN = '1' then
+				elsif NMI_ACTIVE = '1' and LAST_CYCLE = '1' and EN = '1' then
 					NMI_SYNC <= '0';
 				end if;
-				
 				IRQ_SYNC <= not IRQ_N;
 			end if;
 		end if;
 	end process; 
 	
-	IRQ_ACTIVE <= IRQ_SYNC and not P(2);
-	NMI_ACTIVE <= NMI_SYNC;
 	process(CLK, RST_N)
 	begin
 		if RST_N = '0' then
@@ -502,18 +489,26 @@ begin
 			IsNMIInterrupt <= '0';
 			IsIRQInterrupt <= '0';
 			GotInterrupt <= '1';
+			NMI_ACTIVE <= '0';
+			IRQ_ACTIVE <= '0';
 		elsif rising_edge(CLK) then
 			if RDY_IN = '1' and CE = '1' then
+				NMI_ACTIVE <= NMI_SYNC;
+				IRQ_ACTIVE <= not IRQ_N;
+				
 				if LAST_CYCLE = '1' and EN = '1' then
 					if GotInterrupt = '0' then
-						GotInterrupt <= IRQ_ACTIVE or NMI_ACTIVE;
+						GotInterrupt <= (IRQ_ACTIVE and not P(2)) or NMI_ACTIVE;
+						if NMI_ACTIVE = '1' then
+							NMI_ACTIVE <= '0';
+						end if;
 					else
 						GotInterrupt <= '0';
 					end if;
 					
 					IsResetInterrupt <= '0';
 					IsNMIInterrupt <= NMI_ACTIVE;
-					IsIRQInterrupt <= IRQ_ACTIVE;
+					IsIRQInterrupt <= IRQ_ACTIVE and not P(2);
 				end if;
 			end if;
 		end if;
@@ -530,17 +525,17 @@ begin
 			STPExec <= '0';
 		elsif rising_edge(CLK) then
 			if EN = '1' and GotInterrupt = '0' then
-				if STATE = "0001" then 
-					if IR = x"CB" then			-- WAI
+				if STATE = "0000" then 
+					if D_IN = x"CB" then			-- WAI
 						WAIExec <= '1';
-					elsif IR = x"DB" then		-- STP
+					elsif D_IN = x"DB" then		-- STP
 						STPExec <= '1';
 					end if;
 				end if;
 			end if;
 			
 			if RDY_IN = '1' and CE = '1' then
-				if (NMI_SYNC = '1' or IRQ_N = '0' or ABORT_N = '0') and WAIExec = '1' then
+				if ( NMI_SYNC = '1' or IRQ_SYNC = '1' or ABORT_N = '0' ) and WAIExec = '1' then
 					WAIExec <= '0';
 				end if;
 			end if;
@@ -554,34 +549,19 @@ begin
 	begin
 		ADDR_INC := (15 downto 2 => '0', 1 => MC.ADDR_INC(1), 0 => MC.ADDR_INC(0));
 		case MC.ADDR_BUS is
-			when "0000" => 
-				ADDR_BUS <= PBR & PC; 
-				
-			when "0001"=> 
-				ADDR_BUS <= std_logic_vector((unsigned(DBR) & x"0000") + (x"00" & unsigned(AA(15 downto 0))) + (x"00" & ADDR_INC));
-			when "0101"=> 
-				ADDR_BUS <= std_logic_vector((unsigned(AB) & x"0000") + ("0000000" & unsigned(AA)) + (x"00" & ADDR_INC));
-				
-			when "0010"=>
-				ADDR_BUS <= PBR & std_logic_vector(unsigned(AA(15 downto 0)) + ADDR_INC);
-			when "0110"=> 
-				ADDR_BUS <= x"00" & std_logic_vector(unsigned(AA(15 downto 0)) + ADDR_INC);
-				
-			when "0011" | "0111" => 
-				if EF = '0' or MC.ADDR_BUS(2) = '0' then
-					ADDR_BUS <= x"00" & std_logic_vector(unsigned(DX) + ADDR_INC);
+			when "000" => 
+				ADDR_BUS(23 downto 0) <= PBR & PC; 
+			when "001"=> 
+				ADDR_BUS(23 downto 0) <= std_logic_vector((unsigned(DBR) & x"0000") + (x"00" & unsigned(AA(15 downto 0))) + (x"00" & ADDR_INC));
+			when "010" => 
+				if EF = '0' then
+					ADDR_BUS(23 downto 0) <= x"00" & SP;
 				else
-					ADDR_BUS <= x"00" & DX(15 downto 8) & std_logic_vector(unsigned(DX(7 downto 0)) + ADDR_INC(7 downto 0));
+					ADDR_BUS(23 downto 0) <= x"00" & x"01" & SP(7 downto 0);
 				end if;
-				
-			when "1000" | "1100" => 
-				if EF = '0' or MC.ADDR_BUS(2) = '0' then
-					ADDR_BUS <= x"00" & SP;
-				else
-					ADDR_BUS <= x"00" & x"01" & SP(7 downto 0);
-				end if;
-				
-			when "1111" => 
+			when "011" => 
+				ADDR_BUS(23 downto 0) <= x"00" & std_logic_vector(unsigned(DX) + ADDR_INC);
+			when "100" => 
 				ADDR_BUS(23 downto 4) <= x"00" & "11111111111" & EF;
 				if IsResetInterrupt = '1' then
 					ADDR_BUS(3 downto 0) <= "110" & MC.ADDR_INC(0);		--FFFC/D
@@ -596,15 +576,19 @@ begin
 				else			--BRK Interrupt
 					ADDR_BUS(3 downto 0) <= EF & "11" & MC.ADDR_INC(0);	--FFFE/F, FFE6/7
 				end if;
-				
-			when others => 
-				ADDR_BUS <= (others=>'0'); 
+			when "101"=> 
+				ADDR_BUS(23 downto 0) <= std_logic_vector((unsigned(AB) & x"0000") + ("0000000" & unsigned(AA)) + (x"00" & ADDR_INC));
+			when "110"=> 
+				ADDR_BUS(23 downto 0) <= x"00" & std_logic_vector(unsigned(AA(15 downto 0)) + ADDR_INC);
+			when "111"=> 
+				ADDR_BUS(23 downto 0) <= PBR & std_logic_vector(unsigned(AA(15 downto 0)) + ADDR_INC);
+			when others => null;
 		end case;
 	end process;
 	
 	A_OUT <= ADDR_BUS;
 
-	process(MC, IR, LAST_CYCLE, STATE, IRQ_ACTIVE, NMI_ACTIVE, IsBRKInterrupt, IsCOPInterrupt, GotInterrupt )
+	process(MC, IR, LAST_CYCLE, STATE, IRQ_ACTIVE, NMI_ACTIVE, IsBRKInterrupt, IsCOPInterrupt, GotInterrupt, P )
 		variable rmw : std_logic;
 		variable twoCls, softInt : std_logic;
 	begin
@@ -620,13 +604,13 @@ begin
 			rmw := '0';
 		end if;
 				
-		if MC.ADDR_BUS = "1111" then
+		if MC.ADDR_BUS = "100" then
 			VPB <= '0';
 		else
 			VPB <= '1';
 		end if;
 
-		if (MC.ADDR_BUS = "0001" or MC.ADDR_BUS = "0011" or MC.ADDR_BUS = "0111") and rmw = '1' then
+		if (MC.ADDR_BUS = "001" or MC.ADDR_BUS = "011") and rmw = '1' then
 			MLB <= '0';
 		else
 			MLB <= '1';
@@ -645,7 +629,7 @@ begin
 		end if;
 		
 		VDA <= MC.VA(1);
-		VPA <= MC.VA(0) or (twoCls and (IRQ_ACTIVE or NMI_ACTIVE)) or softInt;
+		VPA <= MC.VA(0) or (twoCls and ((IRQ_ACTIVE and not P(2)) or NMI_ACTIVE)) or softInt;
 	end process;
 	
 	RDY_OUT <= EN;

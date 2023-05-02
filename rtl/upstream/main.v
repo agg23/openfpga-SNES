@@ -16,9 +16,6 @@ module main #(
 	input       [7:0] ROM_TYPE,
 	input      [23:0] ROM_MASK,
 	input      [23:0] RAM_MASK,
-	
-	output            SYSCLKR_CE,
-	output            SYSCLKF_CE,
 
 	output reg [23:0] ROM_ADDR,
 	output reg [15:0] ROM_D,
@@ -137,8 +134,8 @@ reg         IRQ_N;
 wire  [7:0] PA;
 wire        PARD_N;
 wire        PAWR_N;
-//wire        SYSCLKF_CE;
-//wire        SYSCLKR_CE;
+wire        SYSCLKF_CE;
+wire        SYSCLKR_CE;
 wire        REFRESH;
 
 wire  [5:0] MAP_ACTIVE;
