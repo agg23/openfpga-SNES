@@ -278,7 +278,7 @@ set_location_assignment PIN_M18 -to aux_sda
 # ==========================
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
-set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
+set_global_assignment -name TIMEQUEST_MULTICORNER_ANALYSIS ON
 
 # Compiler Assignments
 # ====================
