@@ -9,7 +9,7 @@ module MAIN_SNES (
     // Settings
     input wire cpu_turbo_enabled,
     input wire gsu_turbo_enabled,
-	input wire gsu_fastrom_enabled,
+    input wire gsu_fastrom_enabled,
 
     input wire multitap_enabled,
     input wire lightgun_enabled,
@@ -331,7 +331,7 @@ module MAIN_SNES (
 
       // .GSU_ACTIVE(GSU_ACTIVE),
       .GSU_TURBO(gsu_turbo_enabled),
-	  .GSU_FASTROM(gsu_fastrom_enabled),
+      .GSU_FASTROM(gsu_fastrom_enabled),
 
       .ROM_TYPE(rom_type),
       .ROM_MASK(rom_mask),
