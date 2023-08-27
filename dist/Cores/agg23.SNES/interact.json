@@ -32,6 +32,17 @@
         "defaultval": 0,
         "value": 1
       },
+	  {
+        "name": "SuperFX Fastrom",
+        "id": 17,
+        "type": "check",
+        "enabled": true,
+        "address": "0x88",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 1,
+        "value": 1
+      },
       {
         "name": "Use Multitap",
         "id": 20,
