@@ -359,7 +359,7 @@ module core_top (
         32'h84: begin
           gsu_turbo_enabled <= bridge_wr_data[0];
         end
-		32'h88: begin
+	32'h88: begin
           gsu_fastrom_enabled <= bridge_wr_data[0];
         end
         32'h100: begin
@@ -718,7 +718,7 @@ module core_top (
         reset_button,
         cpu_turbo_enabled,
         gsu_turbo_enabled,
-		gsu_fastrom_enabled,
+	gsu_fastrom_enabled,
         multitap_enabled,
         lightgun_enabled,
         lightgun_type,
@@ -732,7 +732,7 @@ module core_top (
         reset_button_s,
         cpu_turbo_enabled_s,
         gsu_turbo_enabled_s,
-		gsu_fastrom_enabled_s,
+	gsu_fastrom_enabled_s,
         multitap_enabled_s,
         lightgun_enabled_s,
         lightgun_type_s,
@@ -778,7 +778,7 @@ module core_top (
       // Settings
       .cpu_turbo_enabled(cpu_turbo_enabled_s),
       .gsu_turbo_enabled(gsu_turbo_enabled_s),
-	  .gsu_fastrom_enabled(gsu_fastrom_enabled_s),
+      .gsu_fastrom_enabled(gsu_fastrom_enabled_s),
 
       .multitap_enabled(multitap_enabled_s),
       .lightgun_enabled(lightgun_enabled_s),
