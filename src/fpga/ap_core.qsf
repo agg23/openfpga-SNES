@@ -42,7 +42,7 @@
 # ========================
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "21:31:36  JANUARY 22, 2020"
-set_global_assignment -name LAST_QUARTUS_VERSION "17.1.0 Standard Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:apf/build_id_gen.tcl"
 set_global_assignment -name SMART_RECOMPILE ON
@@ -278,7 +278,7 @@ set_location_assignment PIN_M18 -to aux_sda
 # ==========================
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
-set_global_assignment -name TIMEQUEST_MULTICORNER_ANALYSIS ON
+set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
 
 # Compiler Assignments
 # ====================
