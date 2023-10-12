@@ -42,7 +42,7 @@
 # ========================
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "21:31:36  JANUARY 22, 2020"
-set_global_assignment -name LAST_QUARTUS_VERSION "21.1.1 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "17.1.0 Standard Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name PRE_FLOW_SCRIPT_FILE "quartus_sh:apf/build_id_gen.tcl"
 set_global_assignment -name SMART_RECOMPILE ON
@@ -748,6 +748,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/sync_fifo.sv
 set_global_assignment -name MIF_FILE core/rtl/chip/DSP/dsp11b23410_p.mif
 set_global_assignment -name MIF_FILE core/rtl/chip/DSP/dsp11b23410_d.mif
 set_global_assignment -name MIF_FILE core/rtl/chip/CX4/drom.mif
+set_global_assignment -name MIF_FILE core/rtl/chip/BSX/bsx121-124.mif
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/sound_i2s.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/rom_parser.sv
 set_global_assignment -name SYSTEMVERILOG_FILE core/rtl/mister_top/data_unloader.sv

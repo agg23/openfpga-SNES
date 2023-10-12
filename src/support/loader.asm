@@ -6,6 +6,7 @@ constant DEBUG = 0
 constant rom_dataslot = 0
 constant save_dataslot = 10
 
+
 // Host init command
 constant host_init = 0x4002
 
@@ -13,9 +14,9 @@ constant host_init = 0x4002
 constant rom_file_size = 0x1000
 constant header_offset_addr = 0x1004
 
-constant lorom_header_seek = 0x007FBD
-constant hirom_header_seek = 0x00FFBD
-constant exhirom_header_seek = 0x40FFBD
+constant lorom_header_seek = 0x007FB2
+constant hirom_header_seek = 0x00FFB2
+constant exhirom_header_seek = 0x40FFB2
 
 constant lorom_output = 0x1A00
 constant hirom_output = 0x1A10
@@ -157,7 +158,7 @@ bit_bsx:
 cmp r4,#0x30 // Check if BSX
 jp nz, check_pal
 log_string("Using BSX")
-// It's BSX
+jp expansion_core// It's BSX
 
 expansion_core:
 ld r8,#1
