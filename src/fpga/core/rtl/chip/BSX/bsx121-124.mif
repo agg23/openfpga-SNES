@@ -1,3 +1,6 @@
+// This file contains the config data for the bsx bios which you can edit with tools like sat wave - https://github.com/LuigiBlood/sat_wave/releases 
+//The file has been changed to read " Welcome to Analogue Pocket satellaview support! from 000 - 03A
+
 
 WIDTH=8;
 DEPTH=550;
