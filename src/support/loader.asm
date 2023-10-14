@@ -157,7 +157,7 @@ bit_bsx:
 cmp r4,#0x30 // Check if BSX
 jp nz, check_pal
 log_string("Using BSX")
-// It's BSX
+jp expansion_core // It's BSX
 
 expansion_core:
 ld r8,#1

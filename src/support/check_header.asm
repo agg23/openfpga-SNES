@@ -49,6 +49,7 @@ macro check_header(variable base_address_input, variable output_address_input) {
   validate_mapping_mode(base_address_input)
   call validate_simple_values
   call choose_ramsz
+  call check_bsx
   call choose_chip_type
   call choose_region
 
@@ -398,6 +399,48 @@ choose_region:
   log_string("Finished region:")
   hex.b r10
   ret
+  
+check_bsx:
+  check_value_equality(header_start_mem, 0x53) // Check if 's'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 1, 0x61) // Check if 'a'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 2, 0x74) // Check if 't'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 3, 0x65) // Check if 'e'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 4, 0x6C) // Check if 'l'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 5, 0x6C) // Check if 'l'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 6, 0x61) // Check if 'a'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 7, 0x76) // Check if 'v'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 8, 0x69) // Check if 'i'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 9, 0x65) // Check if 'e'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0A, 0x77) // Check if 'w'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0B, 0x20) // Check if ' '
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0C, 0x42) // Check if 'B'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0D, 0x53) // Check if 'S'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0E, 0x2D) // Check if '-'
+  jp nz, not_bsx
+  check_value_equality(header_start_mem + 0x0F, 0x58) // Check if 'X'
+  jp nz, is_bsx
+   
+  is_bsx:
+  or r12,#0x30
+
+  not_bsx:
+  log_string("Finished BSX:")
+  hex.b r12
+  ret  
 
 // Load all header values from file into memory
 load_header_values_into_mem:
