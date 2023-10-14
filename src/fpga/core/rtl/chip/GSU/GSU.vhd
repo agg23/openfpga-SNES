@@ -7,33 +7,34 @@ use work.GSU_PKG.all;
 
 entity GSU is
 	port(
-		CLK			: in std_logic;
+		CLK		: in std_logic;
 
-		RST_N			: in std_logic;
+		RST_N		: in std_logic;
 		ENABLE		: in std_logic;
 		
 		ADDR   		: in std_logic_vector(23 downto 0);
-		DI				: in std_logic_vector(7 downto 0);
-		DO				: out std_logic_vector(7 downto 0);
-		RD_N			: in std_logic;
-		WR_N			: in std_logic;
+		DI		: in std_logic_vector(7 downto 0);
+		DO		: out std_logic_vector(7 downto 0);
+		RD_N		: in std_logic;
+		WR_N		: in std_logic;
 
 		SYSCLKF_CE	: in std_logic;
 		SYSCLKR_CE	: in std_logic;
 		
-		TURBO			: in std_logic;
+		TURBO		: in std_logic;
+		FASTROM		: in std_logic;
 
-		IRQ_N			: out std_logic;
+		IRQ_N		: out std_logic;
 		
-		ROM_A   		: out std_logic_vector(20 downto 0);
+		ROM_A   	: out std_logic_vector(20 downto 0);
 		ROM_DI		: in std_logic_vector(7 downto 0);
-		ROM_RD_N		: out std_logic;							--for MISTer sdram
+		ROM_RD_N	: out std_logic;							--for MISTer sdram
 				
-		RAM_A			: out std_logic_vector(16 downto 0);
+		RAM_A		: out std_logic_vector(16 downto 0);
 		RAM_DI		: in std_logic_vector(7 downto 0);
 		RAM_DO		: out std_logic_vector(7 downto 0);
-		RAM_WE_N		: out std_logic;
-		RAM_CE_N		: out std_logic;
+		RAM_WE_N	: out std_logic;
+		RAM_CE_N	: out std_logic;
 		
 		DBG_IN_CACHE: out std_logic;
 		DBG_MC		: out Microcode_r;
@@ -392,7 +393,7 @@ begin
 	
 	
 	--CPU Core
-	CODE_IN_ROM <= '1' when PBR <= x"5F" else '0';
+	CODE_IN_ROM <= '1' when PBR <= x"5F" or (PBR >= x"80" and FASTROM = '1') else '0';
 	CODE_IN_RAM <= '1' when PBR(7 downto 1) = "0111000" else '0';
 	IN_CACHE <= '1' when CACHE_POS(15 downto 9) = "0000000" else '0';
 	VAL_CACHE <= CACHE_VALID(to_integer(CACHE_POS(8 downto 4)));
