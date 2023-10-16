@@ -2,12 +2,20 @@
   "data": {
     "magic": "APF_VER_1",
     "data_slots": [
-      {
+	  {
         "name": "Cartridge",
         "id": 0,
         "required": true,
         "parameters": "0x109",
         "extensions": ["smc", "sfc", "bs"],
+        "address": "0x10000000"
+      },
+	  {
+        "name": "Bios",
+        "id": 1,
+        "required": true,
+        "filename": "bios.rom",
+        "extensions": ["rom"],
         "address": "0x10000000"
       },
       {

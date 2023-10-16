@@ -4,6 +4,7 @@ output "loader.bin", create
 constant DEBUG = 0
 
 constant rom_dataslot = 0
+constant bios_dataslot = 1
 constant save_dataslot = 10
 
 // Host init command
@@ -37,8 +38,22 @@ include "check_header.asm"
 align(2)
 
 start:
+
+ld r1,#rom_dataslot // populate data slot
+getext r1,r7
+ld r6,#ext_bs
+test r7,r6
+jp nz,start1 // Set bs
+
+ld r1,#bios_dataslot // populate data slot
+open r1,r2
+jp start2
+
+start1:
 ld r1,#rom_dataslot // populate data slot
 open r1,r2
+
+start2:
 
 ld.l (rom_file_size),r2
 and r2,#0x200 // AND with 0x200, which implies SMC header
@@ -157,7 +172,77 @@ bit_bsx:
 cmp r4,#0x30 // Check if BSX
 jp nz, check_pal
 log_string("Using BSX")
-jp expansion_core // It's BSX
+// It's bsx
+
+ld r8,#1
+core r8 // Boot SPC7110/SDD1/BSX core
+
+log_string("Sending chip type")
+ld r8,#8
+pmpw r8,r1
+
+log_string("Sending ROM size")
+ld.b r7,(romsz_addr)
+ld r8,#4 // Load address of ROM size
+pmpw r8,r7 // Send ROM size to FPGA
+
+log_string("Sending RAMSZ")
+ld r8,#0xC
+pmpw r8,r2
+
+log_string("Sending PAL")
+ld r8,#0x10
+pmpw r8,r3
+
+log_string("Booting")
+ld r1,#0 // Set address for write
+ld r2,#1 // Downloading start
+pmpw r1,r2 // Write ioctl_download = 1
+
+ld r1,#bios_dataslot
+ld.w r2,(header_offset_addr) // Get header offset
+ld r5,#0x10000000 // Get header offset
+adjfo r1,r2 // Offset by header offset
+adjlp r1,r5 // slot 0 Offset
+loadf r1 // Load ROM
+
+ld r1,#0 // Set address for write
+ld r2,#0 // Downloading end
+pmpw r1,r2 // Write ioctl_download = 0
+
+log_string("Booting")
+ld r1,#0 // Set address for write
+ld r2,#1 // Downloading start
+pmpw r1,r2 // Write ioctl_download = 1
+
+ld r1,#rom_dataslot
+ld.w r2,(header_offset_addr) // Get header offset
+ld r5,#0x10100000 // Get header offset
+adjfo r1,r2 // Offset by header offset
+adjlp r1,r5 // slot 0 Offset
+loadf r1 // Load ROM
+
+ld r1,#0 // Set address for write
+ld r2,#0 // Downloading end
+pmpw r1,r2 // Write ioctl_download = 0
+
+// Load save
+ld r1,#0 // Set address for write
+ld r2,#1 // Downloading start
+pmpw r1,r2 // Write ioctl_download = 1
+
+ld r1,#save_dataslot
+loadf r1 // Load Save
+
+ld r1,#0 // Set address for write
+ld r2,#0 // Downloading end
+pmpw r1,r2 // Write ioctl_download = 0
+
+// Start core
+ld r0,#host_init
+host r0,r0
+
+exit 0
 
 expansion_core:
 ld r8,#1
@@ -196,7 +281,9 @@ pmpw r1,r2 // Write ioctl_download = 1
 
 ld r1,#rom_dataslot
 ld.w r2,(header_offset_addr) // Get header offset
+ld r5,#0x10000000 // Get header offset
 adjfo r1,r2 // Offset by header offset
+adjlp r1,r5 // slot 0 Offset
 loadf r1 // Load ROM
 
 ld r1,#0 // Set address for write
@@ -231,3 +318,6 @@ exit 1
 test_err_msg:
 db "Error",0
 align(2)
+
+ext_bs:
+db "BS",0

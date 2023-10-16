@@ -49,8 +49,8 @@ macro check_header(variable base_address_input, variable output_address_input) {
   validate_mapping_mode(base_address_input)
   call validate_simple_values
   call choose_ramsz
-  call check_bsx
   call choose_chip_type
+  call check_bsx
   call choose_region
 
   log_string("Storing header data at:")
@@ -401,6 +401,7 @@ choose_region:
   ret
   
 check_bsx:
+
   check_value_equality(header_start_mem, 0x53) // Check if 's'
   jp nz, not_bsx
   check_value_equality(header_start_mem + 1, 0x61) // Check if 'a'
@@ -433,7 +434,8 @@ check_bsx:
   jp nz, not_bsx
   check_value_equality(header_start_mem + 0x0F, 0x58) // Check if 'X'
   jp nz, is_bsx
-   
+  
+  
   is_bsx:
   or r12,#0x30
 
