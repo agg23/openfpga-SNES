@@ -10,14 +10,6 @@
         "extensions": ["smc", "sfc", "bs"],
         "address": "0x10000000"
       },
-	  {
-        "name": "Bios",
-        "id": 1,
-        "required": true,
-        "filename": "bios.rom",
-        "extensions": ["rom"],
-        "address": "0x10000000"
-      },
       {
         "name": "Save",
         "id": 10,
@@ -27,7 +19,16 @@
         "extensions": ["sav", "srm"],
         "address": "0x20000000",
         "size_maximum": "0x20000"
+      },
+	  {
+        "name": "Bios",
+        "id": 1,
+        "required": true,
+        "filename": "bios.rom",
+        "extensions": ["rom"],
+        "address": "0x10000000"
       }
+	  
     ]
   }
 }
