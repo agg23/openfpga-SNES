@@ -60,6 +60,7 @@ architecture rtl of SCPU is
 	signal CPU_LAST_CLOCK : unsigned(3 downto 0);
 	constant  CPU_MID_CLOCK : unsigned(3 downto 0) := x"2";
 	signal CPU_ACTIVEr, DMA_ACTIVEr : std_logic;
+	signal P65_RST_CNT : unsigned(7 downto 0);
 	signal DOT_CLK_CNT : unsigned(1 downto 0); 
 	signal H_CNT : unsigned(8 downto 0);
 	signal V_CNT : unsigned(8 downto 0);
@@ -71,6 +72,7 @@ architecture rtl of SCPU is
 	signal P65_DO : std_logic_vector(7 downto 0);
 	signal P65_DI : std_logic_vector(7 downto 0);
 	signal P65_NMI_N, P65_IRQ_N : std_logic;
+	signal P65_RST_N : std_logic;
 	signal P65_EN : std_logic;
 	signal P65_VPA, P65_VDA : std_logic;
 	signal P65_BRK : std_logic;
@@ -268,6 +270,8 @@ begin
 			INT_CLK <= '1';
 			CPU_ACTIVEr <= '1';
 			DMA_ACTIVEr <= '0';
+			P65_RST_CNT <= (others => '0');
+			P65_RST_N <= '0';
 		elsif rising_edge(CLK) then
 			DMA_CLK_CNT <= DMA_CLK_CNT + 1;
 			if DMA_CLK_CNT = DMA_LAST_CLOCK  then
@@ -310,6 +314,12 @@ begin
 					INT_CLK <= '0';
 				end if;
 			end if;
+			
+			if P65_RST_CNT = 150 - 1 then
+				P65_RST_N <= '1';
+			else
+				P65_RST_CNT <= P65_RST_CNT + 1;
+			end if;
 		end if;
 	end process;
 	
@@ -318,7 +328,7 @@ begin
 		if RST_N = '0' then
 			INT_CLKF_CE <= '0';
 			INT_CLKR_CE <= '0';
-		elsif falling_edge(CLK) then
+		elsif rising_edge(CLK) then
 			INT_CLKF_CE <= '0';
 			INT_CLKR_CE <= '0';
 			if DMA_ACTIVEr = '1' or ENABLE = '0' then
@@ -349,7 +359,7 @@ begin
 	P65C816: entity work.P65C816 
 	port map (
 		CLK         => CLK,
-		RST_N       => RST_N,
+		RST_N       => P65_RST_N,
 		CE       	=> INT_CLKF_CE and DBG_CPU_EN,
 		
 		WE          => P65_R_WN,
