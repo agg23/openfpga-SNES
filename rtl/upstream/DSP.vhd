@@ -13,7 +13,8 @@ entity DSP is
 		ENABLE 		: in std_logic;
 		PAL			: in std_logic;
 
-		SMP_EN 		: out std_logic;
+		SMP_EN_F  	: out std_logic;
+		SMP_EN_R    : out std_logic;
 		SMP_A    	: in std_logic_vector(15 downto 0);
 		SMP_DO   	: in std_logic_vector(7 downto 0);
 		SMP_DI   	: out std_logic_vector(7 downto 0);
@@ -44,8 +45,8 @@ end DSP;
 architecture rtl of DSP is 
 
 	signal MCLK_FREQ 		: integer;
-	signal CE 				: std_logic;
-	signal CEGEN_RST_N 			: std_logic;
+	signal CE 	         : std_logic;
+	signal CEGEN_RST_N 	: std_logic;
 
 	signal RI 				: std_logic_vector(7 downto 0);
 	signal REGN_WR 		: std_logic_vector(6 downto 0);
@@ -56,7 +57,8 @@ architecture rtl of DSP is
 	signal REGS_DO 		: std_logic_vector(7 downto 0);
 	signal REGS_WE 		: std_logic;
 
-	signal SMP_EN_INT 	: std_logic;
+	signal SMP_EN_R_INT 	: std_logic;
+	signal SMP_EN_F_INT 	: std_logic;
 	signal STEP_CNT 		: unsigned(4 downto 0);
 	signal SUBSTEP_CNT 	: unsigned(1 downto 0);
 	signal STEP 			: integer range 0 to 31;
@@ -232,9 +234,6 @@ begin
 		OUT_CLK  => ACLK_FREQ,
 		CE       => CE
 	);
-	
-	SMP_EN <= SMP_EN_INT;
-	SMP_CE <= CE;
 
 	process( RST_N, CLK )
 	begin
@@ -250,8 +249,12 @@ begin
 			end if;
 		end if;
 	end process;
-
-	SMP_EN_INT <= ENABLE when SUBSTEP = 3 else '0';
+	SMP_EN_F_INT <= ENABLE when SUBSTEP = 3 else '0';
+	SMP_EN_R_INT <= ENABLE when SUBSTEP = 0 else '0';
+	
+	SMP_EN_R <= SMP_EN_R_INT;
+	SMP_EN_F <= SMP_EN_F_INT;
+	SMP_CE <= CE;
 	
 	STEP <= to_integer(STEP_CNT);
 	SUBSTEP <= to_integer(SUBSTEP_CNT);
@@ -289,7 +292,7 @@ begin
 			if REG_SET = '1' then
 				RI <= REGRI;
 			elsif ENABLE = '1' and CE = '1' then
-				if SMP_EN_INT = '1' and SMP_WE = '0' then
+				if SMP_EN_F_INT = '1' and SMP_WE = '0' then
 					if SMP_A = x"00F2" then
 						RI <= SMP_DO;
 					end if;
@@ -677,7 +680,7 @@ begin
 				--6D ESA
 				TESA <= REG6D;
 			elsif CE = '1' then 
-				if SMP_EN_INT = '1' and SMP_A = x"00F3" and SMP_WE = '0' then
+				if SMP_EN_F_INT = '1' and SMP_A = x"00F3" and SMP_WE = '0' then
 					if RI(6 downto 0) = "1001100" then		--KON
 						WKON <= SMP_DO;
 					elsif RI(6 downto 0) = "1101100" then	--FLG
