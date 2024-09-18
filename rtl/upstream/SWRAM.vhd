@@ -33,7 +33,7 @@ end SWRAM;
 
 architecture rtl of SWRAM is
 
-	signal WMADD : std_logic_vector(23 downto 0);
+	signal WMADD : std_logic_vector(16 downto 0);
 
 begin
 	
@@ -54,7 +54,7 @@ begin
 						when x"82" =>
 							WMADD(15 downto 8) <= DI;
 						when x"83" =>
-							WMADD(23 downto 16) <= DI;
+							WMADD(16 downto 16) <= DI(0 downto 0);
 						when others => null;
 					end case;
 				elsif PARD_N = '0' then
@@ -74,7 +74,7 @@ begin
 	RAM_D <= x"FF" when PA = x"80" and RAMSEL_N = '0' else DI;
 
 	RAM_A 	<= CA(16 downto 0) when RAMSEL_N = '0' else
-					WMADD(16 downto 0);
+					WMADD;
 					
 	RAM_CE_N <= '0' when ENABLE = '0' else 
 					'0' when RAMSEL_N = '0' else

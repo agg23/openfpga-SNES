@@ -251,7 +251,11 @@ begin
 		CLK_CE <= '0';
 	elsif rising_edge(CLK) then
 		if ENABLE = '1' then
-			CLK_CE <= not CLK_CE;
+			if SYSCLKF_CE = '1' then
+				CLK_CE <= '0';
+			else
+				CLK_CE <= not CLK_CE;
+			end if;
 		end if;
 	end if;
 end process; 
