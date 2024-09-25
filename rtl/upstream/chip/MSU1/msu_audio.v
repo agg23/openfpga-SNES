@@ -78,16 +78,15 @@ always @(posedge clk) begin
 				end
 
 			PLAYING_STATE:
-				if (partial_sector_state) begin
-					// Handling the last sector here
-					if (data_cnt >= track_size[9:2]) begin
-						fifo_wren <= 0;
-						state <= END_SECTOR_STATE;
+				begin
+					if (partial_sector_state) begin
+						// Handling the last sector here
+						if (data_cnt >= track_size[9:2]) begin
+							fifo_wren <= 0;
+						end
 					end
-				end
-				else begin
 					// Keep collecting samples until we hit the buffer limit and while audio_ack is still high
-					if (looping) begin
+					else if (looping) begin
 						// We may need to deal with some remainder samples after the loop sector boundary
 						if (data_cnt < loop_index[7:0]) begin
 							// Disable writing to the fifo, skipping to the correct sample in the loop sector
