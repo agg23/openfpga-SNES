@@ -2,13 +2,15 @@
   "core": {
     "magic": "APF_VER_1",
     "metadata": {
-      "platform_ids": ["snes"],
+      "platform_ids": [
+        "snes"
+      ],
       "shortname": "SNES",
       "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
       "author": "agg23",
       "url": "https://github.com/agg23/openfpga-snes",
-      "version": "0.4.3",
-      "date_release": "2022-12-14"
+      "version": "0.4.4",
+      "date_release": "2024-09-16"
     },
     "framework": {
       "target_product": "Analogue Pocket",
