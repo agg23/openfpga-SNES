@@ -868,7 +868,7 @@ begin
 				end if;
 			end if;
 
-			if H_CNT = 274-1 then
+			if H_CNT = 273-1 then
 				IN_HBL <= '1';
 			elsif H_CNT = LAST_DOT then
 				IN_HBL <= '0';
