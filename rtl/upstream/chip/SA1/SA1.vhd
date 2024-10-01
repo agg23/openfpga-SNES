@@ -41,10 +41,10 @@ architecture rtl of SA1 is
 
 signal CLK_CE					: std_logic;
 signal EN						: std_logic;
-signal WIN_CLK_CNT			: unsigned(3 downto 0); 
 signal WINDOW					: std_logic;
 signal DOT_CLK					: std_logic; 
 signal SNES_SYSCLK			: std_logic; 
+signal SYSCLKR_CE_NEXT: std_logic; 
 signal SA1_EN					: std_logic;
 
 --65C816
@@ -64,6 +64,7 @@ signal P65_WR					: std_logic;
 signal P65_RD					: std_logic;
 
 --BUS
+signal INT_SNES_A				: std_logic_vector(23 downto 0);
 signal INT_ROM_A				: std_logic_vector(23 downto 0);
 signal ROM_MAP_A				: std_logic_vector(23 downto 0);
 signal SNES_BWRAM_A			: std_logic_vector(23 downto 0);
@@ -249,36 +250,28 @@ process( RST_N, CLK )
 begin
 	if RST_N = '0' then
 		CLK_CE <= '0';
-	elsif rising_edge(CLK) then
-		if ENABLE = '1' then
-			if SYSCLKF_CE = '1' then
-				CLK_CE <= '0';
-			else
-				CLK_CE <= not CLK_CE;
-			end if;
-		end if;
-	end if;
-end process; 
-
-process( RST_N, CLK )
-begin
-	if RST_N = '0' then
-		WIN_CLK_CNT <= (others => '0');
 		SNES_SYSCLK <= '0';
 	elsif rising_edge(CLK) then
 		if ENABLE = '1' then
-			WIN_CLK_CNT <= WIN_CLK_CNT + 1;
+			CLK_CE <= not CLK_CE;
 			if SYSCLKF_CE = '1' then
-				WIN_CLK_CNT <= (others => '0');
+				CLK_CE <= '0';
+				WINDOW <= '1';
 				SNES_SYSCLK <= '0';
 			elsif SYSCLKR_CE = '1' then
 				SNES_SYSCLK <= '1';
+				INT_SNES_A <= SNES_A;
+			end if;
+			
+			SYSCLKR_CE_NEXT <= SYSCLKR_CE;
+			if CLK_CE = '1' then
+				if SYSCLKR_CE = '1' or SYSCLKR_CE_NEXT = '1' then
+					WINDOW <= '0';
+				end if;
 			end if;
 		end if;
 	end if;
 end process;
-
-WINDOW <= '1' when WIN_CLK_CNT <= 3 or SNES_SYSCLK = '0' else '0';
 
 EN <= ENABLE and CLK_CE;
 
@@ -357,10 +350,10 @@ SA1_IRAM_EN <= SA1_IRAM_SEL and not SA1_IRAM_WAIT and not SNES_IRAM_SEL;
 SA1_INT_EN <= SA1_INT_SEL;
 SA1_EN <= SA1_INT_EN or SA1_ROM_EN or SA1_BWRAM_EN or SA1_IRAM_EN;
 
-process( SNES_A, P65_A, SDA, VDA, SNES_ROM_SEL, SA1_ROM_SEL, DMA_SRC_ROM_SEL, VBP_RUN)
+process( INT_SNES_A, P65_A, SDA, VDA, SNES_ROM_SEL, SA1_ROM_SEL, DMA_SRC_ROM_SEL, VBP_RUN)
 begin
 	if SNES_ROM_SEL = '1' then
-		INT_ROM_A <= SNES_A;
+		INT_ROM_A <= INT_SNES_A;
 	elsif VBP_RUN = '1' then
 		INT_ROM_A <= VDA;
 	elsif DMA_SRC_ROM_SEL = '1' then
@@ -615,7 +608,6 @@ port map (
 	q    		=> IRAM_DO,
 	address  => IRAM_A
 );  
-
 
 -- DMA
 DMA_SRC_ROM_SEL <= DMA_RUN and DMAEN and not CDEN and not DMASD(0) and not DMASD(1);
