@@ -117,8 +117,10 @@ module sdram
 	reg         word[2];
 	reg         read[2],write[2],rfs;
 	
-	always @(posedge clk) begin
+	wire raw_req_test = (addr[0][23:1] != addr0[23:1]);
+	
 		reg old_rd0, old_rd1, old_wr0, old_wr1;
+	always @(posedge clk) begin
 		
 		if (!init_done) begin
 			st_num <= 4'd8;
@@ -143,31 +145,31 @@ module sdram
 				din[0] <= din0;
 				word[0] <= word0;
 				write[0] <= 1;
-				st_num <= 4;
+				st_num <= 5;
 			end
 			if (wr1 && !old_wr1) begin
 				addr[1] <= addr1;
 				din[1] <= din1;
 				word[1] <= word1;
 				write[1] <= 1;
-				st_num <= 4;
+				st_num <= 5;
 			end
 			
 			if (rd0 && !old_rd0) begin
 				addr[0] <= addr0;
 				word[0] <= word0;
-				read[0] <= 1;
-				rfs <= (addr[0][23:1] == addr0[23:1]);
-				st_num <= 0;
+				read[0] <= raw_req_test;
+				rfs <= ~raw_req_test;
+				st_num <= 1;
 			end
 			if (rd1 && !old_rd1) begin
 				addr[1] <= addr1;
 				word[1] <= word1;
 				read[1] <= 1;
-				st_num <= 0;
+				st_num <= 1;
 			end
 			
-			if ((rd1 && !old_rd1) || (wr0 && !old_wr0) || (wr1 && !old_wr1) || read[1] || write[0] || write[1]) begin
+			if ((wr0 && !old_wr0) || (wr1 && !old_wr1) || (rd1 && !old_rd1) || read[1] || write[0] || write[1]) begin
 				rfs <= 0;
 			end
 		end
@@ -182,17 +184,26 @@ module sdram
 								                             CTRL_IDLE;
 			state[0].RFS <= 1;
 		end else begin
+			if (rd0 && !old_rd0 && raw_req_test) begin
+				            state[0].CMD  <= CTRL_RAS;
+								state[0].ADDR <= addr0[22:0];
+								state[0].BANK <= {1'b0,addr0[23]};
+			end else if (wr0 && !old_wr0 && !rd0 && !rd1) begin
+				            state[0].CMD  <= CTRL_RAS;
+								state[0].ADDR <= addr0[22:0];
+								state[0].BANK <= {1'b0,addr0[23]};
+			end else
 			case (st_num[2:0])
-				3'd0: begin state[0].CMD  <= read[0] || rfs     ? CTRL_RAS : CTRL_IDLE;
-								state[0].ADDR <= addr[0][22:0];
-								state[0].BANK <= {1'b0,addr[0][23]};
-								state[0].RFS  <= rfs; end
+//				3'd0: begin state[0].CMD  <= read[0]     ? CTRL_RAS : CTRL_IDLE;
+//								state[0].ADDR <= addr[0][22:0];
+//								state[0].BANK <= {1'b0,addr[0][23]}; end
 								
-				3'd1: begin state[0].CMD  <= read[1]     ? CTRL_RAS : CTRL_IDLE;
+				3'd1: begin state[0].CMD  <= read[1] || rfs     ? CTRL_RAS : CTRL_IDLE;
 								state[0].ADDR <= addr[1][22:0];
-								state[0].BANK <= {1'b1,addr[1][23]}; end
+								state[0].BANK <= {1'b1,addr[1][23]};
+								state[0].RFS  <= rfs; end
 
-				3'd2: begin state[0].CMD  <= read[0]           ? CTRL_CAS : CTRL_IDLE;
+				3'd2: begin state[0].CMD  <= read[0] && !rfs    ? CTRL_CAS : CTRL_IDLE;
 								state[0].ADDR <= addr[0][22:0];
 				            state[0].RD   <= read[0] & ~rfs;
 								state[0].BANK <= {1'b0,addr[0][23]}; end
@@ -263,8 +274,8 @@ module sdram
 		if (out_read) dout_buf[out_bank[1]] <= rbuf;
 	end
 	wire [15:0] dout_temp_0 = data_read0_new ? rbuf : dout_buf[0];
-	assign dout0 = addr[0][0] && !word[0] ? {dout_temp_0[7:0],dout_temp_0[15:8]} : dout_temp_0;
-	assign dout1 = addr[1][0] && !word[1] ? {dout_buf[1][7:0],dout_buf[1][15:8]} : dout_buf[1];
+	assign dout0 = addr[0][0] && !word[0] ? {dout_temp_0[15:8],dout_temp_0[15:8]} : dout_temp_0;
+	assign dout1 = addr[1][0] && !word[1] ? {dout_buf[1][15:8],dout_buf[1][15:8]} : dout_buf[1];
 	
 
 	localparam CMD_NOP             = 3'b111;
