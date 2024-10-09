@@ -9,7 +9,8 @@ entity SMP is
 		CLK 				: in std_logic;
 		RST_N 			: in std_logic; 
 		CE 				: in std_logic;
-		ENABLE 			: in std_logic;
+		EN_R 			   : in std_logic;
+		EN_F 		      : in std_logic;
 		SYSCLKF_CE		: in std_logic;
 		
 		A     			: out std_logic_vector(15 downto 0);
@@ -36,13 +37,13 @@ architecture rtl of SMP is
 	signal SPC700_D_IN, SPC700_D_OUT : std_logic_vector(7 downto 0);
 	signal SPC700_A : std_logic_vector(15 downto 0);
 	signal SPC700_R_WN : std_logic;
-	signal SPC700_CE : std_logic;
+	signal SPC700_CE_R, SPC700_CE_F : std_logic;
 	signal TIMER_CE : std_logic;
 	
 	type Port_t is array (0 to 3) of std_logic_vector(7 downto 0);
 	signal CPUI : Port_t;
 	signal CPUO : Port_t;
-	signal PAWR_N_OLD : std_logic;
+	signal CPUI_LATCH : std_logic_vector(7 downto 0);
 	
 	signal CLK_SPEED : std_logic_vector(1 downto 0);
 	signal TM_SPEED : std_logic_vector(1 downto 0);
@@ -138,16 +139,15 @@ architecture rtl of SMP is
 
 begin
 
-	SPC700_CE <= ENABLE and CE;
+	SPC700_CE_F <= EN_F and CE;
+	SPC700_CE_R <= EN_R and CE;
 	
 	process(RST_N, CLK)
 	begin
 		if RST_N = '0' then
 			CPUI <= (others => (others => '0'));
-			PAWR_N_OLD <= '1';
 		elsif rising_edge(CLK) then
-			PAWR_N_OLD <= PAWR_N;
-			if PAWR_N = '0' and PAWR_N_OLD = '1' and CS = '1' and CS_N = '0' then
+			if PAWR_N = '0' and CS = '1' and CS_N = '0' and SYSCLKF_CE = '1' then
 				CPUI(to_integer(unsigned(PA))) <= CPU_DI;
 			end if;
 			
@@ -156,7 +156,7 @@ begin
 				CPUI(1) <= SMP_REG_DAT(31 downto 24);
 				CPUI(2) <= SMP_REG_DAT(39 downto 32);
 				CPUI(3) <= SMP_REG_DAT(47 downto 40);
-			elsif SPC700_CE = '1' then
+			elsif SPC700_CE_F = '1' then
 				if SPC700_A = x"00F1" and SPC700_R_WN = '0' then
 					if SPC700_D_OUT(4) = '1' then
 						CPUI(0) <= (others=>'0');
@@ -178,7 +178,7 @@ begin
 	port map (
 		CLK      	=> CLK,
 		RST_N    	=> RST_N,
-		RDY      	=> SPC700_CE,
+		RDY      	=> SPC700_CE_F,
 		IRQ_N 		=> '1',
 		A_OUT 		=> SPC700_A,
 		D_IN     	=> SPC700_D_IN,
@@ -239,7 +239,7 @@ begin
 				T0OUT <= SMP_REG_DAT(75 downto 72);
 				T1OUT <= SMP_REG_DAT(99 downto 96);
 				T2OUT <= SMP_REG_DAT(107 downto 104);
-			elsif SPC700_CE = '1' then
+			elsif SPC700_CE_F = '1' then
 				TIMER_CE <= '1';
 				if SPC700_A(15 downto 4) = x"00F" then
 					if SPC700_R_WN = '0' then
@@ -329,17 +329,21 @@ begin
 					TM2_CNT <= NEW_TM2_CNT;
 				end if;
 			end if;
+			
+			if SPC700_CE_R = '1' then
+				CPUI_LATCH <= CPUI(to_integer(unsigned(SPC700_A(1 downto 0))));
+			end if;
 		end if;
 	end process;
 	
-	process(SPC700_A, CPUI, DI, IPL_EN, AUX, T0OUT, T1OUT, T2OUT)
+	process(SPC700_A, CPUI_LATCH, DI, IPL_EN, AUX, T0OUT, T1OUT, T2OUT)
 	begin
 		if SPC700_A(15 downto 4) = x"00F" then
 			case SPC700_A(3 downto 0) is
 				when x"2" | x"3" => 			--DSPADDR/DSPDATA
 					SPC700_D_IN <= DI;
 				when x"4" | x"5" | x"6" | x"7" =>
-					SPC700_D_IN <= CPUI(to_integer(unsigned(SPC700_A(1 downto 0))));
+					SPC700_D_IN <= CPUI_LATCH;
 				when x"8" | x"9" =>
 					SPC700_D_IN <= AUX(to_integer(unsigned(SPC700_A(0 downto 0))));
 				when x"D" => 
