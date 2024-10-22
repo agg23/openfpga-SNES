@@ -154,9 +154,7 @@ begin
 		end if;
 	end process;
 
-	InnerDS <= S when ABSCtrl = "11" and (AALCtrl(2) = '1' or AAHCtrl(2) = '1') else
-				  D when e6502 = '0' else 
-				  D(15 downto 8) & x"00";
+	InnerDS <= S when ABSCtrl = "11" and (AALCtrl(2) = '1' or AAHCtrl(2) = '1') else D; 
 				  
 	NewDL <= std_logic_vector(unsigned("0" & InnerDS(7 downto 0)) + unsigned("0" & D_IN));
 	NewAAHWithCarry <= std_logic_vector(unsigned(NewAAH) + ("00000000"&SavedCarry));

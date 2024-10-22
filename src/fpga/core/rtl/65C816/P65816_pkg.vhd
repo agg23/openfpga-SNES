@@ -6,7 +6,7 @@ package P65816_pkg is
 
 	type MicroInst_r is record
 		stateCtrl    : std_logic_vector(2 downto 0);
-		addrBus      : std_logic_vector(2 downto 0);
+		addrBus      : std_logic_vector(3 downto 0);
 		addrInc      : std_logic_vector(1 downto 0);
 		loadP			: std_logic_vector(2 downto 0); 
 		loadT			: std_logic_vector(1 downto 0); 
@@ -33,7 +33,7 @@ package P65816_pkg is
 	type MCode_r is record
 		ALU_CTRL 	: ALUCtrl_r;
 		STATE_CTRL	: std_logic_vector(2 downto 0);
-		ADDR_BUS      : std_logic_vector(2 downto 0);
+		ADDR_BUS      : std_logic_vector(3 downto 0);
 		ADDR_INC      : std_logic_vector(1 downto 0);
 		IND_CTRL      : std_logic_vector(1 downto 0);
 		ADDR_CTRL     : std_logic_vector(7 downto 0);
@@ -48,9 +48,6 @@ package P65816_pkg is
 		OUT_BUS       : std_logic_vector(2 downto 0);
 		VA      		 : std_logic_vector(1 downto 0);
 	end record;
-	
-	type addrIncTab_t is array(0 to 3) of unsigned(15 downto 0);
-	constant INC_TAB: addrIncTab_t := (x"0000", x"0001", x"0002", x"0003");
 	
 end P65816_pkg;
 

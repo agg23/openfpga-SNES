@@ -41,10 +41,10 @@ architecture rtl of SA1 is
 
 signal CLK_CE					: std_logic;
 signal EN						: std_logic;
-signal WIN_CLK_CNT			: unsigned(3 downto 0); 
 signal WINDOW					: std_logic;
 signal DOT_CLK					: std_logic; 
 signal SNES_SYSCLK			: std_logic; 
+signal SYSCLKR_CE_NEXT: std_logic; 
 signal SA1_EN					: std_logic;
 
 --65C816
@@ -64,6 +64,7 @@ signal P65_WR					: std_logic;
 signal P65_RD					: std_logic;
 
 --BUS
+signal INT_SNES_A				: std_logic_vector(23 downto 0);
 signal INT_ROM_A				: std_logic_vector(23 downto 0);
 signal ROM_MAP_A				: std_logic_vector(23 downto 0);
 signal SNES_BWRAM_A			: std_logic_vector(23 downto 0);
@@ -84,11 +85,15 @@ signal SA1_MMIO_READ_ACCESS : std_logic;
 signal SA1_MMIO_WRITE_ACCESS : std_logic;
 signal SNES_ROM_SEL			: std_logic;
 signal SNES_BWRAM_SEL		: std_logic;
+signal SNES_BWRAM_WE		   : std_logic;
 signal SNES_IRAM_SEL			: std_logic;
+signal SNES_IRAM_WE			: std_logic;
 signal SA1_INT_SEL			: std_logic;
 signal SA1_ROM_SEL			: std_logic;
 signal SA1_BWRAM_SEL			: std_logic;
+signal SA1_BWRAM_WE		   : std_logic;
 signal SA1_IRAM_SEL			: std_logic;
+signal SA1_IRAM_WE			: std_logic;
 signal SA1_BWRAM_WAIT		: std_logic;
 signal SA1_IRAM_WAIT			: std_logic;
 signal SA1_MMIO_READ			: std_logic;
@@ -102,6 +107,7 @@ signal SA1_BWRAM_EN			: std_logic;
 signal SA1_IRAM_EN			: std_logic;
 signal SA1_INT_EN				: std_logic;
 signal SA1_BWRAM_VALID		: std_logic;
+signal BWRAM_WP_MASK			: std_logic_vector(9 downto 0);
 signal OPENBUS					: std_logic_vector(7 downto 0);
 
 --DMA
@@ -203,11 +209,11 @@ signal BMAPS					: std_logic_vector(7 downto 0);
 signal BMAP						: std_logic_vector(6 downto 0);
 signal SBW46					: std_logic;
 signal BBF						: std_logic;
---signal SBWE						: std_logic_vector(7 downto 0);
---signal CBWE						: std_logic_vector(7 downto 0);
---signal BWPA						: std_logic_vector(7 downto 0);
---signal SIWP						: std_logic_vector(7 downto 0);
---signal CIWP						: std_logic_vector(7 downto 0);
+signal SBWE						: std_logic_vector(7 downto 0);
+signal CBWE						: std_logic_vector(7 downto 0);
+signal BWPA						: std_logic_vector(7 downto 0);
+signal SIWP						: std_logic_vector(7 downto 0);
+signal CIWP						: std_logic_vector(7 downto 0);
 signal DMASD					: std_logic_vector(1 downto 0);
 signal DMADD					: std_logic;
 signal CDSEL					: std_logic;
@@ -249,32 +255,28 @@ process( RST_N, CLK )
 begin
 	if RST_N = '0' then
 		CLK_CE <= '0';
-	elsif rising_edge(CLK) then
-		if ENABLE = '1' then
-			CLK_CE <= not CLK_CE;
-		end if;
-	end if;
-end process; 
-
-process( RST_N, CLK )
-begin
-	if RST_N = '0' then
-		WIN_CLK_CNT <= (others => '0');
 		SNES_SYSCLK <= '0';
 	elsif rising_edge(CLK) then
 		if ENABLE = '1' then
-			WIN_CLK_CNT <= WIN_CLK_CNT + 1;
+			CLK_CE <= not CLK_CE;
 			if SYSCLKF_CE = '1' then
-				WIN_CLK_CNT <= (others => '0');
+				CLK_CE <= '0';
+				WINDOW <= '1';
 				SNES_SYSCLK <= '0';
 			elsif SYSCLKR_CE = '1' then
 				SNES_SYSCLK <= '1';
+				INT_SNES_A <= SNES_A;
+			end if;
+			
+			SYSCLKR_CE_NEXT <= SYSCLKR_CE;
+			if CLK_CE = '1' then
+				if SYSCLKR_CE = '1' or SYSCLKR_CE_NEXT = '1' then
+					WINDOW <= '0';
+				end if;
 			end if;
 		end if;
 	end if;
 end process;
-
-WINDOW <= '1' when WIN_CLK_CNT <= 3 or SNES_SYSCLK = '0' else '0';
 
 EN <= ENABLE and CLK_CE;
 
@@ -353,10 +355,10 @@ SA1_IRAM_EN <= SA1_IRAM_SEL and not SA1_IRAM_WAIT and not SNES_IRAM_SEL;
 SA1_INT_EN <= SA1_INT_SEL;
 SA1_EN <= SA1_INT_EN or SA1_ROM_EN or SA1_BWRAM_EN or SA1_IRAM_EN;
 
-process( SNES_A, P65_A, SDA, VDA, SNES_ROM_SEL, SA1_ROM_SEL, DMA_SRC_ROM_SEL, VBP_RUN)
+process( INT_SNES_A, P65_A, SDA, VDA, SNES_ROM_SEL, SA1_ROM_SEL, DMA_SRC_ROM_SEL, VBP_RUN)
 begin
 	if SNES_ROM_SEL = '1' then
-		INT_ROM_A <= SNES_A;
+		INT_ROM_A <= INT_SNES_A;
 	elsif VBP_RUN = '1' then
 		INT_ROM_A <= VDA;
 	elsif DMA_SRC_ROM_SEL = '1' then
@@ -556,51 +558,72 @@ begin
 	end if;
 end process;
 
-BWRAM_A <= CC1_BWRAM_RD_ADDR					when CCDMA_SRC_BWRAM_SEL = '1' else 
-			  SNES_BWRAM_MAP_A					when SNES_BWRAM_SEL = '1' else 
-			  SDA(17 downto 0)					when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-			  DDA(17 downto 0)					when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-			  SA1_BWRAM_MAP_A						when SA1_BWRAM_SEL = '1' else 
+process( BWPA)
+begin
+	case BWPA(3 downto 0) is
+		when "0000" =>	BWRAM_WP_MASK <= "0000000000";
+		when "0001" =>	BWRAM_WP_MASK <= "0000000001";
+		when "0010" =>	BWRAM_WP_MASK <= "0000000011";
+		when "0011" =>	BWRAM_WP_MASK <= "0000000111";
+		when "0100" =>	BWRAM_WP_MASK <= "0000001111";
+		when "0101" =>	BWRAM_WP_MASK <= "0000011111";
+		when "0110" =>	BWRAM_WP_MASK <= "0000111111";
+		when "0111" =>	BWRAM_WP_MASK <= "0001111111";
+		when "1000" =>	BWRAM_WP_MASK <= "0011111111";
+		when "1001" =>	BWRAM_WP_MASK <= "0111111111";
+		when others =>	BWRAM_WP_MASK <= "1111111111";
+	end case;
+end process;
+
+SA1_BWRAM_WE <= '1';--CBWE(7) when (P65_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and P65_A(23 downto 20) = x"4" else '1';--?? Kirby's Dream Land 3 enables write protection for SA-1, but does write to protected area
+SNES_BWRAM_WE <= SBWE(7) when (SNES_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SNES_A(23 downto 20) = x"4" else '1';
+BWRAM_A <= CC1_BWRAM_RD_ADDR					                        when CCDMA_SRC_BWRAM_SEL = '1' else 
+			  SNES_BWRAM_MAP_A					                        when SNES_BWRAM_SEL = '1' else 
+			  SDA(17 downto 0)					                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+			  DDA(17 downto 0)					                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+			  SA1_BWRAM_MAP_A						                        when SA1_BWRAM_SEL = '1' else 
 			  (others => '0');
-BWRAM_DO <= SNES_DI								when SNES_BWRAM_SEL = '1' else 
-				INT_DMA_DAT							when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				SA1_BWRAM_DAT						when SA1_BWRAM_SEL = '1' else 
-				x"00";
-BWRAM_WE_N <= '1'									when ENABLE = '0' else 
-				  '1'									when CCDMA_SRC_BWRAM_SEL = '1' else 
-				  SNES_WR_N or not SYSCLKF_CE	when SNES_BWRAM_SEL = '1' else 
-				  '1'									when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  not DMA_EN						when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  not P65_WR						when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else --
+BWRAM_DO <= SNES_DI								                        when SNES_BWRAM_SEL = '1' else 
+				INT_DMA_DAT							                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				SA1_BWRAM_DAT						                        when SA1_BWRAM_SEL = '1' else 
+				x"00";      
+BWRAM_WE_N <= '1'									                        when ENABLE = '0' else 
+				  '1'									                        when CCDMA_SRC_BWRAM_SEL = '1' else 
+				  not(not SNES_WR_N and SNES_BWRAM_WE and SYSCLKF_CE) when SNES_BWRAM_SEL = '1' else 
+				  '1'									                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  not DMA_EN						                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  not (P65_WR and SA1_BWRAM_WE)						      when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else --
 				  '1';
-BWRAM_OE_N <= '0'									when ENABLE = '0' else 
-				  '0'									when CCDMA_SRC_BWRAM_SEL = '1' else 
-				  SNES_RD_N							when SNES_BWRAM_SEL = '1' else 
-				  '0'									when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  DMA_EN								when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  P65_WR								when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else 
+BWRAM_OE_N <= '0'									                        when ENABLE = '0' else 
+				  '0'									                        when CCDMA_SRC_BWRAM_SEL = '1' else 
+				  SNES_RD_N							                        when SNES_BWRAM_SEL = '1' else 
+				  '0'									                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  DMA_EN								                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  P65_WR								                        when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else 
 				  '1';
 
 --IRAM
-IRAM_A <= SNES_A(10 downto 0)					when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
-			 CC1_IRAM_RD_ADDR						when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
-			 SDA(10 downto 0)						when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			 DDA(10 downto 0)						when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			 CC12_IRAM_WR_ADDR					when CCDMA_DST_IRAM_SEL = '1' else 
-			 P65_A(10 downto 0)					when SA1_IRAM_SEL = '1' else 
+SA1_IRAM_WE <= CIWP(to_integer(unsigned(P65_A(10 downto 8))));
+SNES_IRAM_WE <= SIWP(to_integer(unsigned(SNES_A(10 downto 8))));
+IRAM_A <= SNES_A(10 downto 0)					               when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
+			 CC1_IRAM_RD_ADDR						               when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
+			 SDA(10 downto 0)						               when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			 DDA(10 downto 0)						               when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			 CC12_IRAM_WR_ADDR					               when CCDMA_DST_IRAM_SEL = '1' else 
+			 P65_A(10 downto 0)					               when SA1_IRAM_SEL = '1' else 
 			 (others => '0');
-IRAM_DI <= SNES_DI								when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
-			  INT_DMA_DAT							when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			  CC12_IRAM_WR_DAT					when CCDMA_DST_IRAM_SEL = '1' else 
-			  P65_DO									when SA1_IRAM_SEL = '1' else 
+IRAM_DI <= SNES_DI								               when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
+			  INT_DMA_DAT							               when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			  CC12_IRAM_WR_DAT					               when CCDMA_DST_IRAM_SEL = '1' else 
+			  P65_DO									               when SA1_IRAM_SEL = '1' else 
 			  x"00";
-IRAM_WE <= '0'										when ENABLE = '0' else 
-			  not SNES_WR_N and SYSCLKF_CE	when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
-			  '0'										when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
-			  '0'										when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			  DMA_EN									when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			  CCDMA_IRAM_EN						when CCDMA_DST_IRAM_SEL = '1' else 
-			  P65_WR									when SA1_IRAM_SEL = '1' else 
+IRAM_WE <= '0'										               when ENABLE = '0' else 
+			  not SNES_WR_N and SNES_IRAM_WE and SYSCLKF_CE	when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
+			  '0'										               when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
+			  '0'										               when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			  DMA_EN									               when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			  CCDMA_IRAM_EN						               when CCDMA_DST_IRAM_SEL = '1' else 
+			  P65_WR and SA1_IRAM_WE			               when SA1_IRAM_SEL = '1' else 
 			  '0';
 			  
 IRAM: entity work.spram generic map(11, 8)
@@ -611,7 +634,6 @@ port map (
 	q    		=> IRAM_DO,
 	address  => IRAM_A
 );  
-
 
 -- DMA
 DMA_SRC_ROM_SEL <= DMA_RUN and DMAEN and not CDEN and not DMASD(0) and not DMASD(1);
@@ -1066,7 +1088,6 @@ begin
 		VCNT <= (others => '0');
 		BMAP <= (others => '0');
 		SBW46 <= '0';
---		CIWP <= (others => '0');
 		SNV <= (others => '0');
 		SIV <= (others => '0');
 		CXB <= "000";
@@ -1079,10 +1100,11 @@ begin
 		FBMAP <= '0';
 		BMAPS <= (others => '0');
 		BBF <= '0';
---		SBWE <= (others => '0');
---		CBWE <= (others => '0');
---		BWPA <= (others => '0');
---		SIWP <= (others => '0');
+		CIWP <= (others => '0');
+		SIWP <= (others => '0');
+		SBWE <= (others => '0');
+		CBWE <= (others => '0');
+		BWPA <= (others => '1');
 		AM <= (others => '0');
 		MOF <= '0';
 		MA <= (others => '0');
@@ -1152,12 +1174,12 @@ begin
 						FBMAP <= SNES_DI(7);
 					when x"24" =>						--BMAPS
 						BMAPS <= SNES_DI;
---					when x"26" =>						--SBWE
---						SBWE <= SNES_DI;
---					when x"28" =>						--BWPA
---						BWPA <= SNES_DI;
---					when x"29" =>						--SIWP
---						SIWP <= SNES_DI;
+					when x"26" =>						--SBWE
+						SBWE <= SNES_DI;
+					when x"28" =>						--BWPA
+						BWPA <= SNES_DI;
+					when x"29" =>						--SIWP
+						SIWP <= SNES_DI;
 						
 					--it's contrary to the documentation, but some SMW hacks write inerrupt vectors here!
 					when x"0C" =>						--SNV
@@ -1255,10 +1277,10 @@ begin
 					when x"25" =>						--BMAP
 						BMAP <= P65_DO(6 downto 0) ;
 						SBW46 <= P65_DO(7);
---					when x"27" =>						--CBWE
---						CBWE <= P65_DO;
---					when x"2A" =>						--CIWP
---						CIWP <= P65_DO;
+					when x"27" =>						--CBWE
+						CBWE <= P65_DO;
+					when x"2A" =>						--CIWP
+						CIWP <= P65_DO;
 					when x"3F" =>						--BBF
 						BBF <= P65_DO(7);
 					when x"50" =>						--MCNT
@@ -1303,9 +1325,9 @@ begin
 --				if SNES_RD_N = '0' then
 --					OPENBUS <= SNES_DO;
 --				els
-				if SNES_WR_N = '0' then
+--				if SNES_WR_N = '0' then
 					OPENBUS <= SNES_DI;
-				end if;
+--				end if;
 			end if;
 		end if;
 	end if;

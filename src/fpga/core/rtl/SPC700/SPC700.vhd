@@ -280,12 +280,11 @@ begin
 						A <= AluR;
 					else
 						A <= AluR;
+						Y <= MulDivR(15 downto 8);
 					end if;
 				end if;
 				if MC.LOAD_AXY = "11" then 
 					Y <= AluR;
-				elsif MC.LOAD_AXY = "01" and AYLoad = '1' then 
-					Y <= MulDivR(15 downto 8);
 				end if; 
 			end if; 
 		end if;
