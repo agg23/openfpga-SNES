@@ -62,6 +62,7 @@ module main #(
 	output            GSU_ACTIVE,
 	input             GSU_TURBO,
 	input             GSU_FASTROM,
+	input             SUFAMI_SWAP,
 
 	input             BLEND,
 	input             PAL,
@@ -141,7 +142,7 @@ wire        PAWR_N;
 //wire        SYSCLKR_CE;
 wire        REFRESH;
 
-wire  [5:0] MAP_ACTIVE;
+wire  [6:0] MAP_ACTIVE;
 
 SNES SNES
 (
@@ -731,23 +732,86 @@ BSXMap BSXMap
 	.rom_mask(ROM_MASK),
 	.bsram_mask(RAM_MASK),
 
-	
 	.ext_rtc(EXT_RTC)
 );
 end else
 assign MAP_ACTIVE[5] = 0;
 endgenerate
 
+wire [7:0]  SUFAMI_DO;
+wire        SUFAMI_IRQ_N;
+wire [22:0] SUFAMI_ROM_ADDR;
+wire        SUFAMI_ROM_CE_N;
+wire        SUFAMI_ROM_OE_N;
+wire        SUFAMI_ROM_WORD;
+wire [19:0] SUFAMI_BSRAM_ADDR;
+wire [7:0]  SUFAMI_BSRAM_D;
+wire        SUFAMI_BSRAM_CE_N;
+wire        SUFAMI_BSRAM_OE_N;
+wire        SUFAMI_BSRAM_WE_N;
+
+generate
+if (USE_SUFAMI == 1'b1) begin
+SufamiMap SufamiMap
+(
+	.mclk(MCLK),
+	.rst_n(RESET_N),
+
+	.ca(CA),
+	.di(DO),
+	.do(SUFAMI_DO),
+	.cpurd_n(CPURD_N),
+	.cpuwr_n(CPUWR_N),
+
+	.pa(PA),
+	.pard_n(PARD_N),
+	.pawr_n(PAWR_N),
+
+	.romsel_n(ROMSEL_N),
+	.ramsel_n(RAMSEL_N),
+
+	.sysclkf_ce(SYSCLKF_CE),
+	.sysclkr_ce(SYSCLKR_CE),
+	.refresh(REFRESH),
+
+	.irq_n(SUFAMI_IRQ_N),
+
+	.rom_addr(SUFAMI_ROM_ADDR),
+	.rom_q(ROM_Q),
+	.rom_ce_n(SUFAMI_ROM_CE_N),
+	.rom_oe_n(SUFAMI_ROM_OE_N),
+	.rom_word(SUFAMI_ROM_WORD),
+
+	.bsram_addr(SUFAMI_BSRAM_ADDR),
+	.bsram_d(SUFAMI_BSRAM_D),
+	.bsram_q(BSRAM_Q),
+	.bsram_ce_n(SUFAMI_BSRAM_CE_N),
+	.bsram_oe_n(SUFAMI_BSRAM_OE_N),
+	.bsram_we_n(SUFAMI_BSRAM_WE_N),
+
+	.map_active(MAP_ACTIVE[6]),
+	.map_ctrl(ROM_TYPE),
+	.rom_mask(ROM_MASK),
+	.bsram_mask(RAM_MASK),
+
+	.ext_rtc(EXT_RTC),
+	
+	.cart_swap(SUFAMI_SWAP)
+);
+end else
+assign MAP_ACTIVE[6] = 0;
+endgenerate
+
 assign TURBO_ALLOW = ~(MAP_ACTIVE[3] | MAP_ACTIVE[1]);
 
 always @(*) begin
 	case (MAP_ACTIVE)
-	'b000001:
+	'b0000001:
 		begin
 			DI         = CX4_DO;
 			IRQ_N      = CX4_IRQ_N;
 			ROM_ADDR   = {1'b0,CX4_ROM_ADDR};
-			ROM_D      = 7'h00;
+			ROM_D      = 8'h00;
 			ROM_CE_N   = CX4_ROM_CE_N;
 			ROM_OE_N   = CX4_ROM_OE_N;
 			ROM_WE_N   = 1;
@@ -759,12 +823,12 @@ always @(*) begin
 			ROM_WORD   = CX4_ROM_WORD;
 		end
 
-	'b000010:
+	'b0000010:
 		begin
 			DI         = SDD_DO;
 			IRQ_N      = SDD_IRQ_N;
 			ROM_ADDR   = {1'b0,SDD_ROM_ADDR};
-			ROM_D      = 7'h00;
+			ROM_D      = 8'h00;
 			ROM_CE_N   = SDD_ROM_CE_N;
 			ROM_OE_N   = SDD_ROM_OE_N;
 			ROM_WE_N   = 1;
@@ -776,12 +840,12 @@ always @(*) begin
 			ROM_WORD   = SDD_ROM_WORD;
 		end
 
-	'b000100:
+	'b0000100:
 		begin
 			DI         = GSU_DO;
 			IRQ_N      = GSU_IRQ_N;
 			ROM_ADDR   = {1'b0,GSU_ROM_ADDR};
-			ROM_D      = 7'h00;
+			ROM_D      = 8'h00;
 			ROM_CE_N   = GSU_ROM_CE_N;
 			ROM_OE_N   = GSU_ROM_OE_N;
 			ROM_WE_N   = 1;
@@ -793,12 +857,12 @@ always @(*) begin
 			ROM_WORD   = GSU_ROM_WORD;
 		end
 
-	'b001000:
+	'b0001000:
 		begin
 			DI         = SA1_DO;
 			IRQ_N      = SA1_IRQ_N;
 			ROM_ADDR   = {1'b0,SA1_ROM_ADDR};
-			ROM_D      = 7'h00;
+			ROM_D      = 8'h00;
 			ROM_CE_N   = SA1_ROM_CE_N;
 			ROM_OE_N   = SA1_ROM_OE_N;
 			ROM_WE_N   = 1;
@@ -810,12 +874,12 @@ always @(*) begin
 			ROM_WORD   = SA1_ROM_WORD;
 		end
 
-	'b010000:
+	'b0010000:
 		begin
 			DI         = SPC7110_DO;
 			IRQ_N      = SPC7110_IRQ_N;
 			ROM_ADDR   = {1'b0,SPC7110_ROM_ADDR};
-			ROM_D      = 7'h00;
+			ROM_D      = 8'h00;
 			ROM_CE_N   = SPC7110_ROM_CE_N;
 			ROM_OE_N   = SPC7110_ROM_OE_N;
 			ROM_WE_N   = 1;
@@ -827,7 +891,7 @@ always @(*) begin
 			ROM_WORD   = SPC7110_ROM_WORD;
 		end
 
-	'b100000:
+	'b0100000:
 		begin
 			DI         = BSX_DO;
 			IRQ_N      = BSX_IRQ_N;
@@ -842,6 +906,23 @@ always @(*) begin
 			BSRAM_OE_N = BSX_BSRAM_OE_N;
 			BSRAM_WE_N = BSX_BSRAM_WE_N;
 			ROM_WORD   = BSX_ROM_WORD;
+		end
+
+	'b1000000:
+		begin
+			DI         = SUFAMI_DO;
+			IRQ_N      = SUFAMI_IRQ_N;
+			ROM_ADDR   = {1'b0,SUFAMI_ROM_ADDR};
+			ROM_D      = 8'h00;
+			ROM_CE_N   = SUFAMI_ROM_CE_N;
+			ROM_OE_N   = SUFAMI_ROM_OE_N;
+			ROM_WE_N   = 1;
+			BSRAM_ADDR = SUFAMI_BSRAM_ADDR;
+			BSRAM_D    = SUFAMI_BSRAM_D;
+			BSRAM_CE_N = SUFAMI_BSRAM_CE_N;
+			BSRAM_OE_N = SUFAMI_BSRAM_OE_N;
+			BSRAM_WE_N = SUFAMI_BSRAM_WE_N;
+			ROM_WORD   = SUFAMI_ROM_WORD;
 		end
 		
 	default:
