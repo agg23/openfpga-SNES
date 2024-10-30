@@ -21,6 +21,7 @@ set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SP
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SPC7110_FIFO.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SPC7110_MULDIV.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SPC7110Map.vhd ]
+set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) Sufami/SufamiMap.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_MCC.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_DP.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_BS.vhd ]
