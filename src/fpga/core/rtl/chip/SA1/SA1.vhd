@@ -575,8 +575,8 @@ begin
 	end case;
 end process;
 
-SA1_BWRAM_WE <= '1';--CBWE(7) when (P65_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and P65_A(23 downto 20) = x"4" else '1';--?? Kirby's Dream Land 3 enables write protection for SA-1, but does write to protected area
-SNES_BWRAM_WE <= SBWE(7) when (SNES_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SNES_A(23 downto 20) = x"4" else '1';
+SA1_BWRAM_WE <= SBWE(7) or CBWE(7) when (P65_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and P65_A(23 downto 20) = x"4" else '1';
+SNES_BWRAM_WE <= SBWE(7) or CBWE(7) when (SNES_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SNES_A(23 downto 20) = x"4" else '1';
 BWRAM_A <= CC1_BWRAM_RD_ADDR					                        when CCDMA_SRC_BWRAM_SEL = '1' else 
 			  SNES_BWRAM_MAP_A					                        when SNES_BWRAM_SEL = '1' else 
 			  SDA(17 downto 0)					                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
