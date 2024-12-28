@@ -302,7 +302,7 @@ begin
 	CLK4_CE_F <= '1' when DMA_CLK_CNT(1 downto 0) = "01" else '0';
 	CLK4_CE_R <= '1' when DMA_CLK_CNT(1 downto 0) = "11" else '0';
 	CLK8_CE_F <= '1' when DMA_CLK_CNT(2 downto 0) = "011" else '0';
-	CLK8_CE_R <= '1' when DMA_CLK_CNT(2 downto 0) = "111" else '0';
+	--CLK8_CE_R <= '1' when DMA_CLK_CNT(2 downto 0) = "111" else '0';
 	
 	process( RST_N, CLK )
 	begin
