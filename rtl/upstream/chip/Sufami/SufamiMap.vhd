@@ -62,7 +62,9 @@ architecture rtl of SufamiMap is
 	
 	signal CART_ADDR 		: std_logic_vector(23 downto 0);
 	signal CART_MASK 		: std_logic_vector(23 downto 0);
-	signal ROM_SEL 		: std_logic;
+	signal ROM_BIOS_SEL 	: std_logic;
+	signal ROM_BASE_SEL 	: std_logic;
+	signal ROM_TURBO_SEL : std_logic;
 	signal SRAM_ADDR 		: std_logic_vector(19 downto 0);
 	signal SRAM_MASK		: std_logic_vector(19 downto 0);
 	signal SRAM_BASE_SEL : std_logic;
@@ -79,7 +81,9 @@ begin
 	
 	CART_ADDR <= "00" & "0000" & CA(18 downto 16) & CA(14 downto 0) when CA(22 downto 21) = "00" else "00" & (CA(22) xor SWAP) & (CA(21) xor SWAP) & CA(20 downto 16) & CA(14 downto 0);
 	CART_MASK <= x"03FFFF" when CA(22 downto 21) = "00" else "0011" & ROM_MASK(19 downto 0);
-	ROM_SEL <= not ROMSEL_N when CA(22 downto 21) /= "11" else '0';
+	ROM_BIOS_SEL <= not ROMSEL_N when CA(22 downto 21) = "00" else '0';
+	ROM_BASE_SEL <= not ROMSEL_N when CA(22 downto 21) = "01" else '0';
+	ROM_TURBO_SEL <= not ROMSEL_N when CA(22 downto 21) = "10" and TURBO_SET = '1' else '0';
 	
 	SRAM_ADDR <= "00000000" & (CA(20) xor SWAP) & CA(10 downto 0) when BSRAM_MASK(12 downto 11) = "00" else "000000" & (CA(20) xor SWAP) & CA(12 downto 0);
 	SRAM_MASK <= "00000000" & BSRAM_MASK(10) & BSRAM_MASK(10 downto 0) when BSRAM_MASK(12 downto 11) = "00" else "000000" & BSRAM_MASK(12) & BSRAM_MASK(12 downto 0);
@@ -110,7 +114,7 @@ begin
 		end if;
 	end process;
 
-	DO <= ROM_Q(7 downto 0) when ROM_SEL = '1' else
+	DO <= ROM_Q(7 downto 0) when ROM_BIOS_SEL = '1' or ROM_BASE_SEL = '1' or ROM_TURBO_SEL = '1' else
 			BSRAM_Q when SRAM_BASE_SEL = '1' or SRAM_TURBO_SEL = '1' else
 			OPENBUS;
 
