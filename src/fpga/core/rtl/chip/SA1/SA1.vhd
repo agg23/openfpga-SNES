@@ -320,7 +320,7 @@ SNES_BWRAM_SEL <= SNES_BWRAM_ACCESS and not WINDOW;
 SNES_IRAM_SEL <= (SNES_IRAM_ACCESS and SNES_SYSCLK) or (SNES_CCDMA_IRAM_ACCESS and not WINDOW);
 
 SA1_ROM_ACCESS <= '1' when (P65_A(22) = '0' and P65_A(15) = '1') or (P65_A(23 downto 22) = "11") else '0';
-SA1_BWRAM_ACCESS <= '1' when P65_A(23 downto 20) = x"4" or (P65_A(22) = '0' and P65_A(15 downto 13) = "011" and SBW46 = '0') else '0';
+SA1_BWRAM_ACCESS <= '1' when P65_A(23 downto 20) = x"4" or P65_A(23 downto 20) = x"5" or (P65_A(22) = '0' and P65_A(15 downto 13) = "011" and SBW46 = '0') else '0';
 SA1_BBF_ACCESS <= '1' when P65_A(23 downto 20) = x"6" or (P65_A(22) = '0' and P65_A(15 downto 13) = "011" and SBW46 = '1') else '0';
 SA1_IRAM_ACCESS <= '1' when P65_A(22) = '0' and (P65_A(15 downto 11) = x"0" & "0" or P65_A(15 downto 11) = x"3" & "0") else '0';	
 SA1_MMIO_WRITE_ACCESS <= '1' when P65_A(22) = '0' and P65_A(15 downto 8) = x"22" else '0';	
@@ -575,8 +575,8 @@ begin
 	end case;
 end process;
 
-SA1_BWRAM_WE <= SBWE(7) or CBWE(7) when (P65_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and P65_A(23 downto 20) = x"4" else '1';
-SNES_BWRAM_WE <= SBWE(7) or CBWE(7) when (SNES_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SNES_A(23 downto 20) = x"4" else '1';
+SA1_BWRAM_WE <= SBWE(7) or CBWE(7) when (SA1_BWRAM_MAP_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SA1_BWRAM_ACCESS = '1' else '1';
+SNES_BWRAM_WE <= SBWE(7) or CBWE(7) when (SNES_BWRAM_MAP_A(17 downto 8) and not BWRAM_WP_MASK) = "0000000000" and SNES_BWRAM_ACCESS = '1' else '1';
 BWRAM_A <= CC1_BWRAM_RD_ADDR					                        when CCDMA_SRC_BWRAM_SEL = '1' else 
 			  SNES_BWRAM_MAP_A					                        when SNES_BWRAM_SEL = '1' else 
 			  SDA(17 downto 0)					                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
@@ -1140,6 +1140,9 @@ begin
 						end if;
 						if SNES_DI(4) = '1' then
 							SA1_NMI_FLAG <= '1';
+						end if;
+						if SNES_DI(5) = '1' then
+							CIWP <= (others => '0');
 						end if;
 					when x"01" =>						--SIE
 						CDMA_IRQ_EN <= SNES_DI(5);
