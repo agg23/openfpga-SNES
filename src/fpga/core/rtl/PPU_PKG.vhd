@@ -69,7 +69,7 @@ package PPU_PKG is
 	constant BG_FETCH_END		: unsigned(8 downto 0) := "100001111"; 	--(256+16)-1=271
 	constant M7_FETCH_START		: unsigned(8 downto 0) := "000001111"; 	--15
 	constant M7_FETCH_END		: unsigned(8 downto 0) := "100001110"; 	--(15+256)-1=270
-	constant M7_XY_LATCH			: unsigned(8 downto 0) := "000001011"; 	--11
+	constant M7_XY_LATCH			: unsigned(8 downto 0) := "000001000"; 	--8
 	constant SPR_GET_PIX_START	: unsigned(8 downto 0) := "000010000"; 	--16 
 	constant SPR_GET_PIX_END	: unsigned(8 downto 0) := "100001111"; 	--(16+256)-1=271
 	constant BG_GET_PIX_START	: unsigned(8 downto 0) := "000010001"; 	--17
