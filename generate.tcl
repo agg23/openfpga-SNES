@@ -11,7 +11,7 @@ if { $argc != 1 } {
   exit
 }
 
-project_open src/fpga/ap_core.qpf
+project_open projects/snes_pocket.qpf
 
 if { [lindex $argv 0] == "ntsc" } {
   puts "NTSC"

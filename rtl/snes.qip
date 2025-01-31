@@ -1,0 +1,34 @@
+# ==============================================================================
+# RTL
+# ==============================================================================
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/SNES.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/rom_parser.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/scanline_filler.sv"]
+set_global_assignment -name MIF_FILE                  [file join $::quartus(qip_path) "chip/DSP/dsp11b23410_p.mif"]
+set_global_assignment -name MIF_FILE                  [file join $::quartus(qip_path) "chip/DSP/dsp11b23410_d.mif"]
+set_global_assignment -name MIF_FILE                  [file join $::quartus(qip_path) "chip/CX4/drom.mif"]
+set_global_assignment -name QIP_FILE                  [file join $::quartus(qip_path) "SPC700/SPC700.qip"]
+set_global_assignment -name QIP_FILE                  [file join $::quartus(qip_path) "65C816/65C816.qip"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "SWRAM.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "SNES.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "SMP.vhd"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "sdram.sv"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "PPU_PKG.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "PPU.vhd"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "miracle.sv"]
+set_global_assignment -name VERILOG_FILE              [file join $::quartus(qip_path) "main.v"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "lightgun.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "ioport.sv"]
+set_global_assignment -name VERILOG_FILE              [file join $::quartus(qip_path) "hps_ext.v"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "DSP_PKG.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "DSP.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "CPU.vhd"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "cheatcodes.sv"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "CEGen.vhd"]
+set_global_assignment -name VHDL_FILE                 [file join $::quartus(qip_path) "bram.vhd"]
+set_global_assignment -name QIP_FILE                  [file join $::quartus(qip_path) "chip/chip.qip"]
+
+# ==============================================================================
+# MODULES
+# ==============================================================================
+

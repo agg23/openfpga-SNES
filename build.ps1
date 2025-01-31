@@ -23,4 +23,4 @@ if (($build_type -eq "ntsc") -or ($build_type -eq "none")) {
   $output_file = "snes_spc.rev"
 }
 
-C:\Users\adam\code\pocket-text\tools\reverse.exe C:\Users\adam\code\fpga\snes\src\fpga\output_files\ap_core.rbf "C:\Users\adam\code\fpga\snes\dist\Cores\agg23.SNES\$output_file";
+C:\Users\adam\code\pocket-text\tools\reverse.exe C:\Users\adam\code\fpga\openFPGA\ports\snes\projects\output_files\snes_pocket.rbf "C:\Users\adam\code\fpga\openFPGA\ports\snes\pkg\Cores\agg23.SNES\$output_file";

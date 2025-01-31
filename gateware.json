@@ -1,0 +1,21 @@
+{
+    "name": "snes",
+    "displayName": "snes",
+    "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
+    "author": "agg23",
+    "version": "0.4.4",
+    "license": "GPL-3.0-or-later",
+    "repository": "https://github.com/agg23/openFPGA-SNES",
+    "keywords": [
+        "ecosystem:gateman"
+    ],
+    "scripts": {
+        "verilator": "echo \"Error: no simulation specified\" && exit 1",
+        "build:pocket": "pwsh build.ps1",
+        "program:pocket": "quartus_pgm -m jtag -c 1 -o \"p;projects/output_files/nes_pocket.sof@1\""
+    },
+    "platforms": {
+        "pocket": "1.3.0"
+    },
+    "modules": {}
+}

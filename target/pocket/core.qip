@@ -1,0 +1,15 @@
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "core_top.sv"]
+set_global_assignment -name VERILOG_FILE          [file join $::quartus(qip_path) "core_bridge_cmd.v"]
+set_global_assignment -name SDC_FILE              [file join $::quartus(qip_path) "core_constraints.sdc"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_loader.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_unloader.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "psram.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "save_state_controller.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sound_i2s.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sync_fifo.sv"]
+
+set_global_assignment -name SIGNALTAP_FILE [file join $::quartus(qip_path) "stp1.stp"]
+
+set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "mf_pllbase.qip"]
+set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "mf_pllbase_pal.qip"]
+set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "pll_reconfig.qip"]
