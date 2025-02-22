@@ -282,7 +282,7 @@ EN <= ENABLE and CLK_CE;
 
 -- 65C816
 P65_RST_N <= not SA1RST and RST_N;
-P65_EN <= not SA1WAIT and SA1_EN and ENABLE;
+P65_EN <= not SA1WAIT and ENABLE;
 P65_NMI_N <= not SA1_NMI;
 P65_IRQ_N <= not SA1_IRQ;
 
@@ -290,7 +290,7 @@ P65C816: entity work.P65C816
 port map (
 	CLK         => CLK,
 	RST_N       => P65_RST_N,
-	CE       	=> CLK_CE,
+	CE       	=> SA1_EN and CLK_CE,
 	WE          => P65_R_WN,
 	D_IN     	=> P65_DI,
 	D_OUT    	=> P65_DO,
