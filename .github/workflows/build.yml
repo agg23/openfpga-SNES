@@ -1,0 +1,113 @@
+################################################################################
+# How to create a tag to launch the workflow
+# git tag -a "0.1.0" -m "Release v0.1.0"
+# git push origin --tags
+################################################################################
+# WARNING: Make sure to set action permissions to max ("Read and write permissions")
+name: Build/Release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+jobs:
+  synthesis:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        core: ["main", "pal", "spc", "sa1gsu", "pal_sa1gsu"]
+
+    steps:
+      - name: "🧰 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🧰 Checkout Packybara"
+        uses: actions/checkout@v4
+        with:
+          repository: "agg23/pocketpublish"
+          path: ".github/publish"
+
+      - name: "🏗️ Compile design"
+        shell: bash
+        run: |
+          map_value() {
+              case "$1" in
+                  main)
+                      echo "ntsc"
+                      ;;
+                  pal)
+                      echo "pal"
+                      ;;
+                  spc)
+                      echo "ntsc_spc"
+                      ;;
+                  sa1gsu)
+                      echo "ntsc_sa1gsu"
+                      ;;
+                  pal_sa1gsu)
+                      echo "pal_sa1gsu"
+                      ;;
+                  *)
+                      echo "Unknown input"
+                      ;;
+              esac
+          }
+
+          build_type=$(map_value "${{ matrix.core }}")
+          cmd="docker run --rm -v ${{ github.workspace }}:/build raetro/quartus:21.1 quartus_sh -t generate.tcl $build_type"
+          echo "Running command: $cmd"
+          eval $cmd
+
+      - name: Upload failure artifact
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failure_output_files
+          path: projects/output_files/
+
+      - name: Reverse bitstream
+        shell: bash
+        run: |
+          mkdir artifacts
+          pip3 install -r .github/publish/requirements.txt
+          python3 .github/publish/reverse.py projects/output_files/snes_pocket.rbf artifacts/snes_${{ matrix.core }}.rev
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snes_${{ matrix.core }}
+          path: artifacts/snes_${{ matrix.core }}.rev
+
+  packaging:
+    runs-on: ubuntu-latest
+    needs: synthesis
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: "🧰 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🧰 Checkout Packybara"
+        uses: actions/checkout@v4
+        with:
+          repository: "agg23/pocketpublish"
+          path: ".github/publish"
+
+      - name: "Create folders"
+        run: |
+          pip3 install -r .github/publish/requirements.txt
+          python3 .github/publish/create_folders.py
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: staging/Cores/agg23.SNES/
+          merge-multiple: true
+
+      - name: "Release"
+        run: |
+          python3 .github/publish/release.py
