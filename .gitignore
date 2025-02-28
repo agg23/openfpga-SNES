@@ -1,5 +1,6 @@
 *.rbf_r
 *.zip
+support/test/roms
 dist/**/*.rev
 dist/**/*.bin
 src/**/*.bin
@@ -7,6 +8,7 @@ src/sim/work/
 src/sim/*.hex
 src/sim/*.mem
 src/sim/*.bin
+**/tmp
 
 # Quartus directories and files
 db
