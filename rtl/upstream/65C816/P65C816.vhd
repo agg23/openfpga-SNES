@@ -488,10 +488,14 @@ begin
 					NMI_SYNC <= '0';
 				end if;
 			end if;
+			
+			if CE = '1' then
+				RDY_IN_OLD <= RDY_IN;
+			end if;
 		end if;
 	end process; 
 	
-	IRQ_ACTIVE <= not IRQ_N and not P(2);
+	IRQ_ACTIVE <= not IRQ_N and not P(2) and RDY_IN_OLD;
 	NMI_ACTIVE <= NMI_SYNC;
 	process(CLK, RST_N)
 	begin
@@ -501,11 +505,8 @@ begin
 			IsIRQInterrupt <= '0';
 			GotInterrupt <= '1';
 		elsif rising_edge(CLK) then
-			if CE = '1' then
-				RDY_IN_OLD <= RDY_IN;
-			end if;
 			
-			if RDY_IN = '1' and RDY_IN_OLD = '1' and CE = '1' then
+			if RDY_IN = '1' and CE = '1' then
 				if LAST_CYCLE = '1' and EN = '1' then
 					if GotInterrupt = '0' then
 						GotInterrupt <= IRQ_ACTIVE or NMI_ACTIVE;
