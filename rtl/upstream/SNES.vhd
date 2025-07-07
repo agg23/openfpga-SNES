@@ -94,7 +94,16 @@ entity SNES is
 		IO_ADDR     : in std_logic_vector(16 downto 0);
 		IO_DAT  		: in std_logic_vector(15 downto 0);
 		IO_WR 		: in std_logic;
-		
+
+		SS_ADDR     : in std_logic_vector(8 downto 0);
+		SS_BUSY     : in std_logic;
+		SS_REGS_SEL : in std_logic;
+		SS_SMP_SEL  : in std_logic;
+		SS_WR       : in std_logic;
+		SS_DI       : in std_logic_vector(7 downto 0);
+		SS_SPC_DO   : out std_logic_vector(7 downto 0);
+		SS_PPU_DO   : out std_logic_vector(7 downto 0);
+
 		TURBO			: in std_logic;
 		
 		DBG_BG_EN	: in std_logic_vector(4 downto 0);
@@ -147,6 +156,10 @@ architecture rtl of SNES is
 	signal SMP_EN_F : std_logic;
 	signal SMP_EN_R : std_logic;
 
+	signal SPC_S0 : std_logic; -- SPC state 0 for Save state
+
+	signal DSP_EN : std_logic;
+
 	signal APU_RAM_A : std_logic_vector(15 downto 0);
 	signal APU_RAM_DO	: std_logic_vector(7 downto 0);
 	signal APU_RAM_DI	: std_logic_vector(7 downto 0);
@@ -155,6 +168,9 @@ architecture rtl of SNES is
 	signal GENIE		: std_logic;
 	signal GENIE_DO	: std_logic_vector(7 downto 0);
 	signal GENIE_DI   : std_logic_vector(7 downto 0);
+
+	signal SS_DSP_DO  : std_logic_vector(7 downto 0);
+	signal SS_SMP_DO  : std_logic_vector(7 downto 0);
 
 	component CODES is
 		generic(
@@ -333,7 +349,10 @@ begin
 		HSYNC			=> HSYNC,
 		VSYNC			=> VSYNC,
 		
-		BG_EN			=> DBG_BG_EN
+		BG_EN			=> DBG_BG_EN,
+
+		SS_A		=> INT_CA(7 downto 0),
+		SS_DO		=> SS_PPU_DO
 	);
 
 
@@ -363,18 +382,27 @@ begin
 		CPU_DO		=> SMP_CPU_DO,
 		CS				=> INT_PA(6),
 		CS_N			=> INT_PA(7),
+
+		SPC_S0		=> SPC_S0,
  
 		IO_ADDR		=> IO_ADDR,
 		IO_DAT  		=> IO_DAT,
-		IO_WR			=> IO_WR
+		IO_WR			=> IO_WR,
+
+		SS_ADDR		=> SS_ADDR(7 downto 0),
+		SS_WR		=> SS_SMP_SEL and SS_WR,
+		SS_DI		=> SS_DI,
+		SS_DO		=> SS_SMP_DO
 	);
+
+	DSP_EN <= ENABLE and not (SS_BUSY and SPC_S0); -- Pause DSP on State 0 during Save state
 
 	-- DSP 
 	DSP: entity work.DSP 
 	port map (
 		CLK			=> DSPCLK,
 		RST_N			=> RST_N,
-		ENABLE		=> ENABLE,
+		ENABLE		=> DSP_EN,
 		PAL			=> PAL,
 				
 		SMP_EN_F  	=> SMP_EN_F,
@@ -399,10 +427,18 @@ begin
 		IO_ADDR		=> IO_ADDR,
 		IO_DAT  		=> IO_DAT,
 		IO_WR			=> IO_WR,
-		
+
+		SS_ADDR			=> SS_ADDR,
+		SS_REGS_SEL		=> SS_REGS_SEL,
+		SS_WR			=> SS_WR,
+		SS_DI			=> SS_DI,
+		SS_DO			=> SS_DSP_DO,
+
 		AUDIO_L		=> AUDIO_L,
 		AUDIO_R		=> AUDIO_R
 	);
+
+	SS_SPC_DO <= SS_SMP_DO when SS_SMP_SEL = '1' else SS_DSP_DO;
 
 	CA <= INT_CA;
 	CPURD_N <= INT_CPURD_N;

@@ -33,7 +33,18 @@ entity SA1 is
 		BWRAM_OE_N	: out std_logic;
 		BWRAM_WE_N	: out std_logic;
 		
-		IRQ_N			: out std_logic
+		IRQ_N			: out std_logic;
+
+		-- save states
+		SA1_P65_A   	: out std_logic_vector(23 downto 0);
+		SA1_P65_DO		: out std_logic_vector(7 downto 0);
+		SA1_P65_RD_N	: out std_logic;
+		SA1_P65_WR_N	: out std_logic;
+
+		SS_BUSY			: in std_logic;
+
+		SS_SA1_ROMSEL	: out std_logic;
+		SS_SNS_ROMSEL	: out std_logic
 	);
 end SA1;
 
@@ -56,6 +67,7 @@ signal P65_NMI_N				: std_logic;
 signal P65_IRQ_N				: std_logic;
 signal P65_RST_N				: std_logic;
 signal P65_EN					: std_logic;
+signal P65_CE					: std_logic;
 signal P65_VDA					: std_logic;
 signal P65_VPA					: std_logic;
 signal P65_VPB					: std_logic;
@@ -249,6 +261,13 @@ signal IRAM_DI					: std_logic_vector(7 downto 0);
 signal IRAM_DO					: std_logic_vector(7 downto 0);
 signal IRAM_WE					: std_logic;
 
+-- save states
+signal SS_DO					: std_logic_vector(7 downto 0);
+signal SS_P65_DO				: std_logic_vector(7 downto 0);
+signal SNES_SSIO_READ_ACCESS	: std_logic;
+signal SA1_SSIO_READ_ACCESS		: std_logic;
+signal SS_CMD					: std_logic;
+
 begin
 
 process( RST_N, CLK )
@@ -283,6 +302,7 @@ EN <= ENABLE and CLK_CE;
 -- 65C816
 P65_RST_N <= not SA1RST and RST_N;
 P65_EN <= not SA1WAIT and ENABLE;
+P65_CE <= SA1_EN and CLK_CE;
 P65_NMI_N <= not SA1_NMI;
 P65_IRQ_N <= not SA1_IRQ;
 
@@ -290,7 +310,7 @@ P65C816: entity work.P65C816
 port map (
 	CLK         => CLK,
 	RST_N       => P65_RST_N,
-	CE       	=> SA1_EN and CLK_CE,
+	CE       	=> P65_CE,
 	WE          => P65_R_WN,
 	D_IN     	=> P65_DI,
 	D_OUT    	=> P65_DO,
@@ -389,7 +409,7 @@ begin
 end process;
 
 process( P65_A, P65_VPB, ROM_DI, SA1_MMIO_READ_ACCESS, SA1_BWRAM_ACCESS, SA1_BBF_ACCESS, SA1_IRAM_ACCESS, SA1_ROM_ACCESS, IRAM_DO, BWRAM_DI, SBW46, 
-			CRV, CIV, CNV, SA1_IRQ_FLAG, TM_IRQ_FLAG, DMA_IRQ_FLAG, SA1_NMI_FLAG, SMSG, MR, MOF, VDP, BBF, HCR, VCR, H_CNT, MDR)
+			CRV, CIV, CNV, SA1_IRQ_FLAG, TM_IRQ_FLAG, DMA_IRQ_FLAG, SA1_NMI_FLAG, SMSG, MR, MOF, VDP, BBF, HCR, VCR, H_CNT, MDR, SA1_SSIO_READ_ACCESS, SS_P65_DO)
 begin
 	if SA1_ROM_ACCESS = '1' then												--ROM 00h-3Fh/80h-BFh:8000h-FFFFh, C0h-FFh:0000h-FFFFh 
 		if P65_A(3 downto 1) = "110" and P65_VPB = '0' then	--00FFEC/D, 00FFFC/D
@@ -466,6 +486,8 @@ begin
 				when others => P65_DI <= "000000" & BWRAM_DI(7 downto 6);
 			end case;
 		end if;
+	elsif SA1_SSIO_READ_ACCESS = '1' then
+		P65_DI <= SS_P65_DO;
 	else
 		P65_DI <= MDR;
 	end if;
@@ -603,8 +625,8 @@ BWRAM_OE_N <= '0'									                        when ENABLE = '0' else
 				  '1';
 
 --IRAM
-SA1_IRAM_WE <= CIWP(to_integer(unsigned(P65_A(10 downto 8))));
-SNES_IRAM_WE <= SIWP(to_integer(unsigned(SNES_A(10 downto 8))));
+SA1_IRAM_WE <= CIWP(to_integer(unsigned(P65_A(10 downto 8)))) or SS_BUSY;
+SNES_IRAM_WE <= SIWP(to_integer(unsigned(SNES_A(10 downto 8)))) or SS_BUSY;
 IRAM_A <= SNES_A(10 downto 0)					               when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
 			 CC1_IRAM_RD_ADDR						               when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
 			 SDA(10 downto 0)						               when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
@@ -774,7 +796,7 @@ begin
 						DDA(17 downto 16) <= SNES_DI(1 downto 0);
 					when others => null;
 				end case;
-			elsif SNES_CCDMA_IRAM_ACCESS = '1' and CC1_SNES_BWRAM_MASK = "000000" then
+			elsif SNES_CCDMA_IRAM_ACCESS = '1' and CC1_SNES_BWRAM_MASK = "000000" and SS_BUSY = '0' then
 				DMA_RUN <= CC1DMA_SEL;
 			end if;
 		end if;
@@ -867,6 +889,26 @@ begin
 						DMA_RUN <= CC2DMA_SEL;
 					when others => null;
 				end case;
+
+				if SS_BUSY = '1' then
+					case P65_A(7 downto 0) is
+						when x"09" =>
+							CDMA_IRQ_FLAG <= P65_DO(5);
+						when x"0A" =>
+							DMA_IRQ_FLAG <= P65_DO(0);
+						when x"70" =>
+							CC_BPP		<= unsigned(P65_DO(2 downto 0));
+							CC_TILE_Y	<= unsigned(P65_DO(5 downto 3));
+							CCDMA_RW	<= P65_DO(6);
+							CC1DMA_EXEC	<= P65_DO(7);
+						when x"71" =>
+							CC_TILE_N(7 downto 0) <= unsigned(P65_DO);
+						when x"72" =>
+							CC_TILE_N(14 downto 8) <= unsigned(P65_DO(6 downto 0));
+							DMAEN <= P65_DO(7);
+						when others => null;
+					end case;
+				end if;
 			end if;
 				
 			if DMA_RUN = '1' and DMA_EN = '1' then
@@ -1012,7 +1054,7 @@ begin
 						when x"58" =>							--VBD
 							VB <= P65_DO(3 downto 0);
 							HL <= P65_DO(7);
-							if P65_DO(7) = '0' then
+							if P65_DO(7) = '0' and SS_BUSY = '0' then
 								NEW_VBIT := "0"&VBIT + unsigned(not (P65_DO(0) or P65_DO(1) or P65_DO(2) or P65_DO(3))&P65_DO(3 downto 0));
 								VBIT <= NEW_VBIT(3 downto 0);
 								if NEW_VBIT(4) = '1' then
@@ -1027,11 +1069,29 @@ begin
 							VDA(15 downto 8) <= P65_DO;
 						when x"5B" =>
 							VDA(23 downto 16) <= P65_DO;
-							VBIT <= (others => '0');
-							VBP_RUN <= '1';
-							VBP_PRELOAD <= '1';
+							if SS_BUSY = '0' then
+								VBIT <= (others => '0');
+								VBP_RUN <= '1';
+								VBP_PRELOAD <= '1';
+							end if;
 						when others => null;
 					end case;
+
+					if SS_BUSY = '1' then
+						case P65_A(7 downto 0) is
+							when x"73" =>
+								VBP_BUF(7 downto 0) <= P65_DO;
+							when x"74" =>
+								VBP_BUF(15 downto 8) <= P65_DO;
+							when x"75" =>
+								VBP_BUF(23 downto 16) <= P65_DO;
+							when x"76" =>
+								VBP_BUF(31 downto 24) <= P65_DO;
+							when x"77" =>
+								VBIT <= unsigned(P65_DO(3 downto 0));
+							when others => null;
+						end case;
+					end if;
 				elsif SA1_MMIO_READ = '1' then
 					case P65_A(7 downto 0) is
 						when x"0D" =>							--VDP Msb
@@ -1195,6 +1255,16 @@ begin
 						SIV(15 downto 8) <= SNES_DI;
 					when others => null;
 				end case;
+
+				if SS_BUSY = '1' then
+					case SNES_A(7 downto 0) is
+						when x"0A" =>
+							SA1_NMI_EN <= SNES_DI(4);
+						when x"FF" =>
+							SS_CMD <= SNES_DI(0);
+						when others => null;
+					end case;
+				end if;
 			end if;
 		end if;
 		
@@ -1302,6 +1372,33 @@ begin
 						MATH_REQ <= '1';
 					when others => null;
 				end case;
+
+				if SS_BUSY = '1' then
+					case P65_A(7 downto 0) is
+						when x"19" =>
+							VCR(7 downto 0) <= P65_DO;
+						when x"1A" =>
+							HCR(8) <= P65_DO(0);
+							VCR(8) <= P65_DO(1);
+							TM_IRQ_FLAG <= P65_DO(2);
+						when x"6A" =>
+							MR(7 downto 0) <= P65_DO;
+						when x"6B" =>
+							MR(15 downto 8) <= P65_DO;
+						when x"6C" =>
+							MR(23 downto 16) <= P65_DO;
+						when x"6D" =>
+							MR(31 downto 24) <= P65_DO;
+						when x"6E" =>
+							MR(39 downto 32) <= P65_DO;
+						when x"6F" =>
+							MOF <= P65_DO(0);
+						when x"FF" =>
+							SS_CMD <= P65_DO(0);
+						when others => null;
+					end case;
+				end if;
+
 			elsif SA1_MMIO_READ = '1' then
 				case P65_A(7 downto 0) is
 					when x"02" =>						--HCR Lsb
@@ -1337,7 +1434,7 @@ begin
 end process;
 
 process( SNES_A, SNES_IRAM_ACCESS, SNES_CCDMA_IRAM_ACCESS, SNES_BWRAM_ACCESS, SNES_MMIO_READ_ACCESS, SNES_ROM_ACCESS, 
-			SNES_BWRAM_A, ROM_DI, IRAM_DO, BWRAM_DI, SIV, SNV, NMISEL, IRQSEL, SNES_IRQ_FLAG, CDMA_IRQ_FLAG, CMSG, OPENBUS )
+			SNES_BWRAM_A, ROM_DI, IRAM_DO, BWRAM_DI, SIV, SNV, NMISEL, IRQSEL, SNES_IRQ_FLAG, CDMA_IRQ_FLAG, CMSG, OPENBUS, SNES_SSIO_READ_ACCESS, SS_DO )
 begin
 	if SNES_ROM_ACCESS = '1' then													--ROM 00h-3Fh/80h-BFh:8000h-FFFFh, C0h-FFh:0000h-FFFFh 
 		if SNES_A(23 downto 1) = x"00FFE" & "101" and NMISEL = '1' then	--00FFEA/B
@@ -1371,6 +1468,8 @@ begin
 		SNES_DO <= IRAM_DO;
 	elsif SNES_BWRAM_ACCESS = '1' then												--BW-RAM 40h-4Fh:0000h-FFFFh
 		SNES_DO <= BWRAM_DI;
+	elsif SNES_SSIO_READ_ACCESS = '1' then --save state
+		SNES_DO <= SS_DO;
 	else
 		SNES_DO <= OPENBUS;
 	end if;
@@ -1407,7 +1506,18 @@ begin
 	elsif rising_edge(CLK) then
 		if EN = '1' then
 			DOT_CLK <= not DOT_CLK;
-			if SA1_MMIO_WRITE = '1' and P65_A(7 downto 0) = x"11" then
+			if SS_BUSY = '1' then
+				if SA1_MMIO_WRITE = '1' then
+					case P65_A(7 downto 0) is
+						when x"16" => H_CNT(7 downto 0) <= unsigned(P65_DO);
+						when x"17" => V_CNT(7 downto 0) <= unsigned(P65_DO);
+						when x"18" =>
+							H_CNT(8) <= P65_DO(0);
+							V_CNT(8) <= P65_DO(1);
+						when others => null;
+					end case;
+				end if;
+			elsif SA1_MMIO_WRITE = '1' and P65_A(7 downto 0) = x"11" then
 				H_CNT <= (others => '0');
 				V_CNT <= (others => '0');
 			elsif DOT_CLK = '1' then
@@ -1434,5 +1544,112 @@ begin
 		end if;
 	end if;
 end process;
+
+-- save states
+process( CLK )
+begin
+	if rising_edge(CLK) then
+		case SNES_A(7 downto 0) is
+			when x"00" => SS_DO <= SA1_IRQ_FLAG & SA1WAIT & SA1RST & SA1_NMI_FLAG & SMSG;
+			when x"01" => SS_DO <= SNES_IRQ_EN & "0" & CDMA_IRQ_EN & "00000";
+			when x"03" => SS_DO <= CRV(7 downto 0);
+			when x"04" => SS_DO <= CRV(15 downto 8);
+			when x"05" => SS_DO <= CNV(7 downto 0);
+			when x"06" => SS_DO <= CNV(15 downto 8);
+			when x"07" => SS_DO <= CIV(7 downto 0);
+			when x"08" => SS_DO <= CIV(15 downto 8);
+			when x"0A" => SS_DO <= SA1_IRQ_EN & TM_IRQ_EN & DMA_IRQ_EN & SA1_NMI_EN & "000" & DMA_IRQ_FLAG;
+			when x"0C" => SS_DO <= SNV(7 downto 0);
+			when x"0D" => SS_DO <= SNV(15 downto 8);
+			when x"0E" => SS_DO <= SIV(7 downto 0);
+			when x"0F" => SS_DO <= SIV(15 downto 8);
+			when x"10" => SS_DO <= TMMODE & "00000"& HVEN;
+			when x"12" => SS_DO <= HCNT(7 downto 0);
+			when x"13" => SS_DO <= "0000000" & HCNT(8);
+			when x"14" => SS_DO <= VCNT(7 downto 0);
+			when x"15" => SS_DO <= "0000000" & VCNT(8);
+			when x"16" => SS_DO <= std_logic_vector(H_CNT(7 downto 0));
+			when x"17" => SS_DO <= std_logic_vector(V_CNT(7 downto 0));
+			when x"18" => SS_DO <= "000000" & V_CNT(8) & H_CNT(8);
+			when x"19" => SS_DO <= VCR(7 downto 0);
+			when x"1A" => SS_DO <= "00000" & TM_IRQ_FLAG & VCR(8) & HCR(8);
+			when x"20" => SS_DO <= CBMAP & "0000" & CXB;
+			when x"21" => SS_DO <= DBMAP & "0000" & DXB;
+			when x"22" => SS_DO <= EBMAP & "0000" & EXB;
+			when x"23" => SS_DO <= FBMAP & "0000" & FXB;
+			when x"24" => SS_DO <= "000" & BMAPS(4 downto 0);
+			when x"25" => SS_DO <= SBW46 & BMAP;
+			when x"26" => SS_DO <= SBWE(7) & "0000000";
+			when x"27" => SS_DO <= CBWE(7) & "0000000";
+			when x"28" => SS_DO <= "0000" & BWPA(3 downto 0);
+			when x"29" => SS_DO <= SIWP;
+			when x"2A" => SS_DO <= CIWP;
+			when x"30" => SS_DO <= "0" & DPRIO & CDEN & CDSEL & DMA_RUN & DMADD & DMASD;
+			when x"31" => SS_DO <= "0" & "00" & CDMASIZE & CDMACB;
+			when x"32" => SS_DO <= SDA(7 downto 0);
+			when x"33" => SS_DO <= SDA(15 downto 8);
+			when x"34" => SS_DO <= SDA(23 downto 16);
+			when x"35" => SS_DO <= DDA(7 downto 0);
+			when x"36" => SS_DO <= DDA(15 downto 8);
+			when x"37" => SS_DO <= "000000" & DDA(17 downto 16);
+			when x"38" => SS_DO <= DTC(7 downto 0);
+			when x"39" => SS_DO <= DTC(15 downto 8);
+			when x"3F" => SS_DO <= BBF & "0000000";
+			when x"40" => SS_DO <= BRF(0);
+			when x"41" => SS_DO <= BRF(1);
+			when x"42" => SS_DO <= BRF(2);
+			when x"43" => SS_DO <= BRF(3);
+			when x"44" => SS_DO <= BRF(4);
+			when x"45" => SS_DO <= BRF(5);
+			when x"46" => SS_DO <= BRF(6);
+			when x"47" => SS_DO <= BRF(7);
+			when x"48" => SS_DO <= BRF(8);
+			when x"49" => SS_DO <= BRF(9);
+			when x"4A" => SS_DO <= BRF(10);
+			when x"4B" => SS_DO <= BRF(11);
+			when x"4C" => SS_DO <= BRF(12);
+			when x"4D" => SS_DO <= BRF(13);
+			when x"4E" => SS_DO <= BRF(14);
+			when x"4F" => SS_DO <= BRF(15);
+			when x"50" => SS_DO <= "000000" & AM;
+			when x"51" => SS_DO <= MA(7 downto 0);
+			when x"52" => SS_DO <= MA(15 downto 8);
+			when x"53" => SS_DO <= MB(7 downto 0);
+			when x"54" => SS_DO <= MB(15 downto 8);
+			when x"58" => SS_DO <= HL & "000" & VB;
+			when x"59" => SS_DO <= VDA(7 downto 0);
+			when x"5A" => SS_DO <= VDA(15 downto 8);
+			when x"5B" => SS_DO <= VDA(23 downto 16);
+			when x"6A" => SS_DO <= MR(7 downto 0);
+			when x"6B" => SS_DO <= MR(15 downto 8);
+			when x"6C" => SS_DO <= MR(23 downto 16);
+			when x"6D" => SS_DO <= MR(31 downto 24);
+			when x"6E" => SS_DO <= MR(39 downto 32);
+			when x"6F" => SS_DO <= "0000000" & MOF;
+			when x"70" => SS_DO <= CC1DMA_EXEC & CCDMA_RW & std_logic_vector(CC_TILE_Y) & std_logic_vector(CC_BPP);
+			when x"71" => SS_DO <= std_logic_vector(CC_TILE_N(7 downto 0));
+			when x"72" => SS_DO <= DMAEN & std_logic_vector(CC_TILE_N(14 downto 8));
+			when x"73" => SS_DO <= VBP_BUF(7 downto 0);
+			when x"74" => SS_DO <= VBP_BUF(15 downto 8);
+			when x"75" => SS_DO <= VBP_BUF(23 downto 16);
+			when x"76" => SS_DO <= VBP_BUF(31 downto 24);
+			when x"77" => SS_DO <= "0000" & std_logic_vector(VBIT);
+			when x"FF" => SS_DO <= "0000000" & SS_CMD;
+			when others => SS_DO <= x"00";
+		end case;
+	end if;
+end process;
+
+SNES_SSIO_READ_ACCESS <= '1' when SS_BUSY = '1' and SNES_A(22) = '0' and SNES_A(15 downto 8) = x"22" else '0';
+SA1_SSIO_READ_ACCESS <= '1' when SS_BUSY = '1' and P65_A(22) = '0' and P65_A(15 downto 8) = x"22" else '0';
+SS_P65_DO <= "0000000" & SS_CMD;
+
+SS_SA1_ROMSEL <= SA1_ROM_EN;
+SS_SNS_ROMSEL <= SNES_ROM_SEL;
+
+SA1_P65_A	 <= P65_A;
+SA1_P65_DO	 <= P65_DO;
+SA1_P65_RD_N <= not (P65_RD and P65_CE and P65_EN);
+SA1_P65_WR_N <= not (P65_WR and P65_CE and P65_EN);
 	
 end rtl;

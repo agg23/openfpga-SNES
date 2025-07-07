@@ -54,7 +54,10 @@ entity SPPU is
 		HDE 			: out std_logic;
 		VDE 			: out std_logic;
 		
-		BG_EN			: in std_logic_vector(4 downto 0)
+		BG_EN			: in std_logic_vector(4 downto 0);
+
+		SS_A			: in std_logic_vector(7 downto 0);
+		SS_DO			: out std_logic_vector(7 downto 0)
 	);
 end SPPU;
 
@@ -2289,5 +2292,111 @@ V224 <= not OVERSCAN;
 
 FIELD_OUT <= FIELD;
 INTERLACE <= BGINTERLACE;
+
+
+-- save states
+process( CLK )
+begin
+	if rising_edge(CLK) then
+		case SS_A(7 downto 0) is
+			when x"00" => SS_DO <= FORCE_BLANK & "000" & MB;
+			when x"01" => SS_DO <= OBJSIZE & OBJNAME & OBJADDR;
+			when x"02" => SS_DO <= OAMADD(7 downto 0);
+			when x"03" => SS_DO <= OAM_PRIO & "000000" & OAMADD(8);
+			when x"05" => SS_DO <= BG_SIZE & BG3PRIO & BG_MODE;
+			when x"06" => SS_DO <= MOSAIC_SIZE & BG_MOSAIC_EN;
+			when x"07" => SS_DO <= BG_SC_ADDR(BG1) & BG_SC_SIZE(BG1);
+			when x"08" => SS_DO <= BG_SC_ADDR(BG2) & BG_SC_SIZE(BG2);
+			when x"09" => SS_DO <= BG_SC_ADDR(BG3) & BG_SC_SIZE(BG3);
+			when x"0A" => SS_DO <= BG_SC_ADDR(BG4) & BG_SC_SIZE(BG4);
+			when x"0B" => SS_DO <= BG_NBA(BG2) & BG_NBA(BG1);
+			when x"0C" => SS_DO <= BG_NBA(BG4) & BG_NBA(BG3);
+			when x"0D" =>
+				if BG_MODE = "111" then
+					SS_DO <= M7HOFS(7 downto 0);
+				else
+					SS_DO <= BG_HOFS(BG1)(7 downto 0);
+				end if;
+			when x"0E" =>
+				if BG_MODE = "111" then
+					SS_DO <= M7VOFS(7 downto 0);
+				else
+					SS_DO <= BG_VOFS(BG1)(7 downto 0);
+				end if;
+			when x"0F" => SS_DO <= BG_HOFS(BG2)(7 downto 0);
+			when x"10" => SS_DO <= BG_VOFS(BG2)(7 downto 0);
+			when x"11" => SS_DO <= BG_HOFS(BG3)(7 downto 0);
+			when x"12" => SS_DO <= BG_VOFS(BG3)(7 downto 0);
+			when x"13" => SS_DO <= BG_HOFS(BG4)(7 downto 0);
+			when x"14" => SS_DO <= BG_VOFS(BG4)(7 downto 0);
+			when x"15" =>
+				SS_DO(7 downto 2) <= VMAIN_ADDRINC & "000" & VMAIN_ADDRTRANS;
+				case VMADD_INC is
+					when x"01" =>
+						SS_DO(1 downto 0) <= "00";
+					when x"20" =>
+						SS_DO(1 downto 0) <= "01";
+					when others =>
+						SS_DO(1 downto 0) <= "10";
+				end case;
+			when x"16" => SS_DO <= VMADD(7 downto 0);
+			when x"17" => SS_DO <= VMADD(15 downto 8);
+			when x"1A" => SS_DO <= M7SEL(7 downto 6) & "0000" & M7SEL(1 downto 0);
+			when x"1B" => SS_DO <= M7A(7 downto 0);
+			when x"1C" => SS_DO <= M7B(7 downto 0);
+			when x"1D" => SS_DO <= M7C(7 downto 0);
+			when x"1E" => SS_DO <= M7D(7 downto 0);
+			when x"1F" => SS_DO <= M7X(7 downto 0);
+			when x"20" => SS_DO <= M7Y(7 downto 0);
+			when x"21" => SS_DO <= CGADD(8 downto 1);
+			when x"22" => SS_DO <= CGRAM_Lsb;
+			when x"23" => SS_DO <= W12SEL;
+			when x"24" => SS_DO <= W34SEL;
+			when x"25" => SS_DO <= WOBJSEL;
+			when x"26" => SS_DO <= WH0;
+			when x"27" => SS_DO <= WH1;
+			when x"28" => SS_DO <= WH2;
+			when x"29" => SS_DO <= WH3;
+			when x"2A" => SS_DO <= WBGLOG;
+			when x"2B" => SS_DO <= "0000" & WOBJLOG(3 downto 0);
+			when x"2C" => SS_DO <= "000" & TM(4 downto 0);
+			when x"2D" => SS_DO <= "000" & TS(4 downto 0);
+			when x"2E" => SS_DO <= "000" & TMW(4 downto 0);
+			when x"2F" => SS_DO <= "000" & TSW(4 downto 0);
+			when x"30" => SS_DO <= CGWSEL(7 downto 4) & "00" & CGWSEL(1 downto 0);
+			when x"31" => SS_DO <= CGADSUB;
+			when x"32" => SS_DO <= "100" & SUBCOLBD(14 downto 10);
+			when x"33" => SS_DO <= "0" & M7EXTBG & "00" & PSEUDOHIRES & OVERSCAN & OBJINTERLACE & BGINTERLACE;
+			when x"40" => SS_DO <= "010" & SUBCOLBD(9 downto 5);
+			when x"41" => SS_DO <= "001" & SUBCOLBD(4 downto 0);
+			when x"4D" =>
+				if BG_MODE = "111" then
+					SS_DO <= "000" & M7HOFS(12 downto 8);
+				else
+					SS_DO <= "000000" & BG_HOFS(BG1)(9 downto 8);
+				end if;
+			when x"4E" =>
+				if BG_MODE = "111" then
+					SS_DO <= "000" & M7VOFS(12 downto 8);
+				else
+					SS_DO <= "000000" & BG_VOFS(BG1)(9 downto 8);
+				end if;
+			when x"4F" => SS_DO <= "000000" & BG_HOFS(BG2)(9 downto 8);
+			when x"50" => SS_DO <= "000000" & BG_VOFS(BG2)(9 downto 8);
+			when x"51" => SS_DO <= "000000" & BG_HOFS(BG3)(9 downto 8);
+			when x"52" => SS_DO <= "000000" & BG_VOFS(BG3)(9 downto 8);
+			when x"53" => SS_DO <= "000000" & BG_HOFS(BG4)(9 downto 8);
+			when x"54" => SS_DO <= "000000" & BG_VOFS(BG4)(9 downto 8);
+			when x"5B" => SS_DO <= M7A(15 downto 8);
+			when x"5C" => SS_DO <= M7B(15 downto 8);
+			when x"5D" => SS_DO <= M7C(15 downto 8);
+			when x"5E" => SS_DO <= M7D(15 downto 8);
+			when x"5F" => SS_DO <= "000" & M7X(12 downto 8);
+			when x"60" => SS_DO <= "000" & M7Y(12 downto 8);
+			when x"61" => SS_DO <= "0000000" & CGADD(0);
+			when others => SS_DO <= x"00";
+		end case;
+	end if;
+end process;
 
 end rtl;

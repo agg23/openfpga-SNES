@@ -20,18 +20,6 @@
 
 module msu_data_store
 (
-	input         DDRAM_CLK,
-
-	input         DDRAM_BUSY,
-	output  [7:0] DDRAM_BURSTCNT,
-	output [28:0] DDRAM_ADDR,
-	input  [63:0] DDRAM_DOUT,
-	input         DDRAM_DOUT_READY,
-	output        DDRAM_RD,
-	output [63:0] DDRAM_DIN,
-	output  [7:0] DDRAM_BE,
-	output        DDRAM_WE,
-	
 	input         clk_sys,
 	input  [31:0] base_addr,
 
@@ -39,15 +27,14 @@ module msu_data_store
 	input         rd_seek,
 	output reg    rd_seek_done,
 	input  [31:0] rd_addr,
+
+	output [31:3] ram_addr,
+	output reg    ram_req,
+	input         ram_ack,
+	input  [63:0] ram_din,
+
 	output  [7:0] rd_dout
 );
-
-assign DDRAM_BURSTCNT = ram_burst;
-assign DDRAM_BE       = 8'hFF;
-assign DDRAM_ADDR     = ram_address;
-assign DDRAM_RD       = ram_read;
-assign DDRAM_DIN      = 0;
-assign DDRAM_WE       = 0;
 
 wire [28:0] ph_addr      = base_addr[31:3] + rd_addr[31:3];
 wire [28:0] ph_addr_curr = ph_addr + ((ph_addr >= 'h4400000) ? 29'h100000 : 29'h0);
@@ -55,23 +42,21 @@ wire [28:0] ph_addr_next = ph_addr + ((ph_addr >= 'h43FFFFF) ? 29'h100001 : 29'h
 
 assign rd_dout = ram_q[{rd_addr[2:0], 3'b000} +:8];
 
-reg  [7:0] ram_burst;
 reg [63:0] ram_q, next_q;
-reg [63:0] ram_data;
 reg [28:0] ram_address, cache_addr;
-reg        ram_read = 0;
 
 reg  [1:0] state  = 0;
 
-always @(posedge DDRAM_CLK) begin
+assign ram_addr = ram_address;
+
+always @(posedge clk_sys) begin
 	reg old_seek;
 	reg old_rd;
 
 	if(~rd_seek) old_seek <= 0;
 
-	if(!DDRAM_BUSY) begin
+	if(ram_ack == ram_req) begin
 
-		ram_read <= 0;
 		old_rd   <= rd_next;
 
 		case(state)
@@ -80,8 +65,7 @@ always @(posedge DDRAM_CLK) begin
 					rd_seek_done<= 0;
 					ram_address <= ph_addr_curr;
 					cache_addr  <= ph_addr_next; // seek to 'h21FFFFF8 will return wrong second dword
-					ram_read 	<= 1;
-					ram_burst   <= 2;
+					ram_req     <= ~ram_req;
 					state       <= 1;
 				end
 				else if(~old_rd & rd_next) begin
@@ -89,19 +73,21 @@ always @(posedge DDRAM_CLK) begin
 						ram_q       <= next_q;
 						ram_address <= ph_addr_next;
 						cache_addr  <= ph_addr_next;
-						ram_read    <= 1;
-						ram_burst   <= 1;
+						ram_req     <= ~ram_req;
 						state       <= 2;
 					end
 				end
 
-			1: if(DDRAM_DOUT_READY) begin
-					ram_q <= DDRAM_DOUT;
+			1:  begin
+					ram_q <= ram_din;
+					// Read next address
+					ram_req <= ~ram_req;
+					ram_address <= cache_addr;
 					state <= 2;
 				end
 
-			2: if(DDRAM_DOUT_READY) begin
-					next_q <= DDRAM_DOUT;
+			2:  begin
+					next_q <= ram_din;
 					state  <= 0;
 					rd_seek_done <= 1;
 				end

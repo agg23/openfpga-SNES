@@ -468,33 +468,57 @@ package GSU_PKG is
 	end record;
 	type PixCaches_t is array (0 to 1) of PixCache_r;
 	
-	type ROMState_t is (
-		ROMST_IDLE, 
-		ROMST_FETCH, 
-		ROMST_FETCH_DONE,
-		ROMST_CACHE, 
-		ROMST_CACHE_DONE,
-		ROMST_CACHE_END,
-		ROMST_LOAD
-	);
-	type RAMState_t is (
-		RAMST_IDLE, 
-		RAMST_FETCH, 
-		RAMST_FETCH_DONE,
-		RAMST_CACHE, 
-		RAMST_CACHE_DONE,
-		RAMST_CACHE_END,
-		RAMST_LOAD, 
-		RAMST_SAVE, 
-		RAMST_PCF, 
-		RAMST_PCF_END,
-		RAMST_RPIX
-	);
+	--type ROMState_t is (
+	--	ROMST_IDLE, 
+	--	ROMST_FETCH, 
+	--	ROMST_FETCH_DONE,
+	--	ROMST_CACHE, 
+	--	ROMST_CACHE_DONE,
+	--	ROMST_CACHE_END,
+	--	ROMST_LOAD
+	--);
 	
-	type MULTState_t is (
-		MULTST_IDLE, 
-		MULTST_EXEC
-	);
+	constant ROMST_IDLE:		std_logic_vector(2 downto 0) := "000";
+	constant ROMST_FETCH:		std_logic_vector(2 downto 0) := "001";
+	constant ROMST_FETCH_DONE:	std_logic_vector(2 downto 0) := "010";
+	constant ROMST_CACHE:		std_logic_vector(2 downto 0) := "011";
+	constant ROMST_CACHE_DONE:	std_logic_vector(2 downto 0) := "100";
+	constant ROMST_CACHE_END:	std_logic_vector(2 downto 0) := "101";
+	constant ROMST_LOAD:		std_logic_vector(2 downto 0) := "110";
+
+	--type RAMState_t is (
+	--	RAMST_IDLE, 
+	--	RAMST_FETCH, 
+	--	RAMST_FETCH_DONE,
+	--	RAMST_CACHE, 
+	--	RAMST_CACHE_DONE,
+	--	RAMST_CACHE_END,
+	--	RAMST_LOAD, 
+	--	RAMST_SAVE, 
+	--	RAMST_PCF, 
+	--	RAMST_PCF_END,
+	--	RAMST_RPIX
+	--);
+
+	constant RAMST_IDLE:		std_logic_vector(3 downto 0) := "0000";
+	constant RAMST_FETCH:		std_logic_vector(3 downto 0) := "0001";
+	constant RAMST_FETCH_DONE:	std_logic_vector(3 downto 0) := "0010";
+	constant RAMST_CACHE:		std_logic_vector(3 downto 0) := "0011";
+	constant RAMST_CACHE_DONE:	std_logic_vector(3 downto 0) := "0100";
+	constant RAMST_CACHE_END:	std_logic_vector(3 downto 0) := "0101";
+	constant RAMST_LOAD:		std_logic_vector(3 downto 0) := "0110";
+	constant RAMST_SAVE:		std_logic_vector(3 downto 0) := "0111";
+	constant RAMST_PCF:			std_logic_vector(3 downto 0) := "1000";
+	constant RAMST_PCF_END:		std_logic_vector(3 downto 0) := "1001";
+	constant RAMST_RPIX:		std_logic_vector(3 downto 0) := "1010";
+
+	--type MULTState_t is (
+	--	MULTST_IDLE, 
+	--	MULTST_EXEC
+	--);
+
+	constant MULTST_IDLE: std_logic := '0';
+	constant MULTST_EXEC: std_logic := '1';
 	
 	function GetLastBPP(md: std_logic_vector(1 downto 0)) return unsigned;
 	function GetCharOffset(offs: unsigned(12 downto 0); ht: std_logic_vector(1 downto 0); md: std_logic_vector(1 downto 0); 
