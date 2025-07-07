@@ -36,6 +36,12 @@ entity DSP is
 		IO_DAT  		: in std_logic_vector(15 downto 0);
 		IO_WR 		: in std_logic;
 
+		SS_ADDR		: in std_logic_vector(8 downto 0);
+		SS_REGS_SEL	: in std_logic;
+		SS_WR		: in std_logic;
+		SS_DI		: in std_logic_vector(7 downto 0);
+		SS_DO		: out std_logic_vector(7 downto 0);
+
 		AUDIO_L		: out std_logic_vector(15 downto 0);
 		AUDIO_R		: out std_logic_vector(15 downto 0);
 		SND_RDY		: out std_logic
@@ -221,6 +227,9 @@ architecture rtl of DSP is
 	signal REGRI			: std_logic_vector(7 downto 0);
 	signal REG_SET 		: std_logic;
 
+	signal SS_REGS_WR		: std_logic;
+	signal SS_REGS_DO		: std_logic_vector(7 downto 0);
+
 begin
 	
 	MCLK_FREQ <= MCLK_PAL_FREQ when PAL = '1' else MCLK_NTSC_FREQ;
@@ -235,13 +244,18 @@ begin
 		CE       => CE
 	);
 
+	SS_REGS_WR <= SS_WR and SS_REGS_SEL;
+
 	process( RST_N, CLK )
 	begin
 		if RST_N = '0' then
 			STEP_CNT <= (others => '0');
 			SUBSTEP_CNT <= (others => '0');
 		elsif rising_edge(CLK) then
-			if ENABLE = '1' and CE = '1' then
+			if SS_REGS_WR = '1' and SS_ADDR = "0"&x"80" then
+				STEP_CNT <= unsigned(SS_DI(4 downto 0));
+				SUBSTEP_CNT <= unsigned(SS_DI(6 downto 5));
+			elsif ENABLE = '1' and CE = '1' then
 				SUBSTEP_CNT <= SUBSTEP_CNT + 1;
 				if SUBSTEP_CNT = 3 then
 					STEP_CNT <= STEP_CNT + 1;
@@ -260,16 +274,21 @@ begin
 	SUBSTEP <= to_integer(SUBSTEP_CNT);
 	
 	
-	REGS_ADDR_WR <= IO_ADDR(6 downto 1)&IO_REG_WR(1) when IO_REG_WR /= "00" else 
+	REGS_ADDR_WR <= SS_ADDR(6 downto 0) when SS_REGS_SEL = '1' else
+					IO_ADDR(6 downto 1)&IO_REG_WR(1) when IO_REG_WR /= "00" else
 						 REGN_WR;
-	REGS_ADDR_RD <= REGN_RD;					
-	REGS_DI <= IO_REG_DAT   when IO_REG_WR /= "00" else 
+
+	REGS_ADDR_RD <= SS_ADDR(6 downto 0) when SS_REGS_SEL = '1' else REGN_RD;
+
+	REGS_DI <= SS_DI when SS_REGS_SEL = '1' else
+				  IO_REG_DAT   when IO_REG_WR /= "00" else
 				  SMP_DO 	   when SUBSTEP = 3 else
 				  ENVX_OUT     when REGN_WR(3 downto 0) = x"8" else 
 				  OUTX_OUT     when REGN_WR(3 downto 0) = x"9" else
 				  SMP_DO;
 						
-	REGS_WE <= '1' when IO_REG_WR /= "00" and IO_ADDR(16 downto 7) = "0"&x"01"&"0" else
+	REGS_WE <= '1' when SS_REGS_WR = '1' and SS_ADDR(8 downto 7) = "00" else
+				  '1' when IO_REG_WR /= "00" and IO_ADDR(16 downto 7) = "0"&x"01"&"0" else
 				  '1' when SMP_WE = '0' and SMP_A = x"00F3" and SUBSTEP = 3 and CE = '1' else
 				  '1' when REGN_WR(3 downto 1) = "100" and SUBSTEP = 0 and CE = '1' else
 				  '0';
@@ -291,6 +310,8 @@ begin
 		elsif rising_edge(CLK) then
 			if REG_SET = '1' then
 				RI <= REGRI;
+			elsif SS_REGS_WR = '1' and SS_ADDR = "0"&x"83" then
+				RI <= SS_DI;
 			elsif ENABLE = '1' and CE = '1' then
 				if SMP_EN_F_INT = '1' and SMP_WE = '0' then
 					if SMP_A = x"00F2" then
@@ -458,7 +479,49 @@ begin
 			ECHO_BUF <= (others => (others => (others => '0')));
 			ECHO_DATA_TEMP <= (others => '0');
 		elsif rising_edge(CLK) then
-			if ENABLE = '1' and CE = '1' then
+			if SS_REGS_WR = '1' then
+				case SS_ADDR(8 downto 0) is
+					when "0"&x"A7" => BRR_NEXT_ADDR( 7 downto 0) <= SS_DI;
+					when "0"&x"A8" => BRR_NEXT_ADDR(15 downto 8) <= SS_DI;
+					when "0"&x"AD" => TBRRHDR <= SS_DI;
+					when "0"&x"AE" => TBRRDAT( 7 downto 0) <= SS_DI;
+					when "0"&x"AF" => TBRRDAT(15 downto 8) <= SS_DI;
+					when "0"&x"F1" => ECHO_BUF(0)(0)( 7 downto 0) <= SS_DI;
+					when "0"&x"F2" => ECHO_BUF(0)(0)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"F3" => ECHO_BUF(0)(1)( 7 downto 0) <= SS_DI;
+					when "0"&x"F4" => ECHO_BUF(0)(1)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"F5" => ECHO_BUF(0)(2)( 7 downto 0) <= SS_DI;
+					when "0"&x"F6" => ECHO_BUF(0)(2)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"F7" => ECHO_BUF(0)(3)( 7 downto 0) <= SS_DI;
+					when "0"&x"F8" => ECHO_BUF(0)(3)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"F9" => ECHO_BUF(0)(4)( 7 downto 0) <= SS_DI;
+					when "0"&x"FA" => ECHO_BUF(0)(4)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"FB" => ECHO_BUF(0)(5)( 7 downto 0) <= SS_DI;
+					when "0"&x"FC" => ECHO_BUF(0)(5)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"FD" => ECHO_BUF(0)(6)( 7 downto 0) <= SS_DI;
+					when "0"&x"FE" => ECHO_BUF(0)(6)(14 downto 8) <= SS_DI(6 downto 0);
+					when "0"&x"FF" => ECHO_BUF(0)(7)( 7 downto 0) <= SS_DI;
+					when "1"&x"00" => ECHO_BUF(0)(7)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"01" => ECHO_BUF(1)(0)( 7 downto 0) <= SS_DI;
+					when "1"&x"02" => ECHO_BUF(1)(0)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"03" => ECHO_BUF(1)(1)( 7 downto 0) <= SS_DI;
+					when "1"&x"04" => ECHO_BUF(1)(1)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"05" => ECHO_BUF(1)(2)( 7 downto 0) <= SS_DI;
+					when "1"&x"06" => ECHO_BUF(1)(2)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"07" => ECHO_BUF(1)(3)( 7 downto 0) <= SS_DI;
+					when "1"&x"08" => ECHO_BUF(1)(3)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"09" => ECHO_BUF(1)(4)( 7 downto 0) <= SS_DI;
+					when "1"&x"0A" => ECHO_BUF(1)(4)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"0B" => ECHO_BUF(1)(5)( 7 downto 0) <= SS_DI;
+					when "1"&x"0C" => ECHO_BUF(1)(5)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"0D" => ECHO_BUF(1)(6)( 7 downto 0) <= SS_DI;
+					when "1"&x"0E" => ECHO_BUF(1)(6)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"0F" => ECHO_BUF(1)(7)( 7 downto 0) <= SS_DI;
+					when "1"&x"10" => ECHO_BUF(1)(7)(14 downto 8) <= SS_DI(6 downto 0);
+					when "1"&x"11" => ECHO_DATA_TEMP <= SS_DI(6 downto 0);
+					when others => null;
+				end case;
+			elsif ENABLE = '1' and CE = '1' then
 				case RS is
 					when RS_SRCNL =>
 						BRR_NEXT_ADDR(7 downto 0) <= RAM_DI;
@@ -531,7 +594,23 @@ begin
 			BD_STATE <= BD_IDLE;
 		elsif rising_edge(CLK) then
 			BRR_BUF_WE <= '0';
-			if ENABLE = '1' and CE = '1' then
+			if SS_REGS_WR = '1' then
+				case SS_ADDR(8 downto 0) is
+					when "0"&x"A9" =>
+						BRR_BUF_ADDR(1) <= unsigned(SS_DI(7 downto 4));
+						BRR_BUF_ADDR(0) <= unsigned(SS_DI(3 downto 0));
+					when "0"&x"AA" =>
+						BRR_BUF_ADDR(3) <= unsigned(SS_DI(7 downto 4));
+						BRR_BUF_ADDR(2) <= unsigned(SS_DI(3 downto 0));
+					when "0"&x"AB" =>
+						BRR_BUF_ADDR(5) <= unsigned(SS_DI(7 downto 4));
+						BRR_BUF_ADDR(4) <= unsigned(SS_DI(3 downto 0));
+					when "0"&x"AC" =>
+						BRR_BUF_ADDR(7) <= unsigned(SS_DI(7 downto 4));
+						BRR_BUF_ADDR(6) <= unsigned(SS_DI(3 downto 0));
+					when others => null;
+				end case;
+			elsif ENABLE = '1' and CE = '1' then
 				if BDS.S /= BDS_IDLE and BRR_DECODE_EN = '1' then
 					FILTER := TBRRHDR(3 downto 2);
 					SCALE := unsigned(TBRRHDR(7 downto 4));
@@ -679,6 +758,155 @@ begin
 				TDIR <= REG5D;
 				--6D ESA
 				TESA <= REG6D;
+			elsif SS_REGS_WR = '1' then
+				case SS_ADDR(8 downto 0) is
+					when "0"&x"6C" =>
+						RST_FLG <= SS_DI(7);
+						MUTE_FLG <= SS_DI(6);
+						ECEN_FLG <= SS_DI(5);
+					when "0"&x"81" => WKON <= SS_DI;
+					when "0"&x"82" => TKON <= SS_DI;
+					when "0"&x"84" => TADSR1 <= SS_DI;
+					when "0"&x"85" => TADSR2 <= SS_DI;
+					when "0"&x"86" => TSRCN <= SS_DI;
+					when "0"&x"87" => TPMON <= SS_DI;
+					when "0"&x"88" => TNON <= SS_DI;
+					when "0"&x"89" => TEON <= SS_DI;
+					when "0"&x"8A" => TESA <= SS_DI;
+					when "0"&x"8B" => TDIR <= SS_DI;
+					when "0"&x"8C" => TDIR_ADDR( 7 downto 0) <= SS_DI;
+					when "0"&x"8D" => TDIR_ADDR(15 downto 8) <= SS_DI;
+					when "0"&x"8E" => TPITCH(7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"8F" =>
+						GTBL_ADDR(8)        <= SS_DI(7);
+						TPITCH(14 downto 8) <= unsigned(SS_DI(6 downto 0));
+					when "0"&x"90" => GTBL_ADDR(7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"91" => BRR_ADDR(0)( 7 downto 0) <= SS_DI;
+					when "0"&x"92" => BRR_ADDR(0)(15 downto 8) <= SS_DI;
+					when "0"&x"93" => BRR_ADDR(1)( 7 downto 0) <= SS_DI;
+					when "0"&x"94" => BRR_ADDR(1)(15 downto 8) <= SS_DI;
+					when "0"&x"95" => BRR_ADDR(2)( 7 downto 0) <= SS_DI;
+					when "0"&x"96" => BRR_ADDR(2)(15 downto 8) <= SS_DI;
+					when "0"&x"97" => BRR_ADDR(3)( 7 downto 0) <= SS_DI;
+					when "0"&x"98" => BRR_ADDR(3)(15 downto 8) <= SS_DI;
+					when "0"&x"99" => BRR_ADDR(4)( 7 downto 0) <= SS_DI;
+					when "0"&x"9A" => BRR_ADDR(4)(15 downto 8) <= SS_DI;
+					when "0"&x"9B" => BRR_ADDR(5)( 7 downto 0) <= SS_DI;
+					when "0"&x"9C" => BRR_ADDR(5)(15 downto 8) <= SS_DI;
+					when "0"&x"9D" => BRR_ADDR(6)( 7 downto 0) <= SS_DI;
+					when "0"&x"9E" => BRR_ADDR(6)(15 downto 8) <= SS_DI;
+					when "0"&x"9F" => BRR_ADDR(7)( 7 downto 0) <= SS_DI;
+					when "0"&x"A0" => BRR_ADDR(7)(15 downto 8) <= SS_DI;
+					when "0"&x"A1" =>
+						BRR_OFFS(1) <= unsigned(SS_DI(5 downto 3));
+						BRR_OFFS(0) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"A2" =>
+						BRR_OFFS(3) <= unsigned(SS_DI(5 downto 3));
+						BRR_OFFS(2) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"A3" =>
+						BRR_OFFS(5) <= unsigned(SS_DI(5 downto 3));
+						BRR_OFFS(4) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"A4" =>
+						BRR_OFFS(7) <= unsigned(SS_DI(5 downto 3));
+						BRR_OFFS(6) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"A5" =>
+						EVEN_SAMPLE   <= SS_DI(1);
+						BRR_DECODE_EN <= SS_DI(0);
+					when "0"&x"A6" => BRR_END <= SS_DI;
+					when "0"&x"B0" => INTERP_POS(0)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"B1" => INTERP_POS(0)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"B2" => INTERP_POS(1)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"B3" => INTERP_POS(1)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"B4" => INTERP_POS(2)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"B5" => INTERP_POS(2)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"B6" => INTERP_POS(3)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"B7" => INTERP_POS(3)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"B8" => INTERP_POS(4)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"B9" => INTERP_POS(4)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"BA" => INTERP_POS(5)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"BB" => INTERP_POS(5)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"BC" => INTERP_POS(6)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"BD" => INTERP_POS(6)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"BE" => INTERP_POS(7)( 7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"BF" => INTERP_POS(7)(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"C0" => ENV(0)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"C1" =>
+						ENV_MODE(0) <= SS_DI(5 downto 4);
+						ENV(0)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"C2" => ENV(1)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"C3" =>
+						ENV_MODE(1) <= SS_DI(5 downto 4);
+						ENV(1)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"C4" => ENV(2)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"C5" =>
+						ENV_MODE(2) <= SS_DI(5 downto 4);
+						ENV(2)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"C6" => ENV(3)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"C7" =>
+						ENV_MODE(3) <= SS_DI(5 downto 4);
+						ENV(3)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"C8" => ENV(4)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"C9" =>
+						ENV_MODE(4) <= SS_DI(5 downto 4);
+						ENV(4)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"CA" => ENV(5)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"CB" =>
+						ENV_MODE(5) <= SS_DI(5 downto 4);
+						ENV(5)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"CC" => ENV(6)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"CD" =>
+						ENV_MODE(6) <= SS_DI(5 downto 4);
+						ENV(6)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"CE" => ENV(7)(7 downto 0) <= signed(SS_DI);
+					when "0"&x"CF" =>
+						ENV_MODE(7) <= SS_DI(5 downto 4);
+						ENV(7)(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"D0" => LAST_ENV( 7 downto 0) <= signed(SS_DI);
+					when "0"&x"D1" => LAST_ENV(11 downto 8) <= signed(SS_DI(3 downto 0));
+					when "0"&x"D2" => TENVX(0) <= SS_DI;
+					when "0"&x"D3" => TENVX(1) <= SS_DI;
+					when "0"&x"D4" => TENVX(2) <= SS_DI;
+					when "0"&x"D5" => TENVX(3) <= SS_DI;
+					when "0"&x"D6" => TENVX(4) <= SS_DI;
+					when "0"&x"D7" => TENVX(5) <= SS_DI;
+					when "0"&x"D8" => TENVX(6) <= SS_DI;
+					when "0"&x"D9" => TENVX(7) <= SS_DI;
+					when "0"&x"DA" => ENVX_OUT <= SS_DI;
+					when "0"&x"DB" => BENT_INC_MODE <= SS_DI;
+					when "0"&x"DC" =>
+						KON_CNT(1) <= unsigned(SS_DI(5 downto 3));
+						KON_CNT(0) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"DD" =>
+						KON_CNT(3) <= unsigned(SS_DI(5 downto 3));
+						KON_CNT(2) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"DE" =>
+						KON_CNT(5) <= unsigned(SS_DI(5 downto 3));
+						KON_CNT(4) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"DF" =>
+						KON_CNT(7) <= unsigned(SS_DI(5 downto 3));
+						KON_CNT(6) <= unsigned(SS_DI(2 downto 0));
+					when "0"&x"E0" => ENDX <= SS_DI;
+					when "0"&x"E1" => ENDX_BUF <= SS_DI;
+					when "0"&x"E2" => NOISE(7 downto 0) <= signed(SS_DI);
+					when "0"&x"E3" => NOISE(14 downto 8) <= signed(SS_DI(6 downto 0));
+					when "0"&x"E4" => ECHO_POS(7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"E5" => ECHO_POS(14 downto 8) <= unsigned(SS_DI(6 downto 0));
+					when "0"&x"E6" => ECHO_ADDR(7 downto 0) <= unsigned(SS_DI);
+					when "0"&x"E7" => ECHO_ADDR(15 downto 8) <= unsigned(SS_DI);
+					when "0"&x"E8" =>
+						ECHO_WR_EN <= SS_DI(7);
+						FFC_CNT <= unsigned(SS_DI(6 downto 4));
+						ECHO_LEN(14 downto 11) <= unsigned(SS_DI(3 downto 0));
+					when "0"&x"E9" => ECHO_FFC(0) <= signed(SS_DI);
+					when "0"&x"EA" => ECHO_FFC(1) <= signed(SS_DI);
+					when "0"&x"EB" => ECHO_FFC(2) <= signed(SS_DI);
+					when "0"&x"EC" => ECHO_FFC(3) <= signed(SS_DI);
+					when "0"&x"ED" => ECHO_FFC(4) <= signed(SS_DI);
+					when "0"&x"EE" => ECHO_FFC(5) <= signed(SS_DI);
+					when "0"&x"EF" => ECHO_FFC(6) <= signed(SS_DI);
+					when "0"&x"F0" => ECHO_FFC(7) <= signed(SS_DI);
+					when others => null;
+				end case;
 			elsif CE = '1' then 
 				if SMP_EN_F_INT = '1' and SMP_A = x"00F3" and SMP_WE = '0' then
 					if RI(6 downto 0) = "1001100" then		--KON
@@ -1048,7 +1276,17 @@ begin
 			GCNT_BY3 <= x"410";
 			GCNT_BY5 <= x"218";
 		elsif rising_edge(CLK) then
-			if ENABLE = '1' and CE = '1' then
+			if SS_REGS_WR = '1' then
+				case SS_ADDR(8 downto 0) is
+					when "1"&x"12" => GCNT_BY1( 7 downto 0) <= unsigned(SS_DI);
+					when "1"&x"13" => GCNT_BY1(11 downto 8) <= unsigned(SS_DI(3 downto 0));
+					when "1"&x"14" => GCNT_BY3( 7 downto 0) <= unsigned(SS_DI);
+					when "1"&x"15" => GCNT_BY3(11 downto 8) <= unsigned(SS_DI(3 downto 0));
+					when "1"&x"16" => GCNT_BY5( 7 downto 0) <= unsigned(SS_DI);
+					when "1"&x"17" => GCNT_BY5(11 downto 8) <= unsigned(SS_DI(3 downto 0));
+					when others => null;
+				end case;
+			elsif ENABLE = '1' and CE = '1' then
 				if STEP = 30 and SUBSTEP = 1 then
 					if GCNT_BY3(1 downto 0) = "00" then
 						GCNT_BY3(1 downto 0) <= "10";
@@ -1124,5 +1362,172 @@ begin
 			end if;
 		end if;
 	end process;
+
+	process(CLK)
+	begin
+		if rising_edge(CLK) then
+			if SS_ADDR(8 downto 7) = "00" then
+				SS_REGS_DO <= REGS_DO;
+			else
+				case SS_ADDR(8 downto 0) is
+					when "0"&x"80" => SS_REGS_DO <= "0" & std_logic_vector(SUBSTEP_CNT) & std_logic_vector(STEP_CNT);
+					when "0"&x"81" => SS_REGS_DO <= WKON;
+					when "0"&x"82" => SS_REGS_DO <= TKON;
+					when "0"&x"83" => SS_REGS_DO <= RI;
+					when "0"&x"84" => SS_REGS_DO <= TADSR1;
+					when "0"&x"85" => SS_REGS_DO <= TADSR2;
+					when "0"&x"86" => SS_REGS_DO <= TSRCN;
+					when "0"&x"87" => SS_REGS_DO <= TPMON;
+					when "0"&x"88" => SS_REGS_DO <= TNON;
+					when "0"&x"89" => SS_REGS_DO <= TEON;
+					when "0"&x"8A" => SS_REGS_DO <= TESA;
+					when "0"&x"8B" => SS_REGS_DO <= TDIR;
+					when "0"&x"8C" => SS_REGS_DO <= TDIR_ADDR(7 downto 0);
+					when "0"&x"8D" => SS_REGS_DO <= TDIR_ADDR(15 downto 8);
+					when "0"&x"8E" => SS_REGS_DO <= std_logic_vector(TPITCH(7 downto 0));
+					when "0"&x"8F" => SS_REGS_DO <= GTBL_ADDR(8) & std_logic_vector(TPITCH(14 downto 8));
+					when "0"&x"90" => SS_REGS_DO <= std_logic_vector(GTBL_ADDR(7 downto 0));
+					when "0"&x"91" => SS_REGS_DO <= BRR_ADDR(0)(7 downto 0);
+					when "0"&x"92" => SS_REGS_DO <= BRR_ADDR(0)(15 downto 8);
+					when "0"&x"93" => SS_REGS_DO <= BRR_ADDR(1)(7 downto 0);
+					when "0"&x"94" => SS_REGS_DO <= BRR_ADDR(1)(15 downto 8);
+					when "0"&x"95" => SS_REGS_DO <= BRR_ADDR(2)(7 downto 0);
+					when "0"&x"96" => SS_REGS_DO <= BRR_ADDR(2)(15 downto 8);
+					when "0"&x"97" => SS_REGS_DO <= BRR_ADDR(3)(7 downto 0);
+					when "0"&x"98" => SS_REGS_DO <= BRR_ADDR(3)(15 downto 8);
+					when "0"&x"99" => SS_REGS_DO <= BRR_ADDR(4)(7 downto 0);
+					when "0"&x"9A" => SS_REGS_DO <= BRR_ADDR(4)(15 downto 8);
+					when "0"&x"9B" => SS_REGS_DO <= BRR_ADDR(5)(7 downto 0);
+					when "0"&x"9C" => SS_REGS_DO <= BRR_ADDR(5)(15 downto 8);
+					when "0"&x"9D" => SS_REGS_DO <= BRR_ADDR(6)(7 downto 0);
+					when "0"&x"9E" => SS_REGS_DO <= BRR_ADDR(6)(15 downto 8);
+					when "0"&x"9F" => SS_REGS_DO <= BRR_ADDR(7)(7 downto 0);
+					when "0"&x"A0" => SS_REGS_DO <= BRR_ADDR(7)(15 downto 8);
+					when "0"&x"A1" => SS_REGS_DO <= "00" & std_logic_vector(BRR_OFFS(1)) & std_logic_vector(BRR_OFFS(0));
+					when "0"&x"A2" => SS_REGS_DO <= "00" & std_logic_vector(BRR_OFFS(3)) & std_logic_vector(BRR_OFFS(2));
+					when "0"&x"A3" => SS_REGS_DO <= "00" & std_logic_vector(BRR_OFFS(5)) & std_logic_vector(BRR_OFFS(4));
+					when "0"&x"A4" => SS_REGS_DO <= "00" & std_logic_vector(BRR_OFFS(7)) & std_logic_vector(BRR_OFFS(6));
+					when "0"&x"A5" => SS_REGS_DO <= "000000" & EVEN_SAMPLE & BRR_DECODE_EN;
+					when "0"&x"A6" => SS_REGS_DO <= BRR_END;
+					when "0"&x"A7" => SS_REGS_DO <= BRR_NEXT_ADDR(7 downto 0);
+					when "0"&x"A8" => SS_REGS_DO <= BRR_NEXT_ADDR(15 downto 8);
+					when "0"&x"A9" => SS_REGS_DO <= std_logic_vector(BRR_BUF_ADDR(1)) & std_logic_vector(BRR_BUF_ADDR(0));
+					when "0"&x"AA" => SS_REGS_DO <= std_logic_vector(BRR_BUF_ADDR(3)) & std_logic_vector(BRR_BUF_ADDR(2));
+					when "0"&x"AB" => SS_REGS_DO <= std_logic_vector(BRR_BUF_ADDR(5)) & std_logic_vector(BRR_BUF_ADDR(4));
+					when "0"&x"AC" => SS_REGS_DO <= std_logic_vector(BRR_BUF_ADDR(7)) & std_logic_vector(BRR_BUF_ADDR(6));
+					when "0"&x"AD" => SS_REGS_DO <= TBRRHDR;
+					when "0"&x"AE" => SS_REGS_DO <= TBRRDAT(7 downto 0);
+					when "0"&x"AF" => SS_REGS_DO <= TBRRDAT(15 downto 8);
+					when "0"&x"B0" => SS_REGS_DO <= std_logic_vector(INTERP_POS(0)(7 downto 0));
+					when "0"&x"B1" => SS_REGS_DO <= std_logic_vector(INTERP_POS(0)(15 downto 8));
+					when "0"&x"B2" => SS_REGS_DO <= std_logic_vector(INTERP_POS(1)(7 downto 0));
+					when "0"&x"B3" => SS_REGS_DO <= std_logic_vector(INTERP_POS(1)(15 downto 8));
+					when "0"&x"B4" => SS_REGS_DO <= std_logic_vector(INTERP_POS(2)(7 downto 0));
+					when "0"&x"B5" => SS_REGS_DO <= std_logic_vector(INTERP_POS(2)(15 downto 8));
+					when "0"&x"B6" => SS_REGS_DO <= std_logic_vector(INTERP_POS(3)(7 downto 0));
+					when "0"&x"B7" => SS_REGS_DO <= std_logic_vector(INTERP_POS(3)(15 downto 8));
+					when "0"&x"B8" => SS_REGS_DO <= std_logic_vector(INTERP_POS(4)(7 downto 0));
+					when "0"&x"B9" => SS_REGS_DO <= std_logic_vector(INTERP_POS(4)(15 downto 8));
+					when "0"&x"BA" => SS_REGS_DO <= std_logic_vector(INTERP_POS(5)(7 downto 0));
+					when "0"&x"BB" => SS_REGS_DO <= std_logic_vector(INTERP_POS(5)(15 downto 8));
+					when "0"&x"BC" => SS_REGS_DO <= std_logic_vector(INTERP_POS(6)(7 downto 0));
+					when "0"&x"BD" => SS_REGS_DO <= std_logic_vector(INTERP_POS(6)(15 downto 8));
+					when "0"&x"BE" => SS_REGS_DO <= std_logic_vector(INTERP_POS(7)(7 downto 0));
+					when "0"&x"BF" => SS_REGS_DO <= std_logic_vector(INTERP_POS(7)(15 downto 8));
+					when "0"&x"C0" => SS_REGS_DO <= std_logic_vector(ENV(0)(7 downto 0));
+					when "0"&x"C1" => SS_REGS_DO <= "00" & ENV_MODE(0) & std_logic_vector(ENV(0)(11 downto 8));
+					when "0"&x"C2" => SS_REGS_DO <= std_logic_vector(ENV(1)(7 downto 0));
+					when "0"&x"C3" => SS_REGS_DO <= "00" & ENV_MODE(1) & std_logic_vector(ENV(1)(11 downto 8));
+					when "0"&x"C4" => SS_REGS_DO <= std_logic_vector(ENV(2)(7 downto 0));
+					when "0"&x"C5" => SS_REGS_DO <= "00" & ENV_MODE(2) & std_logic_vector(ENV(2)(11 downto 8));
+					when "0"&x"C6" => SS_REGS_DO <= std_logic_vector(ENV(3)(7 downto 0));
+					when "0"&x"C7" => SS_REGS_DO <= "00" & ENV_MODE(3) & std_logic_vector(ENV(3)(11 downto 8));
+					when "0"&x"C8" => SS_REGS_DO <= std_logic_vector(ENV(4)(7 downto 0));
+					when "0"&x"C9" => SS_REGS_DO <= "00" & ENV_MODE(4) & std_logic_vector(ENV(4)(11 downto 8));
+					when "0"&x"CA" => SS_REGS_DO <= std_logic_vector(ENV(5)(7 downto 0));
+					when "0"&x"CB" => SS_REGS_DO <= "00" & ENV_MODE(5) & std_logic_vector(ENV(5)(11 downto 8));
+					when "0"&x"CC" => SS_REGS_DO <= std_logic_vector(ENV(6)(7 downto 0));
+					when "0"&x"CD" => SS_REGS_DO <= "00" & ENV_MODE(6) & std_logic_vector(ENV(6)(11 downto 8));
+					when "0"&x"CE" => SS_REGS_DO <= std_logic_vector(ENV(7)(7 downto 0));
+					when "0"&x"CF" => SS_REGS_DO <= "00" & ENV_MODE(7) & std_logic_vector(ENV(7)(11 downto 8));
+					when "0"&x"D0" => SS_REGS_DO <= std_logic_vector(LAST_ENV(7 downto 0));
+					when "0"&x"D1" => SS_REGS_DO <= "0000" & std_logic_vector(LAST_ENV(11 downto 8));
+					when "0"&x"D2" => SS_REGS_DO <= TENVX(0);
+					when "0"&x"D3" => SS_REGS_DO <= TENVX(1);
+					when "0"&x"D4" => SS_REGS_DO <= TENVX(2);
+					when "0"&x"D5" => SS_REGS_DO <= TENVX(3);
+					when "0"&x"D6" => SS_REGS_DO <= TENVX(4);
+					when "0"&x"D7" => SS_REGS_DO <= TENVX(5);
+					when "0"&x"D8" => SS_REGS_DO <= TENVX(6);
+					when "0"&x"D9" => SS_REGS_DO <= TENVX(7);
+					when "0"&x"DA" => SS_REGS_DO <= ENVX_OUT;
+					when "0"&x"DB" => SS_REGS_DO <= BENT_INC_MODE;
+					when "0"&x"DC" => SS_REGS_DO <= "00" & std_logic_vector(KON_CNT(1)) & std_logic_vector(KON_CNT(0));
+					when "0"&x"DD" => SS_REGS_DO <= "00" & std_logic_vector(KON_CNT(3)) & std_logic_vector(KON_CNT(2));
+					when "0"&x"DE" => SS_REGS_DO <= "00" & std_logic_vector(KON_CNT(5)) & std_logic_vector(KON_CNT(4));
+					when "0"&x"DF" => SS_REGS_DO <= "00" & std_logic_vector(KON_CNT(7)) & std_logic_vector(KON_CNT(6));
+					when "0"&x"E0" => SS_REGS_DO <= ENDX;
+					when "0"&x"E1" => SS_REGS_DO <= ENDX_BUF;
+					when "0"&x"E2" => SS_REGS_DO <= std_logic_vector(NOISE(7 downto 0));
+					when "0"&x"E3" => SS_REGS_DO <= "0" & std_logic_vector(NOISE(14 downto 8));
+					when "0"&x"E4" => SS_REGS_DO <= std_logic_vector(ECHO_POS(7 downto 0));
+					when "0"&x"E5" => SS_REGS_DO <= "0" & std_logic_vector(ECHO_POS(14 downto 8));
+					when "0"&x"E6" => SS_REGS_DO <= std_logic_vector(ECHO_ADDR(7 downto 0));
+					when "0"&x"E7" => SS_REGS_DO <= std_logic_vector(ECHO_ADDR(15 downto 8));
+					when "0"&x"E8" => SS_REGS_DO <= ECHO_WR_EN & std_logic_vector(FFC_CNT) & std_logic_vector(ECHO_LEN(14 downto 11));
+					when "0"&x"E9" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(0));
+					when "0"&x"EA" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(1));
+					when "0"&x"EB" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(2));
+					when "0"&x"EC" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(3));
+					when "0"&x"ED" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(4));
+					when "0"&x"EE" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(5));
+					when "0"&x"EF" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(6));
+					when "0"&x"F0" => SS_REGS_DO <= std_logic_vector(ECHO_FFC(7));
+					when "0"&x"F1" => SS_REGS_DO <= ECHO_BUF(0)(0)(7 downto 0);
+					when "0"&x"F2" => SS_REGS_DO <= "0" & ECHO_BUF(0)(0)(14 downto 8);
+					when "0"&x"F3" => SS_REGS_DO <= ECHO_BUF(0)(1)(7 downto 0);
+					when "0"&x"F4" => SS_REGS_DO <= "0" & ECHO_BUF(0)(1)(14 downto 8);
+					when "0"&x"F5" => SS_REGS_DO <= ECHO_BUF(0)(2)(7 downto 0);
+					when "0"&x"F6" => SS_REGS_DO <= "0" & ECHO_BUF(0)(2)(14 downto 8);
+					when "0"&x"F7" => SS_REGS_DO <= ECHO_BUF(0)(3)(7 downto 0);
+					when "0"&x"F8" => SS_REGS_DO <= "0" & ECHO_BUF(0)(3)(14 downto 8);
+					when "0"&x"F9" => SS_REGS_DO <= ECHO_BUF(0)(4)(7 downto 0);
+					when "0"&x"FA" => SS_REGS_DO <= "0" & ECHO_BUF(0)(4)(14 downto 8);
+					when "0"&x"FB" => SS_REGS_DO <= ECHO_BUF(0)(5)(7 downto 0);
+					when "0"&x"FC" => SS_REGS_DO <= "0" & ECHO_BUF(0)(5)(14 downto 8);
+					when "0"&x"FD" => SS_REGS_DO <= ECHO_BUF(0)(6)(7 downto 0);
+					when "0"&x"FE" => SS_REGS_DO <= "0" & ECHO_BUF(0)(6)(14 downto 8);
+					when "0"&x"FF" => SS_REGS_DO <= ECHO_BUF(0)(7)(7 downto 0);
+					when "1"&x"00" => SS_REGS_DO <= "0" & ECHO_BUF(0)(7)(14 downto 8);
+					when "1"&x"01" => SS_REGS_DO <= ECHO_BUF(1)(0)(7 downto 0);
+					when "1"&x"02" => SS_REGS_DO <= "0" & ECHO_BUF(1)(0)(14 downto 8);
+					when "1"&x"03" => SS_REGS_DO <= ECHO_BUF(1)(1)(7 downto 0);
+					when "1"&x"04" => SS_REGS_DO <= "0" & ECHO_BUF(1)(1)(14 downto 8);
+					when "1"&x"05" => SS_REGS_DO <= ECHO_BUF(1)(2)(7 downto 0);
+					when "1"&x"06" => SS_REGS_DO <= "0" & ECHO_BUF(1)(2)(14 downto 8);
+					when "1"&x"07" => SS_REGS_DO <= ECHO_BUF(1)(3)(7 downto 0);
+					when "1"&x"08" => SS_REGS_DO <= "0" & ECHO_BUF(1)(3)(14 downto 8);
+					when "1"&x"09" => SS_REGS_DO <= ECHO_BUF(1)(4)(7 downto 0);
+					when "1"&x"0A" => SS_REGS_DO <= "0" & ECHO_BUF(1)(4)(14 downto 8);
+					when "1"&x"0B" => SS_REGS_DO <= ECHO_BUF(1)(5)(7 downto 0);
+					when "1"&x"0C" => SS_REGS_DO <= "0" & ECHO_BUF(1)(5)(14 downto 8);
+					when "1"&x"0D" => SS_REGS_DO <= ECHO_BUF(1)(6)(7 downto 0);
+					when "1"&x"0E" => SS_REGS_DO <= "0" & ECHO_BUF(1)(6)(14 downto 8);
+					when "1"&x"0F" => SS_REGS_DO <= ECHO_BUF(1)(7)(7 downto 0);
+					when "1"&x"10" => SS_REGS_DO <= "0" & ECHO_BUF(1)(7)(14 downto 8);
+					when "1"&x"11" => SS_REGS_DO <= "0" & ECHO_DATA_TEMP;
+					when "1"&x"12" => SS_REGS_DO <= std_logic_vector(GCNT_BY1(7 downto 0));
+					when "1"&x"13" => SS_REGS_DO <= "0000"& std_logic_vector(GCNT_BY1(11 downto 8));
+					when "1"&x"14" => SS_REGS_DO <= std_logic_vector(GCNT_BY3(7 downto 0));
+					when "1"&x"15" => SS_REGS_DO <= "0000"& std_logic_vector(GCNT_BY3(11 downto 8));
+					when "1"&x"16" => SS_REGS_DO <= std_logic_vector(GCNT_BY5(7 downto 0));
+					when "1"&x"17" => SS_REGS_DO <= "0000"& std_logic_vector(GCNT_BY5(11 downto 8));
+					when others => SS_REGS_DO <= x"00";
+				end case;
+			end if;
+		end if;
+	end process;
+
+	SS_DO <= SS_REGS_DO when SS_REGS_SEL = '1' else RAM_Q;
 
 end rtl;

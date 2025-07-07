@@ -15,8 +15,14 @@ entity SPC700 is
         A_OUT			: out std_logic_vector(15 downto 0);
         WE				: out std_logic;
 
-		  REG_DAT		: in std_logic_vector(55 downto 0);
-		  REG_SET		: in std_logic
+		S0              : out std_logic;
+
+		  REG_DAT		: in std_logic_vector(71 downto 0);
+		  REG_SET		: in std_logic;
+
+		SS_ADDR         : in std_logic_vector(7 downto 0);
+		SS_DO           : out std_logic_vector(7 downto 0);
+		SS_REG_SET      : in std_logic
     );
 end SPC700;
 
@@ -53,6 +59,8 @@ architecture rtl of SPC700 is
 	signal CO, VO, SO, ZO, HO, DivZO, DivVO, DivHO, DivSO : std_logic;
 	signal BitMask: std_logic_vector(7 downto 0);
 	signal nBit : integer range 0 to 7;
+
+	signal SS_SPC_DO : std_logic_vector(7 downto 0);
 	
 	constant ONE : unsigned(7 downto 0) := x"01";
 
@@ -153,7 +161,10 @@ begin
 			STATE <= (others=>'0');
 			IR <= (others=>'0');
 		elsif rising_edge(CLK) then
-			if EN = '1' then
+			if SS_REG_SET = '1' then
+				IR <= REG_DAT(71 downto 64);
+				--STATE should always be 0 during Save state
+			elsif EN = '1' then
 				IR <= NextIR;
 				STATE <= NextState;
 			end if;
@@ -161,6 +172,8 @@ begin
 	end process;
 	
 	LAST_CYCLE <= '1' when NextState = "0000" else '0';
+
+	S0 <= '1' when STATE = "0000" else '0';
 	
 	
 	MCode: entity work.SPC700_MCode
@@ -298,9 +311,12 @@ begin
 			SP <= (others=>'0');
 			T <= (others=>'0');
 		elsif rising_edge(CLK) then
-			if REG_SET = '1' then
+			if REG_SET = '1' or SS_REG_SET = '1' then
 				PSW <= REG_DAT(47 downto 40);
 				SP <= REG_DAT(55 downto 48);
+				if SS_REG_SET = '1' then
+					T <= REG_DAT(63 downto 56);
+				end if;
 			elsif EN = '0' then
 				
 			else
@@ -428,5 +444,25 @@ begin
 			end if;
 		end if;
 	end process;
-	
+
+	process(CLK)
+	begin
+		if rising_edge(CLK) then
+			case SS_ADDR(7 downto 0) is
+				when x"15" => SS_SPC_DO <= PC(7 downto 0);
+				when x"16" => SS_SPC_DO <= PC(15 downto 8);
+				when x"17" => SS_SPC_DO <= A;
+				when x"18" => SS_SPC_DO <= X;
+				when x"19" => SS_SPC_DO <= Y;
+				when x"1A" => SS_SPC_DO <= PSW;
+				when x"1B" => SS_SPC_DO <= SP;
+				when x"1C" => SS_SPC_DO <= T;
+				when x"1D" => SS_SPC_DO <= IR;
+				when others => SS_SPC_DO <= x"00";
+			end case;
+		end if;
+	end process;
+
+	SS_DO <= SS_SPC_DO;
+
 end rtl;

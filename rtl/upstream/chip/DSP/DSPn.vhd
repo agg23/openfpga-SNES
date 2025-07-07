@@ -20,7 +20,16 @@ entity DSPn is
 		DP_SEL      : in std_logic;
 
 		VER			: in std_logic_vector(2 downto 0); -- 00-DSP1, 01-DSP2, 10-DSP3, 11-DSP4
-		REV			: in std_logic                     --  1-DSP1B
+		REV			: in std_logic;                     --  1-DSP1B
+
+		SS_BUSY			: in std_logic;
+		CA				: in std_logic_vector(23 downto 0);
+		SS_RAM_A		: in std_logic_vector(11 downto 0);
+		SS_RAM_WR		: in std_logic;
+		SS_RAM_SEL		: in std_logic;
+		SS_REGS_SEL		: in std_logic;
+		SS_DI			: in std_logic_vector(7 downto 0);
+		SS_DO			: out std_logic_vector(7 downto 0)
 	);
 end DSPn;
 
@@ -84,9 +93,10 @@ architecture rtl of DSPn is
 	signal PROG_ROM_Q	: std_logic_vector(23 downto 0);
 	signal DATA_ROM_ADDR : std_logic_vector(12 downto 0);
 	signal DATA_ROM_Q	: std_logic_vector(15 downto 0);
+	signal DATA_RAM_DI	: std_logic_vector(7 downto 0);
 	signal DATA_RAM_ADDR_A, DATA_RAM_ADDR_B	: std_logic_vector(10 downto 0);
 	signal DATA_RAM_Q_A, DATA_RAM_Q_B : std_logic_vector(15 downto 0);
-	signal DATA_RAM_WE : std_logic;
+	signal DATA_RAM_WE, DATA_RAM_WE_B_L, DATA_RAM_WE_B_H : std_logic;
 	
 	signal EN : std_logic;
 	signal RD_Nr, WR_Nr : std_logic_vector(2 downto 0);
@@ -100,7 +110,7 @@ architecture rtl of DSPn is
 	
 begin
 
-	EN <= ENABLE and CE;
+	EN <= ENABLE and CE and not SS_BUSY;
 		
 	OP_INSTR <= PROG_ROM_Q(23 downto 22);
 	OP_P <= PROG_ROM_Q(21 downto 20);
@@ -243,6 +253,11 @@ begin
 					end case;
 				end if;
 			end if;
+
+			if SS_BUSY = '1' and SS_REGS_SEL = '1' and WR_N = '0' then
+				if (CA(7 downto 0) = x"00") then FLAGS(0) <= DI(5 downto 0); end if;
+				if (CA(7 downto 0) = x"01") then FLAGS(1) <= DI(5 downto 0); end if;
+			end if;
 		end if;
 	end process; 
 	
@@ -338,6 +353,38 @@ begin
 					end case;
 				end if;
 			end if;
+
+			if SS_BUSY = '1' and SS_REGS_SEL = '1' and WR_N = '0' then
+				case CA(7 downto 0) is
+					when x"02" => ACC(0)(7 downto 0) <= DI;
+					when x"03" => ACC(0)(15 downto 8) <= DI;
+					when x"04" => ACC(1)(7 downto 0) <= DI;
+					when x"05" => ACC(1)(15 downto 8) <= DI;
+					when x"06" => DP(7 downto 0) <= DI;
+					when x"07" => DP(10 downto 8) <= DI(2 downto 0);
+					when x"08" => RP(7 downto 0) <= DI;
+					when x"09" => RP(10 downto 8) <= DI(2 downto 0);
+					when x"0A" => TR(7 downto 0) <= DI;
+					when x"0B" => TR(15 downto 8) <= DI;
+					when x"0C" =>
+						USF1 <= DI(6);
+						USF0 <= DI(5);
+						DMA <= DI(4);
+						DRC <= DI(3);
+						EI <= DI(2);
+						P1 <= DI(1);
+						P0 <= DI(0);
+					when x"0D" => SO(7 downto 0) <= DI;
+					when x"0E" => SO(15 downto 8) <= DI;
+					when x"0F" => K(7 downto 0) <= DI;
+					when x"10" => K(15 downto 8) <= DI;
+					when x"11" => L(7 downto 0) <= DI;
+					when x"12" => L(15 downto 8) <= DI;
+					when x"13" => TRB(7 downto 0) <= DI;
+					when x"14" => TRB(15 downto 8) <= DI;
+					when others => null;
+				end case;
+			end if;
 		end if;
 	end process; 
 	
@@ -413,6 +460,23 @@ begin
 					PC <= NEXT_PC;
 				end if;
 			end if;
+
+			if SS_BUSY = '1' and SS_REGS_SEL = '1' and WR_N = '0' then
+				case CA(7 downto 0) is
+					when x"15" => PC(7 downto 0) <= DI;
+					when x"16" =>
+						PC(10 downto 8) <= DI(2 downto 0);
+						SP(2 downto 0) <= unsigned(DI(5 downto 3));
+					when others => null;
+				end case;
+				if CA(7 downto 4) = x"2" then -- $20-$2F Stack ram
+					if CA(0) = '0' then
+						STACK_RAM(to_integer(unsigned(CA(3 downto 1))))(7 downto 0) <= DI;
+					else
+						STACK_RAM(to_integer(unsigned(CA(3 downto 1))))(10 downto 8) <= DI(2 downto 0);
+					end if;
+				end if;
+			end if;
 		end if;
 	end process; 
 
@@ -444,8 +508,13 @@ begin
 	);
 	
 	DATA_RAM_ADDR_A <= "000" & DP(7 downto 0) when VER(2)='0' else DP;
-	DATA_RAM_ADDR_B <= DP_ADDR(11 downto 1) when DP_SEL = '1' and (WR_N = '0' or RD_N = '0') else DATA_RAM_ADDR_A or x"40";
+	DATA_RAM_ADDR_B <= SS_RAM_A(11 downto 1) when SS_BUSY = '1' else
+						DP_ADDR(11 downto 1) when DP_SEL = '1' and (WR_N = '0' or RD_N = '0') else
+						DATA_RAM_ADDR_A or x"40";
 	DATA_RAM_WE <= '1' when OP_INSTR /= INSTR_JP and OP_DST = x"F" and EN = '1' else '0';
+	DATA_RAM_WE_B_L <= SS_RAM_WR and not SS_RAM_A(0) when SS_BUSY = '1' else (not WR_N and DP_SEL and not DP_ADDR(0));
+	DATA_RAM_WE_B_H <= SS_RAM_WR and SS_RAM_A(0) when SS_BUSY = '1' else (not WR_N and DP_SEL and DP_ADDR(0));
+	DATA_RAM_DI <= SS_DI when SS_BUSY = '1' else DI;
 
 	DATA_RAML : entity work.dpram generic map(11, 8)
 	port map(
@@ -455,8 +524,8 @@ begin
 		wren_a		=> DATA_RAM_WE,
 		q_a			=> DATA_RAM_Q_A(7 downto 0),
 		address_b	=> DATA_RAM_ADDR_B,
-		data_b		=> DI,
-		wren_b		=> not WR_N and DP_SEL and not DP_ADDR(0),
+		data_b		=> DATA_RAM_DI,
+		wren_b		=> DATA_RAM_WE_B_L,
 		q_b			=> DATA_RAM_Q_B(7 downto 0)
 	);
 
@@ -468,8 +537,8 @@ begin
 		wren_a		=> DATA_RAM_WE,
 		q_a			=> DATA_RAM_Q_A(15 downto 8),
 		address_b	=> DATA_RAM_ADDR_B,
-		data_b		=> DI,
-		wren_b		=> not WR_N and DP_SEL and DP_ADDR(0),
+		data_b		=> DATA_RAM_DI,
+		wren_b		=> DATA_RAM_WE_B_H,
 		q_b			=> DATA_RAM_Q_B(15 downto 8)
 	);
 	
@@ -524,6 +593,20 @@ begin
 					end if;
 				end if;
 			end if;
+
+			if SS_BUSY = '1' and SS_REGS_SEL = '1' and WR_N = '0' then
+				case CA(7 downto 0) is
+					when x"17" =>
+						RD_Nr <= DI(7 downto 5);
+						WR_Nr <= DI(4 downto 2);
+						RQM <= DI(1);
+						DRS <= DI(0);
+					when x"18" => DR(7 downto 0) <= DI;
+					when x"19" => DR(15 downto 8) <= DI;
+					when x"1A" => PORT_ACTIVE <= DI(0);
+					when others => null;
+				end case;
+			end if;
 		end if;
 	end process; 
 
@@ -546,6 +629,68 @@ begin
 				end if;
 			else
 				DO <= DR(7 downto 0);
+			end if;
+		end if;
+	end process;
+
+	-- save states
+	process( CLK )
+	begin
+		if rising_edge(CLK) then
+			if SS_RAM_SEL = '1' then
+				if SS_RAM_A(0) = '0' then
+					SS_DO <= DATA_RAM_Q_B(7 downto 0);
+				else
+					SS_DO <= DATA_RAM_Q_B(15 downto 8);
+				end if;
+			else
+				case CA(7 downto 0) is
+					when x"00" => SS_DO <= "00" & FLAGS(0)(5 downto 0);
+					when x"01" => SS_DO <= "00" & FLAGS(1)(5 downto 0);
+					when x"02" => SS_DO <= ACC(0)(7 downto 0);
+					when x"03" => SS_DO <= ACC(0)(15 downto 8);
+					when x"04" => SS_DO <= ACC(1)(7 downto 0);
+					when x"05" => SS_DO <= ACC(1)(15 downto 8);
+					when x"06" => SS_DO <= DP(7 downto 0);
+					when x"07" => SS_DO <= "00000" & DP(10 downto 8);
+					when x"08" => SS_DO <= RP(7 downto 0);
+					when x"09" => SS_DO <= "00000" & RP(10 downto 8);
+					when x"0A" => SS_DO <= TR(7 downto 0);
+					when x"0B" => SS_DO <= TR(15 downto 8);
+					when x"0C" => SS_DO <= "0" & USF1 & USF0 & DMA & DRC & EI & P1 & P0;
+					when x"0D" => SS_DO <= SO(7 downto 0);
+					when x"0E" => SS_DO <= SO(15 downto 8);
+					when x"0F" => SS_DO <= K(7 downto 0);
+					when x"10" => SS_DO <= K(15 downto 8);
+					when x"11" => SS_DO <= L(7 downto 0);
+					when x"12" => SS_DO <= L(15 downto 8);
+					when x"13" => SS_DO <= TRB(7 downto 0);
+					when x"14" => SS_DO <= TRB(15 downto 8);
+					when x"15" => SS_DO <= PC(7 downto 0);
+					when x"16" => SS_DO <= "00" & std_logic_vector(SP) & PC(10 downto 8);
+					when x"17" => SS_DO <= RD_Nr & WR_Nr & RQM & DRS;
+					when x"18" => SS_DO <= DR(7 downto 0);
+					when x"19" => SS_DO <= DR(15 downto 8);
+					when x"1A" => SS_DO <= "0000000" & PORT_ACTIVE;
+					-- 1B-1F unused
+					when x"20" => SS_DO <= STACK_RAM(0)(7 downto 0);
+					when x"21" => SS_DO <= "00000" & STACK_RAM(0)(10 downto 8);
+					when x"22" => SS_DO <= STACK_RAM(1)(7 downto 0);
+					when x"23" => SS_DO <= "00000" & STACK_RAM(1)(10 downto 8);
+					when x"24" => SS_DO <= STACK_RAM(2)(7 downto 0);
+					when x"25" => SS_DO <= "00000" & STACK_RAM(2)(10 downto 8);
+					when x"26" => SS_DO <= STACK_RAM(3)(7 downto 0);
+					when x"27" => SS_DO <= "00000" & STACK_RAM(3)(10 downto 8);
+					when x"28" => SS_DO <= STACK_RAM(4)(7 downto 0);
+					when x"29" => SS_DO <= "00000" & STACK_RAM(4)(10 downto 8);
+					when x"2A" => SS_DO <= STACK_RAM(5)(7 downto 0);
+					when x"2B" => SS_DO <= "00000" & STACK_RAM(5)(10 downto 8);
+					when x"2C" => SS_DO <= STACK_RAM(6)(7 downto 0);
+					when x"2D" => SS_DO <= "00000" & STACK_RAM(6)(10 downto 8);
+					when x"2E" => SS_DO <= STACK_RAM(7)(7 downto 0);
+					when x"2F" => SS_DO <= "00000" & STACK_RAM(7)(10 downto 8);
+					when others => SS_DO <= x"00";
+				end case;
 			end if;
 		end if;
 	end process;

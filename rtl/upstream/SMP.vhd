@@ -25,10 +25,17 @@ entity SMP is
 		CPU_DO			: out std_logic_vector(7 downto 0);
 		CS					: in std_logic;
 		CS_N				: in std_logic;
-		
+
+		SPC_S0			: out std_logic;
+
 		IO_ADDR     	: in std_logic_vector(16 downto 0);
 		IO_DAT  			: in std_logic_vector(15 downto 0);
-		IO_WR 			: in std_logic
+		IO_WR 			: in std_logic;
+
+		SS_ADDR         : in std_logic_vector(7 downto 0);
+		SS_WR           : in std_logic;
+		SS_DI           : in std_logic_vector(7 downto 0);
+		SS_DO           : out std_logic_vector(7 downto 0)
 	);
 end SMP;
 
@@ -133,9 +140,14 @@ architecture rtl of SMP is
 	x"ff"
 	);
 	
-	signal SMP_REG_DAT : std_logic_vector(111 downto 0);
-	signal SPC_REG_DAT : std_logic_vector(55 downto 0);
+	signal SMP_REG_DAT : std_logic_vector(143 downto 0);
+	signal SPC_REG_DAT : std_logic_vector(71 downto 0);
 	signal REG_SET : std_logic;
+
+	signal SS_SMP_DO : std_logic_vector(7 downto 0);
+	signal SS_SPC_DO : std_logic_vector(7 downto 0);
+
+	signal SS_REG_SET : std_logic;
 
 begin
 
@@ -184,9 +196,14 @@ begin
 		D_IN     	=> SPC700_D_IN,
 		D_OUT    	=> SPC700_D_OUT,
 		WE       	=> SPC700_R_WN,
-		
-		REG_SET	   => REG_SET, 
-		REG_DAT	   => SPC_REG_DAT
+		S0       	=> SPC_S0,
+
+		REG_SET  	=> REG_SET,
+		REG_DAT  	=> SPC_REG_DAT,
+
+		SS_ADDR  	=> SS_ADDR,
+		SS_DO    	=> SS_SPC_DO,
+		SS_REG_SET	=> SS_REG_SET
 	);
 	
 	
@@ -222,7 +239,7 @@ begin
 			TIMER_CE <= '0';
 		elsif rising_edge(CLK) then
 			TIMER_CE <= '0';
-			if REG_SET = '1' then
+			if REG_SET = '1' or SS_REG_SET = '1' then
 --				TIMERS_DISABLE <= SMP_REG_DAT(0);
 --				RAM_WRITE_EN <= SMP_REG_DAT(1);
 --				TIMERS_ENABLE <= SMP_REG_DAT(3);
@@ -239,6 +256,12 @@ begin
 				T0OUT <= SMP_REG_DAT(75 downto 72);
 				T1OUT <= SMP_REG_DAT(99 downto 96);
 				T2OUT <= SMP_REG_DAT(107 downto 104);
+				if SS_REG_SET = '1' then
+					CPUO(0) <= SMP_REG_DAT(119 downto 112);
+					CPUO(1) <= SMP_REG_DAT(127 downto 120);
+					CPUO(2) <= SMP_REG_DAT(135 downto 128);
+					CPUO(3) <= SMP_REG_DAT(143 downto 136);
+				end if;
 			elsif SPC700_CE_F = '1' then
 				TIMER_CE <= '1';
 				if SPC700_A(15 downto 4) = x"00F" then
@@ -370,6 +393,7 @@ begin
 	begin
 		if rising_edge(CLK) then
 			if IO_WR = '1' then
+				REG_SET <= '1';
 				if IO_ADDR(16 downto 4) = "0"&x"02F" then
 					case IO_ADDR(3 downto 1) is
 						when "000" => 
@@ -401,11 +425,109 @@ begin
 						when others => null;
 					end case;
 				end if;
+			elsif SS_WR = '1' then
 				REG_SET <= '1';
+				SS_REG_SET <= '1';
+
+				case SS_ADDR(7 downto 0) is
+					when x"00" =>
+						SMP_REG_DAT(7 downto 0) <= SS_DI;
+					when x"01" =>
+						SMP_REG_DAT(15 downto 8) <= SS_DI;
+					when x"02" =>
+						SMP_REG_DAT(23 downto 16) <= SS_DI;
+					when x"03" =>
+						SMP_REG_DAT(31 downto 24) <= SS_DI;
+					when x"04" =>
+						SMP_REG_DAT(39 downto 32) <= SS_DI;
+					when x"05" =>
+						SMP_REG_DAT(47 downto 40) <= SS_DI;
+					when x"06" =>
+						SMP_REG_DAT(55 downto 48) <= SS_DI;
+					when x"07" =>
+						SMP_REG_DAT(63 downto 56) <= SS_DI;
+					when x"08" =>
+						SMP_REG_DAT(71 downto 64) <= SS_DI;
+					when x"09" =>
+						SMP_REG_DAT(79 downto 72) <= SS_DI;
+					when x"0A" =>
+						SMP_REG_DAT(87 downto 80) <= SS_DI;
+					when x"0B" =>
+						SMP_REG_DAT(95 downto 88) <= SS_DI;
+					when x"0C" =>
+						SMP_REG_DAT(103 downto 96) <= SS_DI;
+					when x"0D" =>
+						SMP_REG_DAT(111 downto 104) <= SS_DI;
+					when x"0E" =>
+						SMP_REG_DAT(119 downto 112) <= SS_DI;
+					when x"0F" =>
+						SMP_REG_DAT(127 downto 120) <= SS_DI;
+					when x"10" =>
+						SMP_REG_DAT(135 downto 128) <= SS_DI;
+					when x"11" =>
+						SMP_REG_DAT(143 downto 136) <= SS_DI;
+					when others => null;
+				end case;
+
+				case SS_ADDR(7 downto 0) is
+					when x"15" =>
+						SPC_REG_DAT(7 downto 0) <= SS_DI;
+					when x"16" =>
+						SPC_REG_DAT(15 downto 8) <= SS_DI;
+					when x"17" =>
+						SPC_REG_DAT(23 downto 16) <= SS_DI;
+					when x"18" =>
+						SPC_REG_DAT(31 downto 24) <= SS_DI;
+					when x"19" =>
+						SPC_REG_DAT(39 downto 32) <= SS_DI;
+					when x"1A" =>
+						SPC_REG_DAT(47 downto 40) <= SS_DI;
+					when x"1B" =>
+						SPC_REG_DAT(55 downto 48) <= SS_DI;
+					when x"1C" =>
+						SPC_REG_DAT(63 downto 56) <= SS_DI;
+					when x"1D" =>
+						SPC_REG_DAT(71 downto 64) <= SS_DI;
+					when others => null;
+				end case;
+
+			elsif SS_REG_SET = '1' then
+				SS_REG_SET <= '0';
+				REG_SET <= '0';
 			elsif RST_N = '1' and REG_SET = '1' then
 				REG_SET <= '0';
 			end if;
 		end if;
 	end process;
+
+	process(CLK)
+	begin
+		if rising_edge(CLK) then
+			case SS_ADDR(7 downto 0) is
+				when x"00" => SS_SMP_DO <= CLK_SPEED & TM_SPEED & TIMERS_ENABLE & "0" & RAM_WRITE_EN & TIMERS_DISABLE;
+				--when x"01" => SS_SMP_DO <= IPL_EN & "0" & RESET_PORT & "0" & TM_EN;
+				when x"01" => SS_SMP_DO <= IPL_EN & "0" & "00" & "0" & TM_EN;
+				when x"02" => SS_SMP_DO <= CPUI(0);
+				when x"03" => SS_SMP_DO <= CPUI(1);
+				when x"04" => SS_SMP_DO <= CPUI(2);
+				when x"05" => SS_SMP_DO <= CPUI(3);
+				when x"06" => SS_SMP_DO <= T0DIV;
+				when x"07" => SS_SMP_DO <= T1DIV;
+				when x"08" => SS_SMP_DO <= T2DIV;
+				when x"09" => SS_SMP_DO <= "0000" & T0OUT;
+				when x"0A" => SS_SMP_DO <= AUX(0);
+				when x"0B" => SS_SMP_DO <= AUX(1);
+				when x"0C" => SS_SMP_DO <= "0000" & T1OUT;
+				when x"0D" => SS_SMP_DO <= "0000" & T2OUT;
+				when x"0E" => SS_SMP_DO <= CPUO(0);
+				when x"0F" => SS_SMP_DO <= CPUO(1);
+				when x"10" => SS_SMP_DO <= CPUO(2);
+				when x"11" => SS_SMP_DO <= CPUO(3);
+				when others => SS_SMP_DO <= SS_SPC_DO;
+			end case;
+		end if;
+	end process;
+
+	SS_DO <= SS_SMP_DO;
 
 end rtl;
