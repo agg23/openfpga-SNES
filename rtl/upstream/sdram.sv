@@ -119,27 +119,23 @@ module sdram
 	
 	wire raw_req_test = (addr[0][23:1] != addr0[23:1]);
 	
-	reg old_rd0, old_rd1, old_wr0, old_wr1;
+		reg old_rd0, old_rd1, old_wr0, old_wr1;
 	always @(posedge clk) begin
-		reg         read_prev,write_prev;
 		
 		if (!init_done) begin
 			st_num <= 4'd8;
 			read <= '{2{0}};
 			write <= '{2{0}};
 			rfs <= 0;
-			{read_prev,write_prev} <= '0;
 		end else begin
 			if (st_num < 4'd8) st_num <= st_num + 4'd1;
 			
 			if (st_num == 4'd3) begin
 				read <= '{2{0}};
-				read_prev <= read[0]|read[1];
 				rfs <= 0;
 			end
 			if (st_num == 4'd7) begin
 				write <= '{2{0}};
-				write_prev <= write[0]|write[1];
 			end
 			
 			{old_rd0,old_rd1} <= {rd0,rd1};
@@ -173,10 +169,11 @@ module sdram
 				st_num <= 1;
 			end
 			
-			if ((wr0 && !old_wr0) || (wr1 && !old_wr1) || (rd1 && !old_rd1) || read[1] || write[0] || write[1] || read_prev || write_prev) begin
+			if ((wr0 && !old_wr0) || (wr1 && !old_wr1) || (rd1 && !old_rd1) || read[1] || write[0] || write[1]) begin
 				rfs <= 0;
 			end
 		end
+		
 	end
 	
 	always_comb begin
