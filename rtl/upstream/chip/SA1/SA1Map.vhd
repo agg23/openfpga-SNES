@@ -50,7 +50,18 @@ entity SA1Map is
 		MAP_ACTIVE  : out std_logic;
 		MAP_CTRL		: in std_logic_vector(7 downto 0);
 		ROM_MASK		: in std_logic_vector(23 downto 0);
-		BSRAM_MASK	: in std_logic_vector(23 downto 0)
+		BSRAM_MASK	: in std_logic_vector(23 downto 0);
+
+		-- save state
+		SA1_P65_A		: out std_logic_vector(23 downto 0);
+		SA1_P65_DO		: out std_logic_vector(7 downto 0);
+		SA1_P65_RD_N	: out std_logic;
+		SA1_P65_WR_N	: out std_logic;
+
+		SS_BUSY			: in std_logic;
+
+		SS_SA1_ROMSEL	: out std_logic;
+		SS_SNS_ROMSEL	: out std_logic
 	);
 end SA1Map;
 
@@ -94,7 +105,17 @@ begin
 		BWRAM_OE_N	=> BSRAM_OE_N,
 		BWRAM_WE_N	=> BSRAM_WE_N,
 		
-		IRQ_N			=> IRQ_N
+		IRQ_N			=> IRQ_N,
+
+		SA1_P65_A		=> SA1_P65_A,
+		SA1_P65_DO		=> SA1_P65_DO,
+		SA1_P65_RD_N	=> SA1_P65_RD_N,
+		SA1_P65_WR_N	=> SA1_P65_WR_N,
+
+		SS_BUSY			=> SS_BUSY,
+
+		SS_SA1_ROMSEL	=> SS_SA1_ROMSEL,
+		SS_SNS_ROMSEL	=> SS_SNS_ROMSEL
 	);
 
 	ROM_ADDR 	<= ROM_A and ROM_MASK(22 downto 0);

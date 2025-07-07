@@ -52,7 +52,14 @@ entity DSP_LHRomMap is
 		ROM_MASK		: in std_logic_vector(23 downto 0);
 		BSRAM_MASK	: in std_logic_vector(23 downto 0);
 
-		EXT_RTC		: in  std_logic_vector(64 downto 0)
+		EXT_RTC		: in  std_logic_vector(64 downto 0);
+
+		SS_BUSY			: in std_logic;
+		SS_RAM_A		: in std_logic_vector(11 downto 0);
+		SS_DSPN_RAM_SEL	: in std_logic;
+		SS_DSPN_REGS_SEL: in std_logic;
+		SS_DI			: in std_logic_vector(7 downto 0);
+		SS_DO			: out std_logic_vector(7 downto 0)
 	);
 end DSP_LHRomMap;
 
@@ -213,7 +220,17 @@ begin
 		DP_SEL      => DP_SEL,
 
 		VER			=> MAP_DSP_VER,
-		REV			=> not MAP_CTRL(2)
+		REV			=> not MAP_CTRL(2),
+
+		-- save states
+		SS_BUSY			=> SS_BUSY,
+		CA				=> CA,
+		SS_RAM_A		=> SS_RAM_A,
+		SS_RAM_WR		=> not PAWR_N and SS_DSPN_RAM_SEL,
+		SS_RAM_SEL		=> SS_DSPN_RAM_SEL,
+		SS_REGS_SEL		=> SS_DSPN_REGS_SEL,
+		SS_DI			=> SS_DI,
+		SS_DO			=> SS_DO
 	);
 	end generate;
 
