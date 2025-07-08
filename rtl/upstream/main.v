@@ -21,6 +21,7 @@ module main #(
 	
 	output            SYSCLKR_CE,
 	output            SYSCLKF_CE,
+	output            REFRESH,
 
 	output reg [23:0] ROM_ADDR,
 	output reg [15:0] ROM_D,
@@ -156,7 +157,7 @@ wire        PARD_N;
 wire        PAWR_N;
 //wire        SYSCLKF_CE;
 //wire        SYSCLKR_CE;
-wire        REFRESH;
+//wire        REFRESH;
 
 wire  [15:0] SNES_ARAM_ADDR;
 wire   [7:0] SNES_ARAM_D;
