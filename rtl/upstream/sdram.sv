@@ -28,8 +28,11 @@ module sdram
 	output    [15: 0] dout1,
 	input             wr1,
 	input             rd1,
-	input             word1,
+	input             rfs1,
+	input             word1
 
+`ifdef DEBUG
+                     ,
 	output [1:0] dbg_ctrl_bank,
 	output [1:0] dbg_ctrl_cmd,
 	output [3:0] dbg_ctrl_we,
@@ -39,7 +42,9 @@ module sdram
 	output       dbg_out_read,
 	output [1:0] dbg_out_bank,
 	
-	output reg [15:0] dbg_sdram_d
+	output reg [ 3:0] dbg_rfs2ras_time,
+	output reg [23:0] dbg_numrfs_in_64ms
+`endif
 );
 
 	localparam RASCAS_DELAY   = 3'd1; // tRCD=20ns -> 2 cycles@85MHz
@@ -119,9 +124,8 @@ module sdram
 	
 	wire raw_req_test = (addr[0][23:1] != addr0[23:1]);
 	
-		reg old_rd0, old_rd1, old_wr0, old_wr1;
+	reg old_rd0, old_rd1, old_wr0, old_wr1;
 	always @(posedge clk) begin
-		
 		if (!init_done) begin
 			st_num <= 4'd8;
 			read <= '{2{0}};
@@ -159,7 +163,7 @@ module sdram
 				addr[0] <= addr0;
 				word[0] <= word0;
 				read[0] <= raw_req_test;
-				rfs <= ~raw_req_test;
+				rfs <= ~raw_req_test & rfs1;
 				st_num <= 1;
 			end
 			if (rd1 && !old_rd1) begin
@@ -173,7 +177,6 @@ module sdram
 				rfs <= 0;
 			end
 		end
-		
 	end
 	
 	always_comb begin
@@ -310,7 +313,7 @@ module sdram
 		
 		SDRAM_DQ <= 'Z;
 		casex({init_done,ctrl_rfs,we,mode,ctrl_cmd})
-			{3'b101, MODE_NORMAL, CTRL_CAS}: begin SDRAM_DQ <= d; dbg_sdram_d <= d; end
+			{3'b101, MODE_NORMAL, CTRL_CAS}: begin SDRAM_DQ <= d; end
 										   default: ;
 		endcase
 
@@ -328,9 +331,8 @@ module sdram
 	
 	assign SDRAM_CKE = 1;
 	assign {SDRAM_DQMH,SDRAM_DQML} = SDRAM_A[12:11];
-	
-	
-	
+		
+`ifdef DEBUG
 	assign dbg_ctrl_bank = ctrl_bank;
 	assign dbg_ctrl_cmd = ctrl_cmd;
 	assign dbg_ctrl_we = ctrl_we;
@@ -338,6 +340,29 @@ module sdram
 	assign dbg_data_read = data_read;
 	assign dbg_out_read = out_read;
 	assign dbg_out_bank = out_bank;
+	
+	always @(posedge clk) begin
+		reg [ 3: 0] cnt = '1;
+		
+		if (cnt != 4'd15) cnt <= cnt + 1;
+		if (ctrl_rfs) cnt <= '0;
+		if (ctrl_cmd == CTRL_RAS && cnt != 4'd15) dbg_rfs2ras_time <= cnt;
+	end
+	
+	always @(posedge clk) begin
+		reg [31: 0] div_cnt;
+		reg [23: 0] num_cnt;
+		
+		if (ctrl_rfs) num_cnt <= num_cnt + 32'd1;
+		
+		div_cnt <= div_cnt + 1;
+		if (div_cnt == 5498180) begin
+			div_cnt <= '0;
+			dbg_numrfs_in_64ms <= num_cnt;
+			num_cnt <= '0;
+		end
+	end
+`endif
 
 	altddio_out
 	#(
