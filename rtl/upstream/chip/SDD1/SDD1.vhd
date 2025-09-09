@@ -75,6 +75,7 @@ architecture rtl of SDD1 is
 	signal DEC_PLANE_DONE, DEC_DONE, DEC_INIT_DONE	: std_logic;
 	signal DEC_OUT_DATA0, DEC_OUT_DATA1: std_logic_vector(7 downto 0);
 	
+	signal SNES_A	   : std_logic_vector(23 downto 0);
 	signal MAP_ROM_A	: std_logic_vector(23 downto 0);
 	signal WORK_ADDR	: std_logic_vector(23 downto 0);
 	signal ROM_DATA	: std_logic_vector(7 downto 0);
@@ -89,6 +90,7 @@ architecture rtl of SDD1 is
 	signal DS : ds_t;  
 	
 	signal DMA_CH : integer range 0 to 7; 
+	signal DMA_EXEC : std_logic;
 	signal DEC_START : std_logic;
 	signal SNES_ACCESS : std_logic;
 	signal OUT_DATA_SEL : std_logic;
@@ -193,12 +195,14 @@ begin
 		if RST_N = '0' then
 			DS <= DS_IDLE;
 			DEC_RUN <= '0';
+			DMA_EXEC <= '0';
 		elsif rising_edge(CLK) then
 			if ENABLE = '1' then
 				case DS is
 					when DS_IDLE =>
 						DEC_RUN <= '0';
 						if DEC_START = '1' then
+							DMA_EXEC <= '0';
 							DS <= DS_INIT;
 						end if;
 						
@@ -232,12 +236,16 @@ begin
 
 					when others => null;
 				end case; 
+				
+				if DS /= DS_IDLE and CA = DEC_CUR_ADDR and DMA_EXEC = '0' then
+					DMA_EXEC <= '1';
+				end if;
 			end if;
 		end if;
 	end process; 
 	
 	DEC_EN <= '1' when (DS = DS_WAIT_INIT) and SNES_ACCESS = '0' else
-				 '1' when (DS = DS_DECODING or DS = DS_PREDECODING) and CA = DEC_CUR_ADDR else 
+				 '1' when (DS = DS_DECODING or DS = DS_PREDECODING) and DMA_EXEC = '1' else 
 				 '0';
 	
 	DEC_INIT <= '1' when DS = DS_INIT else '0';
@@ -298,8 +306,17 @@ begin
 	end process; 
 	
 	TRANSFERING <= '1' when CA = DEC_CUR_ADDR and DMARUN /= x"00" else '0';
-
-	WORK_ADDR <= CA when DEC_EN = '0' else DEC_A;
+	
+	process(CLK)
+	begin
+		if rising_edge(CLK) then
+			if SYSCLKR_CE = '1' then
+				SNES_A <= CA;
+			end if;
+		end if;
+	end process;
+	WORK_ADDR <= SNES_A when DEC_EN = '0' else DEC_A;
+	
 	process( WORK_ADDR, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF )
 	begin
 		if WORK_ADDR(22) = '0' and WORK_ADDR(15) = '1' then

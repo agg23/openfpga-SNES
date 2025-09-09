@@ -135,6 +135,7 @@ architecture rtl of SPC7110 is
 	signal DROM_ADDR 			: std_logic_vector(23 downto 0);
 	signal DROM_DATA 			: std_logic_vector(7 downto 0);
 	signal DROM_READ 			: std_logic;
+	signal SNES_A 				: std_logic_vector(23 downto 0);
 	signal MAP_ROM_A 			: std_logic_vector(23 downto 0);
 
 begin
@@ -661,20 +662,29 @@ begin
 		WR 		=> DEC_OUT_WR
 	);
 	
-	process( CA, BANKD, BANKE, BANKF )
+	process(CLK)
 	begin
-		case CA(23 downto 20) is
+		if rising_edge(CLK) then
+			if SYSCLKR_CE = '1' then
+				SNES_A <= CA;
+			end if;
+		end if;
+	end process;
+	
+	process( SNES_A, BANKD, BANKE, BANKF )
+	begin
+		case SNES_A(23 downto 20) is
 			when x"D" =>
-				MAP_ROM_A <= BANKD & CA(19 downto 0);
+				MAP_ROM_A <= BANKD & SNES_A(19 downto 0);
 			when x"E" =>
-				MAP_ROM_A <= BANKE & CA(19 downto 0);
+				MAP_ROM_A <= BANKE & SNES_A(19 downto 0);
 			when others =>
-				MAP_ROM_A <= BANKF & CA(19 downto 0);
+				MAP_ROM_A <= BANKF & SNES_A(19 downto 0);
 		end case;
 	end process; 
 	
 	SNES_DROM_A <= MAP_ROM_A(22 downto 0);
-	SNES_DROM_OE_N <= '0' when CA(23 downto 20) >= x"D" else '1';
+	SNES_DROM_OE_N <= '0' when SNES_A(23 downto 20) >= x"D" else '1';
 	
 	DROM_A <= DROM_ADDR(22 downto 0);
 	DROM_OE_N <= not DROM_READ;
