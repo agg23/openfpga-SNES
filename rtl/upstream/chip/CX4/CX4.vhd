@@ -124,6 +124,8 @@ architecture rtl of CX4 is
 	signal CACHE_BANK : std_logic;
 	type CachePage_t is array (0 to 1) of std_logic_vector(15 downto 0);
 	signal CACHE_PAGE : CachePage_t;
+	signal CACHE_BUS_ADDR : std_logic_vector(23 downto 0);
+	signal SNES_ADDR : std_logic_vector(23 downto 0);
 	signal DMA_DST_ADDR : std_logic_vector(23 downto 0);
 	signal DMA_SRC_ADDR : std_logic_vector(23 downto 0);
 	signal DMA_DAT : std_logic_vector(7 downto 0);
@@ -383,10 +385,19 @@ begin
 		end if;
 	end process;
 	
-	process( ADDR, CACHE_RUN, ROM_BASE, CACHE_PAGE, CACHE_ADDR, CACHE_BANK, DMA_RUN, DMA_STATE, DMA_SRC_ADDR, DMA_DST_ADDR, ROM_ACCESS, SRAM_ACCESS, EXT_BUS_ADDR )
+	process(CLK)
+	begin
+		if rising_edge(CLK) then
+			if SYSCLKR_CE = '1' then
+				SNES_ADDR <= ADDR;
+			end if;
+		end if;
+	end process;
+	
+	process( SNES_ADDR, CACHE_RUN, CACHE_BUS_ADDR, DMA_RUN, DMA_STATE, DMA_SRC_ADDR, DMA_DST_ADDR, ROM_ACCESS, SRAM_ACCESS, EXT_BUS_ADDR )--ROM_BASE, CACHE_PAGE, CACHE_ADDR, CACHE_BANK
 	begin
 		if CACHE_RUN = '1' then
-			INT_ADDR <= std_logic_vector(unsigned(ROM_BASE) + (unsigned(CACHE_PAGE(BitToInt(CACHE_BANK))(14 downto 0)) & unsigned(CACHE_ADDR)));
+			INT_ADDR <= CACHE_BUS_ADDR;--std_logic_vector(unsigned(ROM_BASE) + (unsigned(CACHE_PAGE(BitToInt(CACHE_BANK))(14 downto 0)) & unsigned(CACHE_ADDR)));
 		elsif DMA_RUN = '1' then
 			if DMA_STATE = '0' then
 				INT_ADDR <= DMA_SRC_ADDR;
@@ -396,7 +407,7 @@ begin
 		elsif ROM_ACCESS = '1' or SRAM_ACCESS = '1' then
 			INT_ADDR <= EXT_BUS_ADDR;
 		else
-			INT_ADDR <= ADDR;
+			INT_ADDR <= SNES_ADDR;
 		end if;
 	end process;
 
@@ -517,6 +528,8 @@ begin
 								CACHE_BANK <= DI(0);
 								CACHE_PAGE(BitToInt(DI(0)))(14 downto 0) <= ROM_PAGE;
 								CACHE_ADDR <= (others => '0');
+								
+								CACHE_BUS_ADDR <= std_logic_vector(unsigned(ROM_BASE) + (unsigned(ROM_PAGE) & "000000000"));
 							end if;
 						elsif MMIO_WR = '1' and ADDR(11 downto 0) = x"F4C" then	--7F4C
 							CACHE_PAGE(0)(15) <= DI(0);
@@ -541,6 +554,8 @@ begin
 								CACHE_BANK <= not BANK;
 								CACHE_PAGE(BitToInt(not BANK))(14 downto 0) <= P;
 								CACHE_ADDR <= (others => '0');
+								
+								CACHE_BUS_ADDR <= std_logic_vector(unsigned(ROM_BASE) + (unsigned(P) & "000000000"));
 							end if;
 						end if;
 					end if;
@@ -552,6 +567,8 @@ begin
 							CACHE_RUN <= '0';
 						end if;
 						CACHE_WAIT_CNT <= (others => '0');
+						
+						CACHE_BUS_ADDR <= std_logic_vector(unsigned(CACHE_BUS_ADDR) + 1);
 					end if;
 				end if;
 			end if;

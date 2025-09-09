@@ -270,9 +270,21 @@ begin
 		EXT_RTC		=> EXT_RTC
 	);
 
-	ROM_RD <= (SYSCLKF_CE or SYSCLKR_CE) when rising_edge(MCLK);
-
-	ROM_ADDR <= CART_ADDR and ROM_MASK;
+	process(MCLK)
+	begin
+		if rising_edge(MCLK) then
+			if SYSCLKR_CE = '1' then
+				ROM_ADDR <= CART_ADDR and ROM_MASK;
+			end if;
+			
+			if SYSCLKR_CE = '1' or SYSCLKF_CE = '1' then
+				ROM_RD <= '1';
+			else
+				ROM_RD <= '0';
+			end if;
+		end if;
+	end process;
+	
 	ROM_CE_N <= ROMSEL_N;
 	ROM_OE_N <= not ROM_RD;
 	ROM_WORD	<= '0';

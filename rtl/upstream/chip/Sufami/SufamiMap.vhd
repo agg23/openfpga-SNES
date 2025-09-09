@@ -90,9 +90,23 @@ begin
 	SRAM_BASE_SEL  <= not CA(20) and not ROMSEL_N when CA(22 downto 21) = "11"                     else '0';
 	SRAM_TURBO_SEL <=     CA(20) and not ROMSEL_N when CA(22 downto 21) = "11" and TURBO_SET = '1' and CART_SWAP = '0' else '0';
 
-	ROM_RD <= (SYSCLKF_CE or SYSCLKR_CE) when rising_edge(MCLK);
+--	ROM_RD <= (SYSCLKF_CE or SYSCLKR_CE) when rising_edge(MCLK);
+	process(MCLK)
+	begin
+		if rising_edge(MCLK) then
+			if SYSCLKR_CE = '1' then
+				ROM_ADDR <= CART_ADDR and CART_MASK;
+			end if;
+			
+			if SYSCLKR_CE = '1' or SYSCLKF_CE = '1' then
+				ROM_RD <= '1';
+			else
+				ROM_RD <= '0';
+			end if;
+		end if;
+	end process;
 
-	ROM_ADDR <= CART_ADDR and CART_MASK;
+--	ROM_ADDR <= CART_ADDR and CART_MASK;
 	ROM_CE_N <= ROMSEL_N;
 	ROM_OE_N <= not ROM_RD;
 	ROM_WORD	<= '0';

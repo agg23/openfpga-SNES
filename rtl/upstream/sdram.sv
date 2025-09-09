@@ -191,7 +191,7 @@ module sdram
 				            state[0].CMD  <= CTRL_RAS;
 								state[0].ADDR <= addr0[22:0];
 								state[0].BANK <= {1'b0,addr0[23]};
-			end else if (wr0 && !old_wr0 && !rd0 && !rd1) begin
+			end else if (wr0 && !old_wr0 && !rd0) begin
 				            state[0].CMD  <= CTRL_RAS;
 								state[0].ADDR <= addr0[22:0];
 								state[0].BANK <= {1'b0,addr0[23]};
