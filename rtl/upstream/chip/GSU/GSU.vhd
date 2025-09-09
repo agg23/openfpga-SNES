@@ -217,6 +217,7 @@ architecture rtl of GSU is
 	signal GSU_ROM_ACCESS 	: std_logic;
 	signal GSU_RAM_ACCESS 	: std_logic;
 	signal SFR 					: std_logic_vector(15 downto 0);
+	signal SNES_ROM_ADDR 	: std_logic_vector(23 downto 0);
 	signal SNES_RAM_A 		: std_logic_vector(16 downto 0);
 	signal INT_ROM_A 			: std_logic_vector(23 downto 0);
 	signal SNES_CACHE_ADDR 	: std_logic_vector(8 downto 0);
@@ -1252,10 +1253,14 @@ begin
 					ROM_RD_N <= '0';
 				end if;
 			end if;
+			
+			if SYSCLKR_CE = '1' then
+				SNES_ROM_ADDR <= ADDR;
+			end if;
 		end if;
 	end process;
 	
-	INT_ROM_A <= ADDR when GSU_ROM_ACCESS = '0' else 
+	INT_ROM_A <= SNES_ROM_ADDR when GSU_ROM_ACCESS = '0' else 
 					 CACHE_SRC_ADDR when ROMST = ROMST_CACHE else 
 					 ROMBR & R(14) when ROMST = ROMST_LOAD else 
 					 PBR & R(15);
