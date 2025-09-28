@@ -145,6 +145,7 @@ signal OBJ_RANGE_OFL 	: std_logic;
 signal PARD_Nr 			: std_logic;
 
 signal BG_FORCE_BLANK	: std_logic;
+signal FORCE_BLANK_SR	: std_logic_vector(2 downto 0);
 signal VMADD_TRANS 		: std_logic_vector(15 downto 0);
 signal VRAM1_WRITE 		: std_logic;
 signal VRAM2_WRITE 		: std_logic;
@@ -191,14 +192,18 @@ signal BG3_PIX_DATA 		: std_logic_vector(5 downto 0);
 signal BG4_PIX_DATA 		: std_logic_vector(5 downto 0);
 signal M7_PIX_DATA 		: std_logic_vector(7 downto 0);
 
-signal MPY 					: signed(23 downto 0);
+signal MPY					: signed(26 downto 0);
 signal M7_SCREEN_X  		: unsigned(7 downto 0);
-signal M7_TEMP_X 			: signed(23 downto 0);
-signal M7_TEMP_Y 			: signed(23 downto 0);
+signal M7_TEMP_X 			: signed(26 downto 0);
+signal M7_TEMP_Y 			: signed(26 downto 0);
+signal M7_VRAM_X 			: signed(26 downto 0);
+signal M7_VRAM_Y 			: signed(26 downto 0);
+signal M7_MULT_X 			: signed(26 downto 0);
 signal M7_TILE_N 			: unsigned(7 downto 0);
 signal M7_TILE_ROW 		: unsigned(2 downto 0);
 signal M7_TILE_COL 		: unsigned(2 downto 0);
 signal M7_TILE_OUTSIDE 	: std_logic;
+signal M7_CALC_SR		: std_logic_vector(2 downto 0);
 
 -- OBJ
 signal OAM_D 				: std_logic_vector(15 downto 0);
@@ -444,7 +449,10 @@ begin
 			if OBJ_TIME = '1' and H_CNT(0) = '0' and FORCE_BLANK = '0' and DOT_CLKR_CE = '1' then
 				OAM_ADDR <= "0" & OAM_TIME_INDEX & "00";
 			end if;
-	
+
+			if DOT_CLKR_CE = '1' then
+				FORCE_BLANK_SR <= FORCE_BLANK_SR(1 downto 0) & FORCE_BLANK;
+			end if;
 			
 			if VRAMPRERD_REQ = '1' then
 				if VRAMRD_CNT = 3 then
@@ -727,11 +735,11 @@ begin
 				  x"24" | x"25" | x"26" | x"28" | x"29" =>	
 				D_OUT <= MDR1;
 			when x"34" =>						--MPYL
-				D_OUT <= std_logic_vector(MPY(7 downto 0));
+				D_OUT <= std_logic_vector(MPY(10 downto 3));
 			when x"35" =>						--MPYM
-				D_OUT <= std_logic_vector(MPY(15 downto 8));
+				D_OUT <= std_logic_vector(MPY(18 downto 11));
 			when x"36" =>						--MPYH
-				D_OUT <= std_logic_vector(MPY(23 downto 16));
+				D_OUT <= std_logic_vector(MPY(26 downto 19));
 			when x"38" =>						--RDOAM
 				if OAM_ADDR(9) = '0' then
 					if OAM_ADDR(0) = '0' then
@@ -965,9 +973,9 @@ HIRES <= '1' when BG_MODE = "101" or BG_MODE = "110" else '0';
 
 BF <= BF_TBL(to_integer(unsigned(BG_MODE)), to_integer(H_CNT(2 downto 0)));
 
-process( RST_N, CLK, BF, BG_MODE, BG_SIZE, BG_SC_ADDR, BG_SC_SIZE, BG_NBA, BG_HOFS, BG_VOFS, H_CNT, V_CNT, IN_VBL, FORCE_BLANK,
-			BG_DATA, BG_TILE_INFO, BG3_OPT_DATA0, BG3_OPT_DATA1, BG_MOSAIC_Y ,BG_MOSAIC_EN, FIELD, HIRES, BGINTERLACE, VRAM_DAI,
-			M7_SCREEN_X, M7_TEMP_X, M7_TEMP_Y, M7_TILE_N, M7_TILE_COL, M7_TILE_ROW, M7SEL, M7HOFS, M7VOFS, M7X, M7Y, M7A, M7B, M7C, M7D)
+process( RST_N, CLK, BF, BG_MODE, BG_SIZE, BG_SC_ADDR, BG_SC_SIZE, BG_NBA, BG_HOFS, BG_VOFS, H_CNT, V_CNT, IN_VBL, BG_FORCE_BLANK, FORCE_BLANK_SR,
+			BG_DATA, BG_TILE_INFO, BG3_OPT_DATA0, BG3_OPT_DATA1, BG_MOSAIC_Y ,BG_MOSAIC_EN, FIELD, HIRES, BGINTERLACE, VRAM_DAI, DOT_CLK, MPY,
+			M7_SCREEN_X, M7_TEMP_X, M7_TEMP_Y, M7_VRAM_X, M7_VRAM_Y, M7_MULT_X, M7_TILE_N, M7_TILE_COL, M7_TILE_ROW, M7SEL, M7HOFS, M7VOFS, M7X, M7Y, M7A, M7B, M7C, M7D, M7_CALC_SR)
 variable SCREEN_X : unsigned(8 downto 0);
 variable SCREEN_Y : unsigned(7 downto 0);
 variable OPTH_EN, OPTV_EN : std_logic;
@@ -987,9 +995,10 @@ variable TILE_INC : unsigned(4 downto 0);
 variable FLIP_Y : unsigned(2 downto 0);
 variable TILE_OFFS : unsigned(14 downto 0);
 variable TILEPOS_INC : unsigned(4 downto 0);
-variable M7_VRAM_X, M7_VRAM_Y : signed(23 downto 0);
 variable ORG_X, ORG_Y : signed(13 downto 0);
-variable M7_X, M7_Y : signed(8 downto 0);
+variable M7_X, M7_Y : unsigned(7 downto 0);
+variable MPY_MULT_A : signed(15 downto 0);
+variable MPY_MULT_B : signed(10 downto 0);
 variable M7_TILE : unsigned(7 downto 0);
 variable BG_TILEMAP_ADDR, BG_TILEDATA_ADDR : unsigned(15 downto 0);
 variable M7_VRAM_ADDRA, M7_VRAM_ADDRB : unsigned(13 downto 0);
@@ -1163,23 +1172,62 @@ begin
 	ORG_Y := signed(resize(signed(M7VOFS), ORG_Y'length)) - signed(resize(signed(M7Y), ORG_Y'length));
 	
 	if M7SEL(0) = '0' then
-		M7_X := signed(resize(M7_SCREEN_X, 9));
+		M7_X := M7_SCREEN_X;
 	else
-		M7_X := signed(resize(not M7_SCREEN_X, 9));
+		M7_X := not M7_SCREEN_X;
 	end if;
 	
 	if M7SEL(1) = '0' then
-		M7_Y := signed(resize(MOSAIC_Y, 9));
+		M7_Y := MOSAIC_Y;
 	else
-		M7_Y := signed(resize(not MOSAIC_Y, 9));
+		M7_Y := not MOSAIC_Y;
 	end if;
-				
-	MPY <= resize(signed(M7A) * signed(M7B(15 downto 8)), MPY'length);
+
+	-- MPY implemented as described in the FullSnes doc. Mode7 gets 2 multiplication results per pixel.
+	-- Signed 16x11 multiplier (27 bits result). MPY / 8 output to CPU (26 downto 3).
+	-- After disabling Force Blank, there is a delay of 3 pixels before it switches back to the Mode7 params.
+	if BG_MODE /= "111" or IN_VBL = '1' or FORCE_BLANK_SR(2) = '1' then
+		MPY_MULT_A := signed(M7A);
+		MPY_MULT_B(10 downto 3) := signed(M7B(15 downto 8));
+		MPY_MULT_B(2 downto 0) := (others => '0');
+	else
+		case M7_CALC_SR is
+			when "001" =>
+				if DOT_CLK = '1' then
+					MPY_MULT_A := signed(M7A);
+					MPY_MULT_B := Mode7Clip(ORG_X);
+				else
+					MPY_MULT_A := signed(M7D);
+					MPY_MULT_B := Mode7Clip(ORG_Y);
+				end if;
+			when "010" =>
+				if DOT_CLK = '1' then
+					MPY_MULT_A := signed(M7B);
+					MPY_MULT_B := Mode7Clip(ORG_Y);
+				else
+					MPY_MULT_A := signed(M7C);
+					MPY_MULT_B := Mode7Clip(ORG_X);
+				end if;
+			when "100" =>
+				if DOT_CLK = '1' then
+					MPY_MULT_A := signed(M7B);
+				else
+					MPY_MULT_A := signed(M7D);
+				end if;
+				MPY_MULT_B := signed(resize(M7_Y, MPY_MULT_B'length));
+			when others =>
+				if DOT_CLK = '1' then
+					MPY_MULT_A := signed(M7A);
+				else
+					MPY_MULT_A := signed(M7C);
+				end if;
+				MPY_MULT_B := signed(resize(M7_X, MPY_MULT_B'length));
+		end case;
+	end if;
 	
-	M7_VRAM_X := M7_TEMP_X + resize(signed(M7A) * M7_X, M7_VRAM_X'length);
-	M7_VRAM_Y := M7_TEMP_Y + resize(signed(M7C) * M7_X, M7_VRAM_Y'length);
-					 
-	if M7_VRAM_X(23 downto 18) = "000000" and M7_VRAM_Y(23 downto 18) = "000000" then
+	MPY <= MPY_MULT_A * MPY_MULT_B;
+
+	if M7_VRAM_X(26 downto 18) = "000000000" and M7_VRAM_Y(26 downto 18) = "000000000" then
 		M7_IS_OUTSIDE := '0';
 	else
 		M7_IS_OUTSIDE := '1';
@@ -1187,6 +1235,8 @@ begin
 	
 	if M7SEL(7 downto 6) = "11" and M7_IS_OUTSIDE = '1' then 
 		M7_TILE := x"00";
+	elsif BG_FORCE_BLANK = '1' then
+		M7_TILE := x"FF";
 	else 
 		M7_TILE := unsigned(VRAM_DAI);
 	end if;
@@ -1213,29 +1263,50 @@ begin
 		M7_TILE_ROW <= (others => '0');
 		M7_TILE_COL <= (others => '0');
 		M7_TILE_OUTSIDE <= '0';
+		M7_CALC_SR <= (others => '0');
 	elsif rising_edge(CLK) then 
-		if ENABLE = '1' and DOT_CLKR_CE = '1' then
-			if M7_FETCH = '1' then
-				M7_SCREEN_X <= M7_SCREEN_X + 1;
-			elsif H_CNT = LAST_DOT then
-				M7_SCREEN_X <= (others => '0');
-			end if;
-			
-			if H_CNT = M7_XY_LATCH then
-				M7_TEMP_X <= (resize(signed(M7X), M7_TEMP_X'length) sll 8) + 
-								 (resize(signed(M7A) * Mode7Clip(ORG_X), M7_TEMP_X'length) and x"FFFFC0") + 
-								 (resize(signed(M7B) * Mode7Clip(ORG_Y), M7_TEMP_X'length) and x"FFFFC0") + 
-								 (resize(signed(M7B) * M7_Y, M7_TEMP_X'length) and x"FFFFC0");
-				M7_TEMP_Y <= (resize(signed(M7Y), M7_TEMP_Y'length) sll 8) + 
-								 (resize(signed(M7C) * Mode7Clip(ORG_X), M7_TEMP_Y'length) and x"FFFFC0") + 
-								 (resize(signed(M7D) * Mode7Clip(ORG_Y), M7_TEMP_Y'length) and x"FFFFC0") + 
-								 (resize(signed(M7D) * M7_Y, M7_TEMP_Y'length) and x"FFFFC0");
+		if ENABLE = '1' then
+			if DOT_CLKR_CE = '1' then
+				if M7_FETCH = '1' then
+					M7_SCREEN_X <= M7_SCREEN_X + 1;
+				elsif H_CNT = LAST_DOT then
+					M7_SCREEN_X <= (others => '0');
+				end if;
+
+				if H_CNT = M7_XY_LATCH then
+					M7_TEMP_X <= (resize(signed(M7X), M7_TEMP_X'length) sll 8);
+					M7_TEMP_Y <= (resize(signed(M7Y), M7_TEMP_Y'length) sll 8);
+
+					M7_CALC_SR <= "001";
+				else
+					M7_CALC_SR <= M7_CALC_SR(1 downto 0) & "0";
+				end if;
 			end if;
 
-			M7_TILE_N <= M7_TILE;
-			M7_TILE_COL <= unsigned(M7_VRAM_X(10 downto 8));
-			M7_TILE_ROW <= unsigned(M7_VRAM_Y(10 downto 8));
-			M7_TILE_OUTSIDE <= M7_IS_OUTSIDE;
+			if M7_CALC_SR /= "000" then
+				if DOT_CLKF_CE = '1' then
+					M7_TEMP_X(26 downto 6) <= M7_TEMP_X(26 downto 6) + MPY(26 downto 6);
+				end if;
+				if DOT_CLKR_CE = '1' then
+					M7_TEMP_Y(26 downto 6) <= M7_TEMP_Y(26 downto 6) + MPY(26 downto 6);
+				end if;
+			end if;
+
+			if DOT_CLKF_CE = '1' then
+				M7_MULT_X <= MPY;
+			end if;
+
+			if DOT_CLKR_CE = '1' then
+				-- First cycle: Set address A for Tile index read
+				M7_VRAM_X <= M7_TEMP_X + M7_MULT_X;
+				M7_VRAM_Y <= M7_TEMP_Y + MPY;
+
+				-- Second cycle: Set address B for Pixel read
+				M7_TILE_N <= M7_TILE;
+				M7_TILE_COL <= unsigned(M7_VRAM_X(10 downto 8));
+				M7_TILE_ROW <= unsigned(M7_VRAM_Y(10 downto 8));
+				M7_TILE_OUTSIDE <= M7_IS_OUTSIDE;
+			end if;
 		end if;
 	end if;
 end process;
@@ -1267,15 +1338,16 @@ begin
 				BG_MOSAIC_Y <= (others => '0');
 			end if;
 
-			if BG_FETCH = '0' then
-				BG_FORCE_BLANK <= FORCE_BLANK;
-			elsif BG_FETCH = '1' and H_CNT(2 downto 0) = 0 then
-				BG_FORCE_BLANK <= FORCE_BLANK;
-			end if;
-			
-			if BG_FETCH = '1' and BG_FORCE_BLANK = '0' then
+			-- Force Blank synchronized to the Dot clk for VRAM reads
+			BG_FORCE_BLANK <= FORCE_BLANK;
+
+			if BG_FETCH = '1' then
 				if BG_MODE /= "111" then 
-					BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
+					if BG_FORCE_BLANK = '1' then
+						BG_DATA(to_integer(H_CNT(2 downto 0))) <= x"FFFF";
+					else
+						BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
+					end if;
 				end if;
 				
 				if H_CNT(2 downto 0) = 0 then
@@ -1676,7 +1748,9 @@ begin
 				
 				if M7SEL(7 downto 6) = "10" and M7_TILE_OUTSIDE = '1' then 
 					M7_PIX_DATA <= (others => '0');
-				else  
+				elsif BG_FORCE_BLANK = '1' then
+					M7_PIX_DATA <= x"FF";
+				else
 					M7_PIX_DATA <= VRAM_DBI;
 				end if;
 			
