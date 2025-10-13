@@ -143,7 +143,7 @@ begin
 				PSRAM_CE_N <= not ROM_AREA;
 			elsif ((not CA(23) and EXT_ON(0)) = '1' or (CA(23) and EXT_ON(1)) = '1') and CA(22) = EXT_MAP and CA(21) = '0' then
 				EXTMEM_CE_N <= not ROM_AREA;
-			else
+			elsif CA(23 downto 20) /= x"7" then
 				DPAK_CE_N <= not ROM_AREA;
 			end if;
 			
