@@ -70,6 +70,7 @@ module main #(
 	input             BLEND,
 	input             PAL,
 	output            HIGH_RES,
+	output            V224_MODE,
 	output            FIELD,
 	output            INTERLACE,
 	output            DOTCLK,
@@ -233,6 +234,7 @@ SNES SNES
 	.high_res(HIGH_RES),
 	.field_out(FIELD),
 	.interlace(INTERLACE),
+	.v224_mode(V224_MODE),
 	.dotclk(DOTCLK),
 
 	.rgb_out({B,G,R}),
