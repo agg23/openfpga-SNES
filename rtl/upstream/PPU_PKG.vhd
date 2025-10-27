@@ -28,8 +28,7 @@ package PPU_PKG is
 		BF_TILEDAT3,
 		BF_TILEDATM7,
 		BF_OPT0,
-		BF_OPT1,
-		BF_MODE7
+		BF_OPT1
 	);
 	
 	type BgFetch_r is record
