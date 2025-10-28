@@ -811,10 +811,10 @@ VRAM1_WRITE <= '1' when PAWR_N = '0' and PA = x"18" and (BG_FORCE_BLANK = '1' or
 VRAM2_WRITE <= '1' when PAWR_N = '0' and PA = x"19" and (BG_FORCE_BLANK = '1' or IN_VBL = '1') else '0';			
 
 		
-VRAM_ADDRA <= BG_VRAM_ADDRA when BG_FETCH = '1' and BG_FORCE_BLANK = '0'else 
+VRAM_ADDRA <= BG_VRAM_ADDRA when BG_FETCH = '1' and BG_FORCE_BLANK = '0' and IN_VBL = '0' else 
 				  OBJ_VRAM_ADDR when OBJ_FETCH = '1' and FORCE_BLANK = '0' else
 				  VMADD_TRANS;
-VRAM_ADDRB <= BG_VRAM_ADDRB when BG_FETCH = '1' and BG_FORCE_BLANK = '0'else 
+VRAM_ADDRB <= BG_VRAM_ADDRB when BG_FETCH = '1' and BG_FORCE_BLANK = '0' and IN_VBL = '0' else 
 				  OBJ_VRAM_ADDR when OBJ_FETCH = '1' and FORCE_BLANK= '0' else
 				  VMADD_TRANS;			 
 				 
@@ -933,7 +933,7 @@ VBLANK <= IN_VBL;
 
 process( H_CNT, V_CNT, LAST_VIS_LINE )
 begin
-	if H_CNT <= BG_FETCH_END and V_CNT >= 0 and V_CNT <= LAST_VIS_LINE then
+	if H_CNT <= BG_FETCH_END then
 		BG_FETCH <= '1';
 	else
 		BG_FETCH <= '0';
@@ -1362,7 +1362,6 @@ begin
 	elsif rising_edge(CLK) then 
 		if ENABLE = '1' and DOT_CLKR_CE = '1' then
 			if H_CNT = LAST_DOT and V_CNT <= LAST_VIS_LINE then
-				BG_DATA <= (others => (others => '0'));
 				BG3_OPT_DATA0 <= (others => '0');
 				BG3_OPT_DATA1 <= (others => '0');
 			end if;
@@ -1380,18 +1379,16 @@ begin
 			-- Force Blank synchronized to the Dot clk for VRAM reads
 			BG_FORCE_BLANK <= FORCE_BLANK;
 
-			BG_DATA(to_integer(H_CNT(2 downto 0))) <= (others => '1');
 			if BG_FETCH = '1' then
-				if BG_FORCE_BLANK = '0' and BF.MODE /= BF_TILEDATM7 and  
-					((BF.BG = BG1 and (TM(0) = '1' or TS(0) = '1'                                          )) or 
-					 (BF.BG = BG2 and (TM(1) = '1' or TS(1) = '1'                                          )) or 
-					 (BF.BG = BG3 and (TM(2) = '1' or TS(2) = '1' or BF.MODE = BF_OPT0 or BF.MODE = BF_OPT1)) or 
-					 (BF.BG = BG4 and (TM(3) = '1' or TS(3) = '1'                                          ))) then
-					BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
+				if BG_MODE /= "111" then
+					if BG_FORCE_BLANK = '1' or IN_VBL = '1' then
+						BG_DATA(to_integer(H_CNT(2 downto 0))) <= x"FFFF";
+					else
+						BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
+					end if;
 				end if;
 				
 				if H_CNT(2 downto 0) = 0 then
-					BG_TILES(0).PLANES <= (others => (others => '1'));
 					case BG_MODE_SYNC is
 						when "000" =>
 							BG_TILES(0).PLANES( 0) <= FlipPlane(BG_DATA(7)( 7 downto 0), BG_TILE_INFO(BG1)(14));
@@ -1487,11 +1484,13 @@ begin
 						when others => null;
 					end case;
 
-					BG_TILES(0).ATR(0) <= BG_TILE_INFO(BG1)(13 downto 10);
-					BG_TILES(0).ATR(1) <= BG_TILE_INFO(BG2)(13 downto 10);
-					BG_TILES(0).ATR(2) <= BG_TILE_INFO(BG3)(13 downto 10);
-					BG_TILES(0).ATR(3) <= BG_TILE_INFO(BG4)(13 downto 10);
-					BG_TILES(1) <= BG_TILES(0);
+					if BG_MODE /= "111" then
+						BG_TILES(0).ATR(0) <= BG_TILE_INFO(BG1)(13 downto 10);
+						BG_TILES(0).ATR(1) <= BG_TILE_INFO(BG2)(13 downto 10);
+						BG_TILES(0).ATR(2) <= BG_TILE_INFO(BG3)(13 downto 10);
+						BG_TILES(0).ATR(3) <= BG_TILE_INFO(BG4)(13 downto 10);
+						BG_TILES(1) <= BG_TILES(0);
+					end if;
 				end if;
 				
 				if H_CNT(2 downto 0) = 7 then
