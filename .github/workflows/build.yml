@@ -19,7 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        core: ["main", "pal", "spc", "sa1gsu", "pal_sa1gsu"]
+        # core: ["main", "pal", "spc", "sa1gsu", "pal_sa1gsu"]
+        # TODO: Add SA1/GSU cores
+        core: ["main", "pal", "spc"]
+      fail-fast: false
 
     steps:
       - name: "🧰 Checkout Repository"
@@ -66,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: failure_output_files
+          name: failure_output_files_${{ matrix.core }}
           path: projects/output_files/
 
       - name: Reverse bitstream
