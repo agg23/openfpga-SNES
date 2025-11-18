@@ -213,6 +213,7 @@ signal OAMIO_Q 			: std_logic_vector(15 downto 0);
 signal OAM_ADDR_A 		: std_logic_vector(7 downto 0);
 signal OAM_ADDR_B 		: std_logic_vector(6 downto 0);
 signal OAM_WE 				: std_logic;
+signal OAM_DATA			: std_logic_vector(15 downto 0);
 signal HOAM_Q 				: std_logic_vector(7 downto 0);
 signal HOAM_ADDR 			: std_logic_vector(4 downto 0);
 signal HOAM_WE 			: std_logic;
@@ -221,6 +222,7 @@ signal HOAM_S 				: std_logic;
 
 signal OAM_ADDR 			: std_logic_vector(9 downto 0);
 signal OAM_RANGE 			: RangeOam_t;
+signal OAM_XY_LATCH		: std_logic_vector(15 downto 0);
 signal OAM_PRIO_INDEX 	: std_logic_vector(6 downto 0);
 signal OAM_TIME_INDEX 	: std_logic_vector(6 downto 0);
 signal RANGE_CNT 			: unsigned(5 downto 0);
@@ -457,7 +459,7 @@ begin
 				OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 4);
 			end if;
 	
-			if OBJ_TIME = '1' and H_CNT(0) = '0' and FORCE_BLANK = '0' and DOT_CLKR_CE = '1' then
+			if OBJ_TIME = '1' and H_CNT(0) = '0' and FORCE_BLANK = '0' and DOT_CLKF_CE = '1' then
 				OAM_ADDR <= "0" & OAM_TIME_INDEX & "00";
 			end if;
 
@@ -1520,6 +1522,8 @@ OAM_ADDR_A <= OAM_ADDR(8 downto 1);
 OAM_ADDR_B <= OAM_ADDR(8 downto 2);
 OAM_WE <= ENABLE when (OAM_ADDR(9) = '0' or (IN_VBL = '0' and FORCE_BLANK = '0')) and OAM_ADDR(0) = '1' and PAWR_N = '0' and PA = x"04" and SYSCLK_CE = '1' else '0';
 
+OAM_DATA <= OAM_D when OAM_WE = '1' else OAM_Q(31 downto 16) when OAM_ADDR(1) = '1' else OAM_Q(15 downto 0);--original bidirectional 16bit data port
+
 HOAM : entity work.spram generic map(5,8)
 port map(
 	clock		=> CLK,
@@ -1594,8 +1598,12 @@ begin
 				OBJ_TIME_OFL <= '0';
 			end if;
 			
-			OAM_OBJ_X := HOAM_X8 & unsigned(OAM_Q(7 downto 0));
-			OAM_OBJ_Y := unsigned(OAM_Q(15 downto 8));
+			if (FORCE_BLANK = '0' and IN_VBL = '0' and H_CNT(0) = '0') or (not (FORCE_BLANK = '0' and IN_VBL = '0') and OAM_ADDR(9) = '0') then
+				OAM_XY_LATCH <= OAM_DATA;
+			end if;
+			
+			OAM_OBJ_X := HOAM_X8 & unsigned(OAM_XY_LATCH(7 downto 0));
+			OAM_OBJ_Y := unsigned(OAM_XY_LATCH(15 downto 8));
 			OAM_OBJ_S := HOAM_S;	
 			OAM_OBJ_TILE := unsigned(OAM_Q(23 downto 16));
 			OAM_OBJ_N := OAM_Q(24);
@@ -1613,7 +1621,7 @@ begin
 				H2 := H;
 			end if;		
 			
-			if OBJ_RANGE = '1' and H_CNT(0) = '1' and FORCE_BLANK = '0' then
+			if OBJ_RANGE = '1' and H_CNT(0) = '1' then
 				if (OAM_OBJ_X <= 256 or (0 - OAM_OBJ_X) <= W) and (SCREEN_Y - OAM_OBJ_Y) <= H2 then
 					if OBJ_RANGE_DONE = '0' then
 						NEW_RANGE_CNT := RANGE_CNT + 1;
@@ -1653,7 +1661,7 @@ begin
 					if OAM_OBJ_VFLIP = '0' then
 						Y := SCREEN_Y - OAM_OBJ_Y;
 					else
-						Y := not (SCREEN_Y - OAM_OBJ_Y);
+						Y := not (SCREEN_Y - OAM_OBJ_Y) and "00"&H;
 					end if;
 					if OBJINTERLACE = '1' then
 						Y := (Y(6 downto 0) & FIELD);
@@ -1665,7 +1673,7 @@ begin
 					else
 						OBJ_TILE_COL <= unsigned(OAM_OBJ_TILE(3 downto 0)) + ((not CUR_TILES_CNT) and W(5 downto 3));
 					end if;
-					OBJ_TILE_ROW <= unsigned(OAM_OBJ_TILE(7 downto 4)) + (Y(5 downto 3) and H(5 downto 3));
+					OBJ_TILE_ROW <= unsigned(OAM_OBJ_TILE(7 downto 4)) + Y(5 downto 3);
 					if OAM_OBJ_N = '0' then
 						OBJ_TILE_GAP <= (others => '0');
 					else
