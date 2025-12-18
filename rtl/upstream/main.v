@@ -66,6 +66,7 @@ module main #(
 	input             GSU_TURBO,
 	input             GSU_FASTROM,
 	input             SUFAMI_SWAP,
+	input       [7:0] CC_DIP,
 
 	input             BLEND,
 	input             PAL,
@@ -379,6 +380,8 @@ DSP_LHRomMap #(.USE_DSPn(USE_DSPn)) DSP_LHRomMap
 	.bsram_mask(RAM_MASK),
 
 	.ext_rtc(EXT_RTC),
+	
+	.cc_dip(CC_DIP),
 
 	.ss_busy(SS_BUSY),
 	.ss_ram_a(SS_EXT_ADDR[11:0]),
