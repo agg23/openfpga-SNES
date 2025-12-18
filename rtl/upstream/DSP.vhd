@@ -12,6 +12,8 @@ entity DSP is
 		RST_N 		: in std_logic; 
 		ENABLE 		: in std_logic;
 		PAL			: in std_logic;
+		
+		FREQ			: in std_logic;
 
 		SMP_EN_F  	: out std_logic;
 		SMP_EN_R    : out std_logic;
@@ -51,6 +53,7 @@ end DSP;
 architecture rtl of DSP is 
 
 	signal MCLK_FREQ 		: integer;
+	signal ACLK_FREQ 		: integer;
 	signal CE 	         : std_logic;
 	signal CEGEN_RST_N 	: std_logic;
 
@@ -233,6 +236,7 @@ architecture rtl of DSP is
 begin
 	
 	MCLK_FREQ <= MCLK_PAL_FREQ when PAL = '1' else MCLK_NTSC_FREQ;
+	ACLK_FREQ <= ACLK_REAL_FREQ when FREQ = '1' else ACLK_TYPE_FREQ;
 	CEGEN_RST_N <= RST_N and ENABLE;
 	
 	CEGen : entity work.CEGen
