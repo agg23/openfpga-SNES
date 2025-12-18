@@ -110,6 +110,8 @@ module main #(
 
 	input             TURBO,
 	output            TURBO_ALLOW,
+	
+	input             DSP_FREQ,
 
 	output     [15:0] MSU_TRACK_NUM,
 	output            MSU_TRACK_REQUEST,
@@ -268,6 +270,8 @@ SNES SNES
 	.DBG_CPU_EN(DBG_CPU_EN),
 	
 	.turbo(TURBO),
+	
+	.dsp_freq(DSP_FREQ),
 
 	.audio_l(AUDIO_L),
 	.audio_r(AUDIO_R)
