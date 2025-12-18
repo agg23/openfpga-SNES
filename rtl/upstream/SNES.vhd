@@ -106,6 +106,8 @@ entity SNES is
 
 		TURBO			: in std_logic;
 		
+		DSP_FREQ		: in std_logic;
+		
 		DBG_BG_EN	: in std_logic_vector(4 downto 0);
 		DBG_CPU_EN	: in std_logic;
 
@@ -404,6 +406,8 @@ begin
 		RST_N			=> RST_N,
 		ENABLE		=> DSP_EN,
 		PAL			=> PAL,
+		
+		FREQ			=> DSP_FREQ,
 				
 		SMP_EN_F  	=> SMP_EN_F,
 		SMP_EN_R    => SMP_EN_R,
