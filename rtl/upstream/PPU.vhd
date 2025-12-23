@@ -235,6 +235,11 @@ signal OBJ_FETCH 			: std_logic;
 signal OBJ_RANGE_DONE 	: std_logic;
 signal OBJ_TIME_DONE 	: std_logic;
 
+signal OBJ_8PX				: std_logic;
+signal OBJ_16PX				: std_logic;
+signal OBJ_32PX				: std_logic;
+signal OBJ_64PX				: std_logic;
+
 signal OBJ_TILE_COL 		: unsigned(3 downto 0);
 signal OBJ_TILE_ROW 		: unsigned(3 downto 0);
 signal OBJ_TILE_LINE 	: unsigned(2 downto 0);
@@ -1539,15 +1544,43 @@ HOAM_WE <= ENABLE when (OAM_ADDR(9) = '1' or (IN_VBL = '0' and FORCE_BLANK = '0'
 HOAM_X8 <= HOAM_Q(to_integer(unsigned(OAM_ADDR(3 downto 2))&"0"));
 HOAM_S  <= HOAM_Q(to_integer(unsigned(OAM_ADDR(3 downto 2))&"1"));
 
+process( HOAM_S, OBJSIZE )
+	variable SIZE0: std_logic;
+	variable SIZE1: std_logic;
+	variable SIZE2: std_logic;
+	variable SIZE3: std_logic;
+begin
+
+	SIZE0 := not OBJSIZE(1) and not OBJSIZE(0);
+	SIZE1 := not OBJSIZE(1) and     OBJSIZE(0);
+	SIZE2 :=     OBJSIZE(1) and not OBJSIZE(0);
+	SIZE3 :=     OBJSIZE(1) and     OBJSIZE(0);
+
+	OBJ_8PX <=   not HOAM_S and not OBJSIZE(2) and not SIZE3;     -- S 0,1,2
+
+	OBJ_16PX <= (not HOAM_S and not OBJSIZE(2) and     SIZE3) or  -- S 3
+	            (not HOAM_S and     OBJSIZE(2) and not SIZE1) or  -- S 4,6,7
+	            (    HOAM_S and not OBJSIZE(2) and     SIZE0);    -- L 0
+
+	OBJ_32PX <= (not HOAM_S and     OBJSIZE(2) and not SIZE0) or  -- S 5,6,7
+	            (    HOAM_S and not OBJSIZE(2) and     SIZE1) or  -- L 1
+	            (    HOAM_S and                        SIZE3) or  -- L 3,7
+	            (    HOAM_S and     OBJSIZE(2) and     SIZE2);    -- L 6
+
+	OBJ_64PX <= (    HOAM_S and                        SIZE2) or  -- L 2,6
+	            (    HOAM_S and     OBJSIZE(2) and     SIZE0) or  -- L 4
+	            (    HOAM_S and     OBJSIZE(2) and     SIZE1);    -- L 5
+end process;
 
 process( RST_N, CLK )
 variable SCREEN_Y 		: unsigned(7 downto 0);
 variable X 					: unsigned(8 downto 0);
 variable Y 					: unsigned(7 downto 0);
-variable W, H, H2 		: unsigned(5 downto 0);
+variable WH, H2 		: unsigned(5 downto 0);
 variable NEW_RANGE_CNT 	: unsigned(5 downto 0);
 variable TILE_X 			: unsigned(8 downto 0);
 variable CUR_TILES_CNT 	: unsigned(2 downto 0);
+variable TILE_CNT_MASK 	: unsigned(2 downto 0);
 variable OAM_OBJ_X			: unsigned(8 downto 0);
 variable OAM_OBJ_Y			: unsigned(7 downto 0);
 variable OAM_OBJ_S 			: std_logic;
@@ -1598,7 +1631,7 @@ begin
 				OBJ_TIME_OFL <= '0';
 			end if;
 			
-			if (FORCE_BLANK = '0' and IN_VBL = '0' and H_CNT(0) = '0') or (not (FORCE_BLANK = '0' and IN_VBL = '0') and OAM_ADDR(9) = '0') then
+			if (((FORCE_BLANK = '0' and IN_VBL = '0') or OAM_ADDR(9) = '0') and H_CNT(0) = '0') then
 				OAM_XY_LATCH <= OAM_DATA;
 			end if;
 			
@@ -1613,16 +1646,22 @@ begin
 			OAM_OBJ_VFLIP := OAM_Q(31);
 					
 			SCREEN_Y := V_CNT(7 downto 0);
-			W := SprWidth(OAM_OBJ_S & OBJSIZE);
-			H := SprHeight(OAM_OBJ_S & OBJSIZE);
-			if OBJINTERLACE = '1' then
-				H2 := (H srl 1);
+
+			WH(2 downto 0) := "111";
+			WH(3) := OBJ_16PX or OBJ_32PX or OBJ_64PX;
+			WH(4) := OBJ_32PX or OBJ_64PX;
+			WH(5) := OBJ_64PX;
+
+			if OBJINTERLACE = '1' and OBJ_16PX = '1' and OBJ_32PX = '1' then
+				H2 := "000111";
+			elsif OBJINTERLACE = '1' then
+				H2 := (WH srl 1);
 			else
-				H2 := H;
+				H2 := WH;
 			end if;		
 			
 			if OBJ_RANGE = '1' and H_CNT(0) = '1' then
-				if (OAM_OBJ_X <= 256 or (0 - OAM_OBJ_X) <= W) and (SCREEN_Y - OAM_OBJ_Y) <= H2 then
+				if (OAM_OBJ_X <= 256 or (0 - OAM_OBJ_X) <= WH) and (SCREEN_Y - OAM_OBJ_Y) <= H2 then
 					if OBJ_RANGE_DONE = '0' then
 						NEW_RANGE_CNT := RANGE_CNT + 1;
 						OAM_RANGE(to_integer(NEW_RANGE_CNT(4 downto 0))) <= OAM_ADDR(8 downto 2);
@@ -1657,21 +1696,36 @@ begin
 					else
 						CUR_TILES_CNT := TILES_CNT;
 					end if;
-					
-					if OAM_OBJ_VFLIP = '0' then
-						Y := SCREEN_Y - OAM_OBJ_Y;
+
+					if OBJ_8PX = '1' then
+						TILE_CNT_MASK := "000";
+					elsif OBJ_16PX = '1' then
+						TILE_CNT_MASK := "001";
+					elsif OBJ_32PX = '1' then
+						TILE_CNT_MASK := "011";
 					else
-						Y := not (SCREEN_Y - OAM_OBJ_Y) and "00"&H;
+						TILE_CNT_MASK := "111";
 					end if;
+
+					Y := SCREEN_Y - OAM_OBJ_Y;
 					if OBJINTERLACE = '1' then
 						Y := (Y(6 downto 0) & FIELD);
 					end if;
-					OBJ_TILE_LINE <= Y(2 downto 0);
+
+					if OAM_OBJ_VFLIP = '1' then
+						OBJ_TILE_LINE <= not Y(2 downto 0);
+					else
+						OBJ_TILE_LINE <= Y(2 downto 0);
+					end if;
 
 					if OAM_OBJ_HFLIP = '0' then
 						OBJ_TILE_COL <= unsigned(OAM_OBJ_TILE(3 downto 0)) + CUR_TILES_CNT;
 					else
-						OBJ_TILE_COL <= unsigned(OAM_OBJ_TILE(3 downto 0)) + ((not CUR_TILES_CNT) and W(5 downto 3));
+						OBJ_TILE_COL <= unsigned(OAM_OBJ_TILE(3 downto 0)) + (CUR_TILES_CNT xor TILE_CNT_MASK);
+					end if;
+
+					if OAM_OBJ_VFLIP = '1' then
+						Y(5 downto 3) := Y(5 downto 3) xor TILE_CNT_MASK;
 					end if;
 					OBJ_TILE_ROW <= unsigned(OAM_OBJ_TILE(7 downto 4)) + Y(5 downto 3);
 					if OAM_OBJ_N = '0' then
@@ -1689,7 +1743,7 @@ begin
 					
 					TILES_OAM_CNT <= TILES_OAM_CNT + 1;
 					TILES_CNT <= CUR_TILES_CNT + 1;
-					if CUR_TILES_CNT = W(5 downto 3) or ((TILE_X + 8) >= 256 and OAM_OBJ_X /= 256) then
+					if ((CUR_TILES_CNT or not TILE_CNT_MASK) = 7) or ((TILE_X + 8) >= 256 and OAM_OBJ_X /= 256) then
 						NEW_RANGE_CNT := RANGE_CNT - 1;
 						TILES_CNT <= (others => '0');
 						RANGE_CNT <= NEW_RANGE_CNT;
