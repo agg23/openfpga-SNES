@@ -86,19 +86,7 @@ package PPU_PKG is
 	constant OBJ_FETCH_END		: unsigned(8 downto 0) := "101010011"; 	--(16+256+68)-1=339
 	
 	type RangeOam_t is array(0 to 31) of std_logic_vector(6 downto 0);
-	
-	type SprSize_t is array(0 to 15) of unsigned(7 downto 0);
-	constant SPR_WIDTH: SprSize_t := (
-	x"07", x"07", x"07", x"0F", x"0F", x"1F", x"0F", x"0F",
-	x"0F", x"1F", x"3F", x"1F", x"3F", x"3F", x"1F", x"1F"
-	);
-	constant SPR_HEIGHT: SprSize_t := (
-	x"07", x"07", x"07", x"0F", x"0F", x"1F", x"1F", x"1F",
-	x"0F", x"1F", x"3F", x"1F", x"3F", x"3F", x"3F", x"1F"
-	);
-	function SprWidth(size: std_logic_vector(3 downto 0)) return unsigned;
-	function SprHeight(size: std_logic_vector(3 downto 0)) return unsigned;
-		
+
 	function FlipPlane(bp: std_logic_vector(7 downto 0); flip: std_logic) return std_logic_vector;
 	function FlipBGPlaneHR(bp: std_logic_vector(15 downto 0); flip: std_logic; main: std_logic) return std_logic_vector;
 									  
@@ -140,21 +128,7 @@ package body PPU_PKG is
 		end if;
 		return res;
 	end function;
-	
-	function SprWidth(size: std_logic_vector(3 downto 0)) return unsigned is
-		variable temp: unsigned(7 downto 0); 
-	begin
-		temp := SPR_WIDTH(to_integer(unsigned(size)));
-		return temp(5 downto 0);
-	end function;
-	
-	function SprHeight(size: std_logic_vector(3 downto 0)) return unsigned is
-		variable temp: unsigned(7 downto 0); 
-	begin
-		temp := SPR_HEIGHT(to_integer(unsigned(size)));
-		return temp(5 downto 0);
-	end function;
-	
+
 	function AddSub(a: unsigned(4 downto 0); 
 						 b: unsigned(4 downto 0);
 						 add: std_logic;
