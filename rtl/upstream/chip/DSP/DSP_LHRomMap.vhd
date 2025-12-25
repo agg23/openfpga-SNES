@@ -123,7 +123,7 @@ begin
 
 	DSP_CLK <= 760000 when MAP_CTRL(3) = '0' else 1000000;
 
-	process( CA, MAP_CTRL, ROMSEL_N, RAMSEL_N, BSRAM_MASK, ROM_MASK )
+	process( CA, MAP_CTRL, CC_DR, ROMSEL_N, RAMSEL_N, BSRAM_MASK, ROM_MASK )
 	begin
 		DP_SEL <= '0';
 		DSP_SEL <= '0';
