@@ -149,6 +149,7 @@ signal FORCE_BLANK_SR	: std_logic_vector(2 downto 0);
 signal VMADD_TRANS 		: std_logic_vector(15 downto 0);
 signal VRAM1_WRITE 		: std_logic;
 signal VRAM2_WRITE 		: std_logic;
+signal VRAM_READ 			: std_logic;
 signal VRAM_ADDR_INC 	: std_logic;
 signal OAM_ADDR_REQ 		: std_logic;
 signal OAM_PRIO_REQ 		: std_logic;
@@ -164,6 +165,7 @@ signal LAST_LINE			: unsigned(8 downto 0);
 signal LAST_DOT			: unsigned(8 downto 0);
 signal IN_HBL 				: std_logic;
 signal IN_VBL 				: std_logic;
+signal NO_BLANK			: std_logic;
 
 -- BACKGROUND
 signal BG_VRAM_ADDRA 	: std_logic_vector(15 downto 0);
@@ -808,34 +810,34 @@ end process;
 
 DO <= D_OUT;
 
-				 
+NO_BLANK <= not (IN_VBL or FORCE_BLANK);
+			
+			
 VMADD_TRANS <= VMADD(15 downto  8) & VMADD(4 downto 0) & VMADD(7 downto 5) when VMAIN_ADDRTRANS = "01" else 
 					VMADD(15 downto  9) & VMADD(5 downto 0) & VMADD(8 downto 6) when VMAIN_ADDRTRANS = "10" else 
 					VMADD(15 downto 10) & VMADD(6 downto 0) & VMADD(9 downto 7) when VMAIN_ADDRTRANS = "11" else 
 					VMADD(15 downto  0);
 					
-VRAM1_WRITE <= '1' when PAWR_N = '0' and PA = x"18" and (BG_FORCE_BLANK = '1' or IN_VBL = '1') else '0';
-VRAM2_WRITE <= '1' when PAWR_N = '0' and PA = x"19" and (BG_FORCE_BLANK = '1' or IN_VBL = '1') else '0';			
+VRAM1_WRITE <= '1' when PAWR_N = '0' and PA = x"18" and NO_BLANK = '0' else '0';
+VRAM2_WRITE <= '1' when PAWR_N = '0' and PA = x"19" and NO_BLANK = '0' else '0';		
+VRAM_READ <= '1' when NO_BLANK = '1' else 
+             '1' when (PARD_N = '0' and PA = x"39" and VMAIN_ADDRINC = '0') or (PARD_N = '0' and PA = x"3A" and VMAIN_ADDRINC = '1') or VRAMPRERD_REQ = '1' else 
+				 '0';			
 
-		
-VRAM_ADDRA <= BG_VRAM_ADDRA when BG_FETCH = '1' and BG_FORCE_BLANK = '0' and IN_VBL = '0' else 
-				  OBJ_VRAM_ADDR when OBJ_FETCH = '1' and FORCE_BLANK = '0' else
-				  VMADD_TRANS;
-VRAM_ADDRB <= BG_VRAM_ADDRB when BG_FETCH = '1' and BG_FORCE_BLANK = '0' and IN_VBL = '0' else 
-				  OBJ_VRAM_ADDR when OBJ_FETCH = '1' and FORCE_BLANK= '0' else
-				  VMADD_TRANS;			 
+VRAM_ADDRA <= VMADD_TRANS when NO_BLANK = '0' else 
+              BG_VRAM_ADDRA when BG_FETCH = '1' else 
+				  OBJ_VRAM_ADDR when OBJ_FETCH = '1';
+VRAM_ADDRB <= VMADD_TRANS when NO_BLANK = '0' else 
+              BG_VRAM_ADDRB when BG_FETCH = '1' else 
+				  OBJ_VRAM_ADDR when OBJ_FETCH = '1';			 
 				 
 
 VRAM_DAO <= DI;
 VRAM_DBO <= DI;
 
-VRAM_RD_N <= '0' when ENABLE = '0' else 
-             '0' when BG_FORCE_BLANK = '0' and IN_VBL = '0' else
-			    '0' when PA /= x"18" and PA /= x"19" else
-			    '1';
+VRAM_RD_N <= '1' when ENABLE = '0' else not VRAM_READ;
 VRAM_WRA_N <= '1' when ENABLE = '0' else not VRAM1_WRITE;
 VRAM_WRB_N <= '1' when ENABLE = '0' else not VRAM2_WRITE;
-
 
 
 --HV counters
@@ -1281,8 +1283,6 @@ begin
 	
 	if M7SEL(7 downto 6) = "11" and M7_IS_OUTSIDE = '1' then 
 		M7_TILE := x"00";
-	elsif BG_FORCE_BLANK = '1' then
-		M7_TILE := x"FF";
 	else 
 		M7_TILE := unsigned(VRAM_DAI);
 	end if;
@@ -1388,11 +1388,7 @@ begin
 
 			if BG_FETCH = '1' then
 				if BG_MODE /= "111" then
-					if BG_FORCE_BLANK = '1' or IN_VBL = '1' then
-						BG_DATA(to_integer(H_CNT(2 downto 0))) <= x"FFFF";
-					else
-						BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
-					end if;
+					BG_DATA(to_integer(H_CNT(2 downto 0))) <= VRAM_DBI & VRAM_DAI;
 				end if;
 				
 				if H_CNT(2 downto 0) = 0 then
@@ -1850,8 +1846,6 @@ begin
 				
 				if M7SEL(7 downto 6) = "10" and M7_TILE_OUTSIDE = '1' then 
 					M7_PIX_DATA <= (others => '0');
-				elsif BG_FORCE_BLANK = '1' then
-					M7_PIX_DATA <= x"FF";
 				else
 					M7_PIX_DATA <= VRAM_DBI;
 				end if;
