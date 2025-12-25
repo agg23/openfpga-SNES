@@ -85,8 +85,6 @@ package PPU_PKG is
 	constant OBJ_FETCH_START	: unsigned(8 downto 0) := "100010000"; 	--(16+256)=272
 	constant OBJ_FETCH_END		: unsigned(8 downto 0) := "101010011"; 	--(16+256+68)-1=339
 	
-	type RangeOam_t is array(0 to 31) of std_logic_vector(6 downto 0);
-
 	function FlipPlane(bp: std_logic_vector(7 downto 0); flip: std_logic) return std_logic_vector;
 	function FlipBGPlaneHR(bp: std_logic_vector(15 downto 0); flip: std_logic; main: std_logic) return std_logic_vector;
 									  

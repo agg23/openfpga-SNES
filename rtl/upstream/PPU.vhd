@@ -78,7 +78,7 @@ signal OBJADDR 			: std_logic_vector(2 downto 0);
 signal OBJNAME 			: std_logic_vector(1 downto 0);
 signal OBJSIZE 			: std_logic_vector(2 downto 0);
 signal OAMADD 				: std_logic_vector(8 downto 0);
-signal OAM_PRIO 			: std_logic;
+signal OAMPRIO 			: std_logic;
 signal TM 					: std_logic_vector(7 downto 0);
 signal TS 					: std_logic_vector(7 downto 0);
 signal BGINTERLACE 		: std_logic;
@@ -152,7 +152,6 @@ signal VRAM2_WRITE 		: std_logic;
 signal VRAM_READ 			: std_logic;
 signal VRAM_ADDR_INC 	: std_logic;
 signal OAM_ADDR_REQ 		: std_logic;
-signal OAM_PRIO_REQ 		: std_logic;
 signal VRAMPRERD_REQ 	: std_logic;
 signal VRAMRD_CNT 		: unsigned(1 downto 0);
 
@@ -165,7 +164,9 @@ signal LAST_LINE			: unsigned(8 downto 0);
 signal LAST_DOT			: unsigned(8 downto 0);
 signal IN_HBL 				: std_logic;
 signal IN_VBL 				: std_logic;
+signal FIRST_VBLANK_LINE: std_logic;
 signal NO_BLANK			: std_logic;
+signal VBLANK_LINE		: std_logic;
 
 -- BACKGROUND
 signal BG_VRAM_ADDRA 	: std_logic_vector(15 downto 0);
@@ -212,8 +213,7 @@ signal M7_CALC_SR		: std_logic_vector(2 downto 0);
 signal OAM_D 				: std_logic_vector(15 downto 0);
 signal OAM_Q 				: std_logic_vector(31 downto 0);
 signal OAMIO_Q 			: std_logic_vector(15 downto 0);
-signal OAM_ADDR_A 		: std_logic_vector(7 downto 0);
-signal OAM_ADDR_B 		: std_logic_vector(6 downto 0);
+signal OAM_CE 				: std_logic;
 signal OAM_WE 				: std_logic;
 signal OAM_DATA			: std_logic_vector(15 downto 0);
 signal HOAM_Q 				: std_logic_vector(7 downto 0);
@@ -221,15 +221,19 @@ signal HOAM_ADDR 			: std_logic_vector(4 downto 0);
 signal HOAM_WE 			: std_logic;
 signal HOAM_X8 			: std_logic;
 signal HOAM_S 				: std_logic;
+signal RANGE_ADDR 		: std_logic_vector(4 downto 0);
+signal RANGE_DATA 		: std_logic_vector(6 downto 0);
+signal RANGE_WE 			: std_logic;
 
-signal OAM_ADDR 			: std_logic_vector(9 downto 0);
-signal OAM_RANGE 			: RangeOam_t;
+signal OAM_BYTE			: std_logic;
+signal OAM_ADDR 			: std_logic_vector(8 downto 0);
+signal OAM_A 				: std_logic_vector(7 downto 0);
 signal OAM_XY_LATCH		: std_logic_vector(15 downto 0);
-signal OAM_PRIO_INDEX 	: std_logic_vector(6 downto 0);
 signal OAM_TIME_INDEX 	: std_logic_vector(6 downto 0);
 signal RANGE_CNT 			: unsigned(5 downto 0);
 signal TILES_OAM_CNT 	: unsigned(5 downto 0);
 signal TILES_CNT 			: unsigned(2 downto 0);
+signal VBLANK_LINE_OLD	: std_logic;
 
 signal OBJ_RANGE 			: std_logic;
 signal OBJ_TIME 			: std_logic;
@@ -370,6 +374,7 @@ begin
 		OBJNAME <= (others => '0');
 		OBJSIZE <= (others => '0');
 		OAMADD <= (others => '0');
+		OAMPRIO <= '0';
 		TM <= (others => '0');
 		TS <= (others => '0');
 		BGINTERLACE <= '0';
@@ -433,43 +438,9 @@ begin
 		EXTLATCHr <= '1';
 		PARD_Nr <= '1';
 		
-		OAM_ADDR <= (others => '0');
-		OAM_PRIO <= '0';
-		OAM_latch <= (others => '0');
-		OAM_PRIO_INDEX <= (others => '0');
-		OAM_ADDR_REQ <= '0';
-		OAM_PRIO_REQ <= '0';
-		
 		CGRAM_Lsb <= (others => '0');
 	elsif rising_edge(CLK) then
 		if ENABLE = '1' then
-			if OAM_ADDR_REQ = '1' and DOT_CLKR_CE = '1' then
-				OAM_ADDR <= OAMADD & "0";
-				OAM_PRIO_INDEX <= OAMADD(7 downto 1);
-				OAM_ADDR_REQ <= '0';
-			end if;
-	
-			if OAM_PRIO_REQ = '1' and DOT_CLKR_CE = '1' then
-				OAM_PRIO_INDEX <= OAM_ADDR(8 downto 2);
-				OAM_PRIO_REQ <= '0';
-			end if;
-	
-			if H_CNT = LAST_DOT and (V_CNT < LAST_VIS_LINE or V_CNT = LAST_LINE) and FORCE_BLANK = '0' and DOT_CLKR_CE = '1' then
-				if OAM_PRIO = '0' then
-					OAM_ADDR <= (others => '0');
-				else
-					OAM_ADDR <= "0" & OAM_PRIO_INDEX & "00";
-				end if;
-			end if;
-	
-			if OBJ_RANGE = '1' and FORCE_BLANK = '0' and H_CNT(0) = '1' and DOT_CLKR_CE = '1' then
-				OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 4);
-			end if;
-	
-			if OBJ_TIME = '1' and H_CNT(0) = '0' and FORCE_BLANK = '0' and DOT_CLKF_CE = '1' then
-				OAM_ADDR <= "0" & OAM_TIME_INDEX & "00";
-			end if;
-
 			if DOT_CLKR_CE = '1' then
 				FORCE_BLANK_SR <= FORCE_BLANK_SR(1 downto 0) & FORCE_BLANK;
 				MATH_RESET(1) <= MATH_RESET(0);
@@ -495,26 +466,17 @@ begin
 					when x"00" =>						--INIDISP
 						FORCE_BLANK <= DI(7);
 						MB <= DI(3 downto 0);
-						if FORCE_BLANK = '1' and V_CNT = LAST_VIS_LINE + 1 then
-							OAM_ADDR_REQ <= '1';
-						end if;
 					when x"01" =>						--OBSEL
 						OBJADDR <= DI(2 downto 0);
 						OBJNAME <= DI(4 downto 3);
 						OBJSIZE <= DI(7 downto 5);
 					when x"02" =>						--OAMADDL
 						OAMADD(7 downto 0) <= DI;
-						OAM_ADDR_REQ <= '1';
 					when x"03" =>						--OAMADDH
 						OAMADD(8) <= DI(0);
-						OAM_PRIO <= DI(7);
-						OAM_ADDR_REQ <= '1';
+						OAMPRIO <= DI(7);
 					when x"04" =>						--OAMDI
-						if OAM_ADDR(0) = '0' then
-							OAM_latch <= DI;
-						end if;
-						OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
-						OAM_PRIO_REQ <= '1';
+						
 					when x"05" =>						--BGMODE
 						BG_MODE <= DI(2 downto 0);
 						BG3PRIO <= DI(3);
@@ -680,8 +642,7 @@ begin
 			elsif PARD_N = '0' and SYSCLK_CE = '1' then
 				case PA is
 					when x"38" =>			--RDOAM
-						OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
-						OAM_PRIO_REQ <= '1';
+						
 					when x"3B" =>			--RDCGRAM
 						CGADD <= std_logic_vector(unsigned(CGADD) + 1);
 					when x"39" =>						--RDVRAML
@@ -714,11 +675,6 @@ begin
 						end if;
 					when others => null;
 				end case;
-			end if;
-			
-			if H_CNT = LAST_DOT and V_CNT = LAST_VIS_LINE and FORCE_BLANK = '0' and DOT_CLKR_CE = '1' then
-				OAM_ADDR <= OAMADD & "0";
-				OAM_PRIO_INDEX <= OAMADD(7 downto 1);
 			end if;
 			
 			EXTLATCHr <= EXTLATCH;
@@ -767,8 +723,8 @@ begin
 			when x"36" =>						--MPYH
 				D_OUT <= std_logic_vector(MPY(26 downto 19));
 			when x"38" =>						--RDOAM
-				if OAM_ADDR(9) = '0' then
-					if OAM_ADDR(0) = '0' then
+				if OAM_ADDR(8) = '0' then
+					if OAM_BYTE = '0' then
 						D_OUT <= OAMIO_Q(7 downto 0);
 					else
 						D_OUT <= OAMIO_Q(15 downto 8);
@@ -811,8 +767,8 @@ end process;
 DO <= D_OUT;
 
 NO_BLANK <= not (IN_VBL or FORCE_BLANK);
-			
-			
+
+				 
 VMADD_TRANS <= VMADD(15 downto  8) & VMADD(4 downto 0) & VMADD(7 downto 5) when VMAIN_ADDRTRANS = "01" else 
 					VMADD(15 downto  9) & VMADD(5 downto 0) & VMADD(8 downto 6) when VMAIN_ADDRTRANS = "10" else 
 					VMADD(15 downto 10) & VMADD(6 downto 0) & VMADD(9 downto 7) when VMAIN_ADDRTRANS = "11" else 
@@ -876,6 +832,7 @@ begin
 		FIELD <= '0';
 		IN_HBL <= '0';
 		IN_VBL <= '0';
+		FIRST_VBLANK_LINE <= '0';
 	elsif rising_edge(CLK) then
 		if ENABLE = '1' and DOT_CLKR_CE = '1' then
 			if PAL = '0' then
@@ -917,6 +874,12 @@ begin
 				IN_VBL <= '0';
 			end if;
 			
+			if V_CNT = LAST_VIS_LINE and H_CNT = LAST_DOT then
+				FIRST_VBLANK_LINE <= '1';
+			elsif V_CNT = LAST_VIS_LINE+1 and H_CNT = LAST_DOT then
+				FIRST_VBLANK_LINE <= '0';
+			end if;
+			
 			if H_CNT = 20-1  then HDE <= '1'; end if;
 			if H_CNT = 276-1 then HDE <= '0'; end if;
 
@@ -935,10 +898,7 @@ begin
 	end if;
 end process;
 
-DOTCLK <= DOT_CLK;
-HBLANK <= IN_HBL;
-VBLANK <= IN_VBL;
-
+VBLANK_LINE <= FIRST_VBLANK_LINE and not FORCE_BLANK;
 
 process( H_CNT, V_CNT, LAST_VIS_LINE )
 begin
@@ -1508,22 +1468,86 @@ end process;
 
 
 --Sprites engine
+process( RST_N, CLK )
+begin
+	if RST_N = '0' then
+		OAM_ADDR <= (others => '0');
+		OAM_BYTE <= '0';
+		OAM_latch <= (others => '0');
+		OAM_ADDR_REQ <= '0';
+	elsif rising_edge(CLK) then
+		if ENABLE = '1' then
+			if OAM_ADDR_REQ = '1' and DOT_CLKR_CE = '1' then
+				OAM_ADDR <= OAMADD;
+				OAM_BYTE <= '0';
+				OAM_ADDR_REQ <= '0';
+			end if;
+	
+			if OBJ_RANGE = '1' and H_CNT(0) = '1' and DOT_CLKR_CE = '1' and NO_BLANK = '1' then
+				OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 2);
+			end if;
+	
+			if H_CNT = LAST_DOT and (V_CNT < LAST_VIS_LINE or V_CNT = LAST_LINE) and DOT_CLKR_CE = '1' and NO_BLANK = '1' then
+				if OAMPRIO = '0' then
+					OAM_ADDR(8 downto 1) <= (others => '0');
+				end if;
+			end if;
+			
+			if PAWR_N = '0' and SYSCLK_CE = '1' then
+				case PA is
+					when x"02" | x"03" =>			--OAMADD
+						OAM_ADDR_REQ <= '1';
+					when x"04" =>						--OAMDI
+						OAM_BYTE <= not OAM_BYTE;
+						if OAM_BYTE = '0' then
+							OAM_latch <= DI;
+						end if;
+						if OAM_BYTE = '1' then
+							OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
+						end if;
+					when others => null;
+				end case;
+	
+			elsif PARD_N = '0' and SYSCLK_CE = '1' then
+				case PA is
+					when x"38" =>			--RDOAM
+						OAM_BYTE <= not OAM_BYTE;
+						if OAM_BYTE = '1' then
+							OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
+						end if;
+					when others => null;
+				end case;
+			end if;
+			
+			if DOT_CLKR_CE = '1' then
+				VBLANK_LINE_OLD <= VBLANK_LINE;
+			end if;
+			if VBLANK_LINE = '1' and VBLANK_LINE_OLD = '0' and OAM_ADDR_REQ = '0' then
+				OAM_ADDR_REQ <= '1';
+			end if;
+		end if;
+	end if;
+end process;
+
+OAM_A(7 downto 1) <= OAM_TIME_INDEX when H_CNT(8) = '1' and NO_BLANK = '1' else OAM_ADDR(7 downto 1);
+OAM_A(0) <= H_CNT(8) and H_CNT(0) when NO_BLANK = '1' else OAM_ADDR(0);
+
 OAM : entity work.dpram_dif generic map(8,16,7,32)
 port map(
 	clock			=> CLK,
 	data_a		=> OAM_D,
-	address_a	=> OAM_ADDR_A,
-	address_b	=> OAM_ADDR_B,
+	address_a	=> OAM_A(7 downto 0),
 	wren_a		=> OAM_WE,
 	q_a			=> OAMIO_Q,
+	
+	address_b	=> OAM_A(7 downto 1),
 	q_b			=> OAM_Q
 );
 OAM_D <= DI & OAM_latch;
-OAM_ADDR_A <= OAM_ADDR(8 downto 1);
-OAM_ADDR_B <= OAM_ADDR(8 downto 2);
-OAM_WE <= ENABLE when (OAM_ADDR(9) = '0' or (IN_VBL = '0' and FORCE_BLANK = '0')) and OAM_ADDR(0) = '1' and PAWR_N = '0' and PA = x"04" and SYSCLK_CE = '1' else '0';
+OAM_CE <= '1' when (OAM_ADDR(8) = '0' and NO_BLANK = '0') or NO_BLANK = '1' else '0';
+OAM_WE <= ENABLE when OAM_CE = '1' and OAM_BYTE = '1' and PAWR_N = '0' and PA = x"04" and SYSCLK_CE = '1' else '0';
 
-OAM_DATA <= OAM_D when OAM_WE = '1' else OAM_Q(31 downto 16) when OAM_ADDR(1) = '1' else OAM_Q(15 downto 0);--original bidirectional 16bit data port
+OAM_DATA <= OAM_D when OAM_WE = '1' else OAM_Q(31 downto 16) when OAM_A(0) = '1' else OAM_Q(15 downto 0);
 
 HOAM : entity work.spram generic map(5,8)
 port map(
@@ -1533,12 +1557,24 @@ port map(
 	wren		=> HOAM_WE,
 	q			=> HOAM_Q
 );
-HOAM_ADDR <= OAM_ADDR(8 downto 4) when IN_VBL = '0' and FORCE_BLANK = '0' else
-				 OAM_ADDR(4 downto 0);
-HOAM_WE <= ENABLE when (OAM_ADDR(9) = '1' or (IN_VBL = '0' and FORCE_BLANK = '0')) and PAWR_N = '0' and PA = x"04" and SYSCLK_CE = '1' else '0';
+HOAM_ADDR <= OAM_A(7 downto 3) when NO_BLANK = '1' else OAM_A(3 downto 0)&OAM_BYTE;
+HOAM_WE <= ENABLE when (OAM_ADDR(8) = '1' or NO_BLANK = '1') and PAWR_N = '0' and PA = x"04" and SYSCLK_CE = '1' else '0';
 
-HOAM_X8 <= HOAM_Q(to_integer(unsigned(OAM_ADDR(3 downto 2))&"0"));
-HOAM_S  <= HOAM_Q(to_integer(unsigned(OAM_ADDR(3 downto 2))&"1"));
+RANGE_TBL: entity work.mlab generic map(5,7)
+port map(
+	clock			=> CLK,
+	wraddress	=> RANGE_ADDR,
+	data			=> RANGE_DATA,
+	wren			=> RANGE_WE,
+	
+	rdaddress	=> RANGE_ADDR,
+	q				=> OAM_TIME_INDEX
+);
+RANGE_ADDR <= std_logic_vector(RANGE_CNT(4 downto 0)) when RANGE_CNT(5) = '0' else "00000";
+
+
+HOAM_X8 <= HOAM_Q(to_integer(unsigned(OAM_A(2 downto 1))&"0"));
+HOAM_S  <= HOAM_Q(to_integer(unsigned(OAM_A(2 downto 1))&"1"));
 
 process( HOAM_S, OBJSIZE )
 	variable SIZE0: std_logic;
@@ -1572,14 +1608,13 @@ process( RST_N, CLK )
 variable SCREEN_Y 		: unsigned(7 downto 0);
 variable X 					: unsigned(8 downto 0);
 variable Y 					: unsigned(7 downto 0);
-variable WH, H2 		: unsigned(5 downto 0);
+variable WH, H2 			: unsigned(5 downto 0);
 variable NEW_RANGE_CNT 	: unsigned(5 downto 0);
 variable TILE_X 			: unsigned(8 downto 0);
 variable CUR_TILES_CNT 	: unsigned(2 downto 0);
 variable TILE_CNT_MASK 	: unsigned(2 downto 0);
 variable OAM_OBJ_X			: unsigned(8 downto 0);
 variable OAM_OBJ_Y			: unsigned(7 downto 0);
-variable OAM_OBJ_S 			: std_logic;
 variable OAM_OBJ_TILE	: unsigned(7 downto 0);
 variable OAM_OBJ_N		: std_logic;
 variable OAM_OBJ_PAL		: std_logic_vector(2 downto 0);
@@ -1590,7 +1625,6 @@ variable TEMP 				: unsigned(5 downto 0);
 begin
 	if RST_N = '0' then
 		RANGE_CNT <= (others => '1');
-		OAM_RANGE <= (others => (others => '0'));
 		TILES_OAM_CNT <= (others => '0');
 		TILES_CNT <= (others => '0');
 		OBJ_RANGE_OFL <= '0';
@@ -1598,7 +1632,6 @@ begin
 		OBJ_RANGE_DONE <= '0';
 		OBJ_TIME_DONE <= '0';
 		OBJ_TIME_SAVE <= '0';
-		OAM_TIME_INDEX <= (others => '0');
 		OBJ_TILE_LINE <= (others => '0');
 		OBJ_TILE_COL <= (others => '0');
 		OBJ_TILE_ROW <= (others => '0');
@@ -1612,7 +1645,17 @@ begin
 		SPR_TILE_PAL <= (others => '0');
 		SPR_TILE_PRIO <= (others => '0');
 		SPR_TILE_DATA_TEMP <= (others => '0');
+		
+		RANGE_WE <= '0';
 	elsif rising_edge(CLK) then 
+		RANGE_WE <= '0';
+		
+		if ENABLE = '1' and  DOT_CLKF_CE = '1' then
+			if ((NO_BLANK = '1' or OAM_ADDR(8) = '0') and H_CNT(0) = '0') then
+				OAM_XY_LATCH <= OAM_DATA;
+			end if;
+		end if;
+		
 		if ENABLE = '1' and  DOT_CLKR_CE = '1' then
 			if H_CNT = LAST_DOT and V_CNT < LAST_VIS_LINE then
 				RANGE_CNT <= (others => '1');
@@ -1627,13 +1670,8 @@ begin
 				OBJ_TIME_OFL <= '0';
 			end if;
 			
-			if (((FORCE_BLANK = '0' and IN_VBL = '0') or OAM_ADDR(9) = '0') and H_CNT(0) = '0') then
-				OAM_XY_LATCH <= OAM_DATA;
-			end if;
-			
 			OAM_OBJ_X := HOAM_X8 & unsigned(OAM_XY_LATCH(7 downto 0));
 			OAM_OBJ_Y := unsigned(OAM_XY_LATCH(15 downto 8));
-			OAM_OBJ_S := HOAM_S;	
 			OAM_OBJ_TILE := unsigned(OAM_Q(23 downto 16));
 			OAM_OBJ_N := OAM_Q(24);
 			OAM_OBJ_PAL := OAM_Q(27 downto 25);
@@ -1660,7 +1698,8 @@ begin
 				if (OAM_OBJ_X <= 256 or (0 - OAM_OBJ_X) <= WH) and (SCREEN_Y - OAM_OBJ_Y) <= H2 then
 					if OBJ_RANGE_DONE = '0' then
 						NEW_RANGE_CNT := RANGE_CNT + 1;
-						OAM_RANGE(to_integer(NEW_RANGE_CNT(4 downto 0))) <= OAM_ADDR(8 downto 2);
+						RANGE_DATA <= OAM_A(7 downto 1);
+						RANGE_WE <= '1';
 						RANGE_CNT <= NEW_RANGE_CNT;
 						if NEW_RANGE_CNT = 31 then
 							OBJ_RANGE_DONE <= '1';
@@ -1668,13 +1707,6 @@ begin
 					elsif OBJ_RANGE_OFL = '0' then
 						OBJ_RANGE_OFL <= '1';
 					end if;
-				end if;
-			end if;
-			
-			
-			if H_CNT = OBJ_TIME_START-1 and V_CNT < LAST_VIS_LINE then
-				if RANGE_CNT(5) /= '1' then
-					OAM_TIME_INDEX <= OAM_RANGE(to_integer(RANGE_CNT(4 downto 0)));
 				end if;
 			end if;
 			
@@ -1743,9 +1775,6 @@ begin
 						NEW_RANGE_CNT := RANGE_CNT - 1;
 						TILES_CNT <= (others => '0');
 						RANGE_CNT <= NEW_RANGE_CNT;
-						if NEW_RANGE_CNT(5) /= '1' then
-							OAM_TIME_INDEX <= OAM_RANGE(to_integer(NEW_RANGE_CNT(4 downto 0)));
-						end if;
 					end if;
 					
 					OBJ_TIME_DONE <= '0';
@@ -2475,6 +2504,9 @@ end process;
 COLOR_OUT <= (others => '0') when BG_FORCE_BLANK = '1' else
              BRIGHT_SUB_B  & BRIGHT_SUB_G  & BRIGHT_SUB_R when DOT_CLK = '1' else
 				 BRIGHT_MAIN_B & BRIGHT_MAIN_G & BRIGHT_MAIN_R;
+DOTCLK <= DOT_CLK;
+HBLANK <= IN_HBL;
+VBLANK <= IN_VBL;
 
 HIGH_RES <= HIRES or (PSEUDOHIRES and not BLEND);
 V224 <= not OVERSCAN;
@@ -2490,7 +2522,7 @@ begin
 			when x"00" => SS_DO <= FORCE_BLANK & "000" & MB;
 			when x"01" => SS_DO <= OBJSIZE & OBJNAME & OBJADDR;
 			when x"02" => SS_DO <= OAMADD(7 downto 0);
-			when x"03" => SS_DO <= OAM_PRIO & "000000" & OAMADD(8);
+			when x"03" => SS_DO <= OAMPRIO & "000000" & OAMADD(8);
 			when x"05" => SS_DO <= BG_SIZE & BG3PRIO & BG_MODE;
 			when x"06" => SS_DO <= MOSAIC_SIZE & BG_MOSAIC_EN;
 			when x"07" => SS_DO <= BG_SC_ADDR(BG1) & BG_SC_SIZE(BG1);
