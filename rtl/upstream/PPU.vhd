@@ -151,7 +151,6 @@ signal VRAM1_WRITE 		: std_logic;
 signal VRAM2_WRITE 		: std_logic;
 signal VRAM_READ 			: std_logic;
 signal VRAM_ADDR_INC 	: std_logic;
-signal OAM_ADDR_REQ 		: std_logic;
 signal VRAMPRERD_REQ 	: std_logic;
 signal VRAMRD_CNT 		: unsigned(1 downto 0);
 
@@ -227,6 +226,8 @@ signal RANGE_WE 			: std_logic;
 
 signal OAM_BYTE			: std_logic;
 signal OAM_ADDR 			: std_logic_vector(8 downto 0);
+signal OAM_RANGE_NO_BLANK: std_logic;
+signal OAM_ADDR_UPD 		: std_logic;
 signal OAM_A 				: std_logic_vector(7 downto 0);
 signal OAM_XY_LATCH		: std_logic_vector(15 downto 0);
 signal OAM_TIME_INDEX 	: std_logic_vector(6 downto 0);
@@ -1469,22 +1470,33 @@ end process;
 
 --Sprites engine
 process( RST_N, CLK )
+	variable OAM_ADDR_INC: std_logic;
 begin
 	if RST_N = '0' then
 		OAM_ADDR <= (others => '0');
 		OAM_BYTE <= '0';
 		OAM_latch <= (others => '0');
-		OAM_ADDR_REQ <= '0';
+		OAM_ADDR_UPD <= '0';
 	elsif rising_edge(CLK) then
+		OAM_ADDR_INC := '0';
+		
 		if ENABLE = '1' then
-			if OAM_ADDR_REQ = '1' and DOT_CLKR_CE = '1' then
-				OAM_ADDR <= OAMADD;
+			if DOT_CLKF_CE = '1' then
+				OAM_RANGE_NO_BLANK <= OBJ_RANGE and NO_BLANK;
+			end if;
+			
+			if OAM_ADDR_UPD = '1' and DOT_CLKR_CE = '1' then
+				if OAM_RANGE_NO_BLANK = '0' then
+					OAM_ADDR <= OAMADD;
+				end if;
 				OAM_BYTE <= '0';
-				OAM_ADDR_REQ <= '0';
+				OAM_ADDR_UPD <= '0';
 			end if;
 	
-			if OBJ_RANGE = '1' and H_CNT(0) = '1' and DOT_CLKR_CE = '1' and NO_BLANK = '1' then
-				OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 2);
+			if H_CNT(0) = '1' and DOT_CLKR_CE = '1' then
+				if OAM_RANGE_NO_BLANK = '1' then
+					OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 2);
+				end if;
 			end if;
 	
 			if H_CNT = LAST_DOT and (V_CNT < LAST_VIS_LINE or V_CNT = LAST_LINE) and DOT_CLKR_CE = '1' and NO_BLANK = '1' then
@@ -1496,34 +1508,35 @@ begin
 			if PAWR_N = '0' and SYSCLK_CE = '1' then
 				case PA is
 					when x"02" | x"03" =>			--OAMADD
-						OAM_ADDR_REQ <= '1';
+						OAM_ADDR_UPD <= '1';
 					when x"04" =>						--OAMDI
-						OAM_BYTE <= not OAM_BYTE;
 						if OAM_BYTE = '0' then
 							OAM_latch <= DI;
 						end if;
-						if OAM_BYTE = '1' then
-							OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
-						end if;
+						OAM_ADDR_INC := '1';
 					when others => null;
 				end case;
 	
 			elsif PARD_N = '0' and SYSCLK_CE = '1' then
 				case PA is
 					when x"38" =>			--RDOAM
-						OAM_BYTE <= not OAM_BYTE;
-						if OAM_BYTE = '1' then
-							OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
-						end if;
+						OAM_ADDR_INC := '1';
 					when others => null;
 				end case;
+			end if;
+			
+			if OAM_ADDR_INC = '1' then
+				OAM_BYTE <= not OAM_BYTE;
+				if OAM_BYTE = '1' and OAM_RANGE_NO_BLANK = '0' then
+					OAM_ADDR <= std_logic_vector(unsigned(OAM_ADDR) + 1);
+				end if;
 			end if;
 			
 			if DOT_CLKR_CE = '1' then
 				VBLANK_LINE_OLD <= VBLANK_LINE;
 			end if;
-			if VBLANK_LINE = '1' and VBLANK_LINE_OLD = '0' and OAM_ADDR_REQ = '0' then
-				OAM_ADDR_REQ <= '1';
+			if VBLANK_LINE = '1' and VBLANK_LINE_OLD = '0' and OAM_ADDR_UPD = '0' then
+				OAM_ADDR_UPD <= '1';
 			end if;
 		end if;
 	end if;
@@ -1680,7 +1693,7 @@ begin
 			OAM_OBJ_VFLIP := OAM_Q(31);
 					
 			SCREEN_Y := V_CNT(7 downto 0);
-
+			
 			WH(2 downto 0) := "111";
 			WH(3) := OBJ_16PX or OBJ_32PX or OBJ_64PX;
 			WH(4) := OBJ_32PX or OBJ_64PX;
@@ -1692,7 +1705,7 @@ begin
 				H2 := (WH srl 1);
 			else
 				H2 := WH;
-			end if;		
+			end if;	
 			
 			if OBJ_RANGE = '1' and H_CNT(0) = '1' then
 				if (OAM_OBJ_X <= 256 or (0 - OAM_OBJ_X) <= WH) and (SCREEN_Y - OAM_OBJ_Y) <= H2 then
@@ -1724,7 +1737,7 @@ begin
 					else
 						CUR_TILES_CNT := TILES_CNT;
 					end if;
-
+					
 					if OBJ_8PX = '1' then
 						TILE_CNT_MASK := "000";
 					elsif OBJ_16PX = '1' then
