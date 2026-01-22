@@ -11,6 +11,7 @@ module msu_audio
 	input      [7:0]  ctl_volume,
 	input             ctl_repeat,
 	input             ctl_play,
+	input             ctl_resume,
 	output reg        ctl_stop,
 
 	input      [31:0] track_size,
@@ -20,10 +21,11 @@ module msu_audio
 	input             audio_data_wr,
 	input      [15:0] audio_data,
 
+	input             audio_ack,
 	output reg        audio_req,
 	output reg        audio_seek,
 	output reg [21:0] audio_sector,
-	input             audio_ack,
+	input      [21:0] resume_sector,
  
 	output     [15:0] audio_l,	 
 	output     [15:0] audio_r
@@ -39,7 +41,7 @@ always @(posedge clk) begin
 	reg [31:0] loop_index = 0;
 	reg  [7:0] state = WAITING_FOR_PLAY_STATE;
 	reg        partial_sector_state = 0;
-	reg        looping;
+	reg        looping, resuming;
 
 	ctl_stop <= 0;
 
@@ -49,21 +51,23 @@ always @(posedge clk) begin
 		audio_seek <= 0;
 		fifo_wren <= 0;
 		audio_req <= 0;
+		resuming <= 0;
 	end
 	else begin
 
 		// Loop sector handling - also need to take into account the 8 bytes for file header (msu1 and loop index = 8 bytes)
 		if (audio_sector == 0 && data_cnt == 1 && data_wr && audio_ack) loop_index <= data + 2;
+		if (ctl_resume) resuming <= 1;
 
 		case (state)
 			WAITING_FOR_PLAY_STATE:
 				begin
-					audio_sector <= 0;
 					audio_seek <= 0;
 					partial_sector_state <= 0;
 					fifo_wren <= 0;
 					looping <= 0;
 					audio_req <= 0;
+					audio_sector <= resuming ? resume_sector : 0;
 					if (~track_processing & ctl_play) begin
 						audio_seek <= 1;
 						state <= WAITING_ACK_STATE;
@@ -74,6 +78,7 @@ always @(posedge clk) begin
 				if (audio_ack) begin
 					audio_req <= 0;
 					audio_seek <= 0;
+					resuming <= 0;
 					state <= PLAYING_STATE;
 				end
 

@@ -25,6 +25,9 @@ module MSU
 	output reg        status_audio_repeat,
 	output reg        status_audio_playing,
 	input             audio_stop,
+	output reg        audio_resume,
+	input      [21:0] audio_sector,
+	output reg [21:0] resume_sector,
 
 	// Data track read
 	output reg [31:0] data_addr,
@@ -38,7 +41,7 @@ module MSU
 // Read 'registers'
 // MSU_STATUS - $2000
 // Status bits
-localparam [2:0] status_revision = 3'b001;
+localparam [2:0] status_revision = 3'b010;
 wire [7:0] MSU_STATUS = {
 	status_data_busy,
 	status_audio_busy,
@@ -55,7 +58,9 @@ reg [15:0] MSU_TRACK;  // $2004 - $2005
 // banks 00-3F and 80-BF, address 2000-2007
 assign MSU_SEL = ENABLE && !ADDR[22] && (ADDR[15:4] == 'h200) && !ADDR[3];
 
-wire status_audio_busy = track_request;
+wire       status_audio_busy = track_request;
+reg [15:0] resume_track_num;
+reg        resume_valid;
 
 reg data_ack_1 = 1'b0;
 reg status_data_busy = 1'b0;
@@ -73,15 +78,18 @@ always @(posedge CLK) begin
 		track_request <= 0;
 		volume <= 0;
 		status_audio_playing <= 0;
+		audio_resume <= 0;
 		status_audio_repeat <= 0;
 		status_data_busy <= 0;
 		track_mounting_old <= 0;
+		resume_valid <= 0;
 		data_req <= 0;
 		data_seek <= 0;
 	end
 	else begin
 		// Reset our request trigger for pulsing
 		data_req <= 0;
+		audio_resume <= 0;
 
 		// Falling edge of data busy
 		data_ack_1 <= data_ack;
@@ -114,6 +122,10 @@ always @(posedge CLK) begin
 						MSU_TRACK[15:8] <= DIN; // MSU_Track MSB
 						track_num <= {DIN, MSU_TRACK[7:0]};
 						track_request <= 1;
+						if (resume_valid && resume_track_num == {DIN, MSU_TRACK[7:0]}) begin
+							audio_resume <= 1;
+							resume_valid <= 0;
+						end
 					end
 
 				6: volume <= DIN; // MSU Audio Volume
@@ -122,6 +134,11 @@ always @(posedge CLK) begin
 				7: begin
 						status_audio_repeat <= DIN[1];
 						status_audio_playing <= DIN[0];
+						if (DIN[2] && !DIN[0]) begin
+							resume_track_num <= track_num;
+							resume_sector <= audio_sector;
+							resume_valid <= 1;
+						end
 					end
 			endcase
 		end
