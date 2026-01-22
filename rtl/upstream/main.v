@@ -120,7 +120,10 @@ module main #(
 	output      [7:0] MSU_VOLUME,
 	input             MSU_AUDIO_STOP,
 	output            MSU_AUDIO_REPEAT,
+	output            MSU_AUDIO_RESUME,
 	output            MSU_AUDIO_PLAYING,
+	input      [21:0] MSU_AUDIO_SECTOR,
+	output     [21:0] MSU_RESUME_SECTOR,
 	output     [31:0] MSU_DATA_ADDR,
 	input       [7:0] MSU_DATA,
 	input             MSU_DATA_ACK,
@@ -311,8 +314,11 @@ MSU MSU
 
 	.status_track_missing(MSU_TRACK_MISSING),
 	.status_audio_repeat(MSU_AUDIO_REPEAT),
+	.audio_resume(MSU_AUDIO_RESUME),
 	.status_audio_playing(MSU_AUDIO_PLAYING),
 	.audio_stop(MSU_AUDIO_STOP),
+	.audio_sector(MSU_AUDIO_SECTOR),
+	.resume_sector(MSU_RESUME_SECTOR),
 
 	.volume(MSU_VOLUME)
 );
