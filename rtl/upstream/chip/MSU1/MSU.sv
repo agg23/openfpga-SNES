@@ -51,9 +51,9 @@ wire [7:0] MSU_STATUS = {
 	status_revision
 };
 
-// Write registers
-reg [31:0] MSU_SEEK;   // $2000 - $2003
-reg [15:0] MSU_TRACK;  // $2004 - $2005
+// Write register buffers excl MSB
+reg [23:0] MSU_SEEK;   // $2000 - $2003
+reg [ 7:0] MSU_TRACK;  // $2004 - $2005
 
 // banks 00-3F and 80-BF, address 2000-2007
 assign MSU_SEL = ENABLE && !ADDR[22] && (ADDR[15:4] == 'h200) && !ADDR[3];
@@ -62,18 +62,16 @@ wire       status_audio_busy = track_request;
 reg [15:0] resume_track_num;
 reg        resume_valid;
 
-reg data_ack_1 = 1'b0;
-reg status_data_busy = 1'b0;
-reg track_mounting_old = 0;
+reg status_data_busy;
+reg data_ack_old;
+reg track_mounting_old;
 
 reg  data_rd_old;
 wire data_rd = MSU_SEL && !RD_N && ADDR[2:0] == 1 && !status_data_busy;
 
 always @(posedge CLK) begin
 	if (~RST_N) begin
-		MSU_SEEK <= 0;
 		data_addr <= 0;
-		MSU_TRACK <= 0;
 		track_num <= 0;
 		track_request <= 0;
 		volume <= 0;
@@ -82,18 +80,22 @@ always @(posedge CLK) begin
 		status_audio_repeat <= 0;
 		status_data_busy <= 0;
 		track_mounting_old <= 0;
+		data_ack_old <= 0;
+		data_rd_old <= 0;
 		resume_valid <= 0;
 		data_req <= 0;
 		data_seek <= 0;
 	end
 	else begin
-		// Reset our request trigger for pulsing
+
+		// Set/reset pulsed signals
 		data_req <= 0;
 		audio_resume <= 0;
+		if (audio_stop) status_audio_playing <= 0;
 
-		// Falling edge of data busy
-		data_ack_1 <= data_ack;
-		if (!data_ack_1 && data_ack) begin
+		// Rising edge of data busy
+		data_ack_old <= data_ack;
+		if (!data_ack_old && data_ack) begin
 			status_data_busy <= 0;
 			data_seek <= 0;
 		end
@@ -102,44 +104,36 @@ always @(posedge CLK) begin
 		track_mounting_old <= track_mounting;
 		if (track_mounting_old && !track_mounting) track_request <= 0;
 
-		if (audio_stop) status_audio_playing <= 0;
-
 		// Register writes
 		if (MSU_SEL & SYSCLKF_CE & ~WR_N) begin
 			case (ADDR[2:0])
-				0: MSU_SEEK[7:0]   <= DIN; // Data seek address. MSU_SEEK, LSB byte
-				1: MSU_SEEK[15:8]  <= DIN; // Data seek address. MSU_SEEK.
-				2: MSU_SEEK[23:16] <= DIN; // Data seek address. MSU_SEEK.
+				0: MSU_SEEK[7:0]   <= DIN;
+				1: MSU_SEEK[15:8]  <= DIN;
+				2: MSU_SEEK[23:16] <= DIN;
 				3: begin 
-						MSU_SEEK[31:24] <= DIN; // Data seek address. MSU_SEEK, MSB byte
-						data_addr <= {DIN, MSU_SEEK[23:0]};
-						data_seek <= 1;
-						status_data_busy <= 1;
-					end
-
-				4: MSU_TRACK[7:0] <= DIN; // MSU_Track LSB
+					data_addr <= {DIN, MSU_SEEK};
+					data_seek <= 1;
+					status_data_busy <= 1;
+				end
+				4: MSU_TRACK <= DIN;
 				5: begin
-						MSU_TRACK[15:8] <= DIN; // MSU_Track MSB
-						track_num <= {DIN, MSU_TRACK[7:0]};
-						track_request <= 1;
-						if (resume_valid && resume_track_num == {DIN, MSU_TRACK[7:0]}) begin
-							audio_resume <= 1;
-							resume_valid <= 0;
-						end
+					track_num <= {DIN, MSU_TRACK};
+					track_request <= 1;
+					if (resume_valid && resume_track_num == {DIN, MSU_TRACK}) begin
+						audio_resume <= 1;
+						resume_valid <= 0;
 					end
-
-				6: volume <= DIN; // MSU Audio Volume
-
-				// MSU Audio state control
+				end
+				6: volume <= DIN;
 				7: begin
-						status_audio_repeat <= DIN[1];
-						status_audio_playing <= DIN[0];
-						if (DIN[2] && !DIN[0]) begin
-							resume_track_num <= track_num;
-							resume_sector <= audio_sector;
-							resume_valid <= 1;
-						end
+					status_audio_repeat <= DIN[1];
+					status_audio_playing <= DIN[0];
+					if (DIN[2] && !DIN[0]) begin
+						resume_track_num <= track_num;
+						resume_sector <= audio_sector;
+						resume_valid <= 1;
 					end
+				end
 			endcase
 		end
 
@@ -149,7 +143,7 @@ always @(posedge CLK) begin
 			data_addr <= data_addr + 1;
 			data_req <= 1'b1;
 		end
-		
+
 		case (ADDR[2:0])
 			0: DOUT <= MSU_STATUS;
 			1: DOUT <= data;
