@@ -523,14 +523,12 @@ begin
 				if CACHE_RUN = '0' then
 					if CPU_RUN = '0' then
 						if MMIO_WR = '1' and ADDR(11 downto 0) = x"F48" then	--7F48
-							if CACHE_PAGE(BitToInt(DI(0)))(14 downto 0) /= ROM_PAGE then
-								CACHE_RUN <= '1';
-								CACHE_BANK <= DI(0);
-								CACHE_PAGE(BitToInt(DI(0)))(14 downto 0) <= ROM_PAGE;
-								CACHE_ADDR <= (others => '0');
-								
-								CACHE_BUS_ADDR <= std_logic_vector(unsigned(ROM_BASE) + (unsigned(ROM_PAGE) & "000000000"));
-							end if;
+							CACHE_RUN <= '1';
+							CACHE_BANK <= DI(0);
+							CACHE_PAGE(BitToInt(DI(0)))(14 downto 0) <= ROM_PAGE;
+							CACHE_ADDR <= (others => '0');
+
+							CACHE_BUS_ADDR <= std_logic_vector(unsigned(ROM_BASE) + (unsigned(ROM_PAGE) & "000000000"));
 						elsif MMIO_WR = '1' and ADDR(11 downto 0) = x"F4C" then	--7F4C
 							CACHE_PAGE(0)(15) <= DI(0);
 							if DI(0) = '1' then
@@ -1060,48 +1058,49 @@ begin
 			elsif CPU_EN = '1' then
 				NEXT_PC := std_logic_vector(unsigned(PC) + 1);
 				if INST = I_BR or INST = I_BSUB then
-					EXTRA_CYCLES <= EXTRA_CYCLES + 1;
-					case EXTRA_CYCLES is
-						when 1 =>
-							if INST = I_BSUB and COND = '1' then
-								STACK_RAM(to_integer(SP)) <= BANK & NEXT_PC;
-								SP <= SP + 1;
-							end if;
-						when 2 =>
-							EXTRA_CYCLES <= 0;
-							if COND = '1' then
-								PC <= IR(7 downto 0);
-								BANK <= BANK xor IR(9);
-							else
-								PC <= NEXT_PC;
-							end if;
-						when others => null;
-					end case;
-					
+					if COND = '0' then
+						PC <= NEXT_PC;
+						EXTRA_CYCLES <= 0;
+					else
+						EXTRA_CYCLES <= 2;
+					end if;
+
+					if EXTRA_CYCLES = 2 then
+						EXTRA_CYCLES <= 1;
+						if INST = I_BSUB then
+							STACK_RAM(to_integer(SP)) <= BANK & NEXT_PC;
+							SP <= SP + 1;
+						end if;
+					elsif EXTRA_CYCLES = 1 then
+						EXTRA_CYCLES <= 0;
+						PC <= IR(7 downto 0);
+						BANK <= BANK xor IR(9);
+					end if;
+
 				elsif INST = I_SKIP then
-					EXTRA_CYCLES <= EXTRA_CYCLES + 1;
-					case EXTRA_CYCLES is
-						when 1 =>
-							EXTRA_CYCLES <= 0;
-							if COND = '0' then
-								PC <= NEXT_PC;
-							else
-								PC <= std_logic_vector(unsigned(NEXT_PC) + 1);
-							end if;
-						when others => null;
-					end case;
+					if COND = '0' then
+						PC <= NEXT_PC;
+						EXTRA_CYCLES <= 0;
+					else
+						EXTRA_CYCLES <= 1;
+					end if;
+
+					if EXTRA_CYCLES = 1 then
+						EXTRA_CYCLES <= 0;
+						PC <= std_logic_vector(unsigned(NEXT_PC) + 1);
+					end if;
 
 				elsif INST = I_RTS then
-					EXTRA_CYCLES <= EXTRA_CYCLES + 1;
-					case EXTRA_CYCLES is
-						when 0 =>
-							SP <= SP - 1;
-						when 1 =>
-							EXTRA_CYCLES <= 0;
-							PC <= STACK_RAM(to_integer(SP))(7 downto 0);
-							BANK <= STACK_RAM(to_integer(SP))(8);
-						when others => null;
-					end case;
+					EXTRA_CYCLES <= 2;
+
+					if EXTRA_CYCLES = 2 then
+						EXTRA_CYCLES <= 1;
+						SP <= SP - 1;
+					elsif EXTRA_CYCLES = 1 then
+						EXTRA_CYCLES <= 0;
+						PC <= STACK_RAM(to_integer(SP))(7 downto 0);
+						BANK <= STACK_RAM(to_integer(SP))(8);
+					end if;
 
 				elsif INST = I_FINEXT then
 					if BUS_ACCESS_CNT = 0 then
