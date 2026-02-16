@@ -935,10 +935,10 @@ begin
 								EXT_BUS_ADDR <= MAR;
 								if IR(0) = '0' then
 									ROM_ACCESS <= '1';
-									BUS_ACCESS_CNT <= unsigned(WS1);
+									BUS_ACCESS_CNT <= unsigned(WS1) - 1;
 								else
 									SRAM_ACCESS <= '1';
-									BUS_ACCESS_CNT <= unsigned(WS2);
+									BUS_ACCESS_CNT <= unsigned(WS2) - 1;
 									SRAM_WR <= '0';
 								end if;
 							end if;
@@ -963,7 +963,7 @@ begin
 						MBR <= A(7 downto 0);
 					elsif IR(8) = '1' and IR(7 downto 0) = "00101111" then
 						SRAM_ACCESS <= '1';
-						BUS_ACCESS_CNT <= unsigned(WS2);
+						BUS_ACCESS_CNT <= unsigned(WS2) - 1;
 						SRAM_WR <= '1';
 					end if;
 				end if;
