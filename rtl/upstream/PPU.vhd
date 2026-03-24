@@ -783,10 +783,10 @@ VRAM_READ <= '1' when NO_BLANK = '1' else
 
 VRAM_ADDRA <= VMADD_TRANS when NO_BLANK = '0' else 
               BG_VRAM_ADDRA when BG_FETCH = '1' else 
-				  OBJ_VRAM_ADDR when OBJ_FETCH = '1';
+				  OBJ_VRAM_ADDR;
 VRAM_ADDRB <= VMADD_TRANS when NO_BLANK = '0' else 
               BG_VRAM_ADDRB when BG_FETCH = '1' else 
-				  OBJ_VRAM_ADDR when OBJ_FETCH = '1';			 
+				  OBJ_VRAM_ADDR;
 				 
 
 VRAM_DAO <= DI;
