@@ -79,6 +79,7 @@ entity SNES is
 		JOY1_P6		: out std_logic;
 		JOY2_P6		: out std_logic;
 		JOY2_P6_in	: in std_logic;
+		SNI_JOY     : out std_logic_vector(63 downto 0);
 
 		LRCK			: out std_logic;
 		BCK			: out std_logic;
@@ -250,6 +251,7 @@ begin
 		JOY_STRB		=> JOY_STRB,
 		JOY1_CLK		=> JOY1_CLK,
 		JOY2_CLK		=> JOY2_CLK,
+		SNI_JOY		=> SNI_JOY,
 
 		TURBO			=> TURBO,
 		DBG_CPU_EN	=> DBG_CPU_EN
