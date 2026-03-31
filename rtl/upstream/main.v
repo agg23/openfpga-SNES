@@ -91,6 +91,7 @@ module main #(
 	output            JOY1_P6,
 	output            JOY2_P6,
 	input             JOY2_P6_in,
+	output reg [63:0] SNI_JOY,
 
 	input      [64:0] EXT_RTC,
 
@@ -234,6 +235,7 @@ SNES SNES
 	.joy1_p6(JOY1_P6),
 	.joy2_p6(JOY2_P6),
 	.joy2_p6_in(JOY2_P6_in),
+	.sni_joy(SNI_JOY),
 
 	.blend(BLEND),
 	.pal(PAL),

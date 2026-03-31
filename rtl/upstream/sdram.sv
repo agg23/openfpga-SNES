@@ -29,8 +29,18 @@ module sdram
 	input             wr1,
 	input             rd1,
 	input             rfs1,
-	input             word1
+	input             word1,
 
+	// Interface for reads/writes from a host PC via SNI.
+	// SNI can access either bank, but must wait for the bank to be idle so
+	// that SNI does not affect the behavior or timing of the core.
+	input     [24: 0] sni_addr,
+	input     [15: 0] sni_din,
+	output wire [15:0] sni_dout,
+	input             sni_wr_req,
+	input             sni_rd_req,
+	input             sni_word,
+	output reg        sni_ready
 `ifdef DEBUG
                      ,
 	output [1:0] dbg_ctrl_bank,
@@ -113,6 +123,7 @@ module sdram
 		bit        WE;		//write enable
 		bit [ 1:0] BE;		//byte
 		bit        RFS;	//refresh	
+		bit        SNI; // is SNI request
 	} state_t;
 	state_t state[5];
 	reg [ 3: 0] st_num;
@@ -120,59 +131,188 @@ module sdram
 	reg [23: 0] addr[2];
 	reg [15: 0] din[2];
 	reg         word[2];
-	reg         read[2],write[2],rfs;
+	reg         read[2],write[2],is_sni[2],rfs;
 	
 	wire raw_req_test = (addr[0][23:1] != addr0[23:1]);
-	
-	reg old_rd0, old_rd1, old_wr0, old_wr1;
+
+	reg sni_rd_pending_, sni_wr_pending_;
+	wire sni_rd_pending = sni_rd_pending_ | (sni_rd_req && !old_sni_rd);
+	wire sni_wr_pending = sni_wr_pending_ | (sni_wr_req && !old_sni_wr);
+
+	wire can_start_sni =
+		~rfs & ~rfs1 & (
+			(~read[0] & ~read[1]) &
+			(~write[0] & ~write[1]));
+
+	wire sni_read_ch0 =                 // We can perform an SNI acces if:
+		sni_rd_pending & ~is_sni[0] &   // A request is pending and not already in progress
+		sni_addr[24] == 0 &             // ...for the channel the client interested in
+		can_start_sni;                  // ...and we're currently in between requests from the CPU.
+
+	wire sni_write_ch0 =
+		sni_wr_pending & ~is_sni[0] &
+		sni_addr[24] == 0 &
+		can_start_sni;
+
+	wire sni_read_ch1 =
+		sni_rd_pending & ~is_sni[1] &
+		sni_addr[24] == 1 &
+		can_start_sni;
+
+	wire sni_write_ch1 =
+		sni_wr_pending & ~is_sni[1] &
+		sni_addr[24] == 1 &
+		can_start_sni;
+
+	reg old_rd0, old_rd1, old_wr0, old_wr1, old_sni_rd, old_sni_wr;
 	always @(posedge clk) begin
 		if (!init_done) begin
 			st_num <= 4'd8;
 			read <= '{2{0}};
 			write <= '{2{0}};
+			is_sni <= '{2{0}};
 			rfs <= 0;
+			sni_ready <= 0;
 		end else begin
 			if (st_num < 4'd8) st_num <= st_num + 4'd1;
 			
 			if (st_num == 4'd3) begin
+				// We've completed a read.
 				read <= '{2{0}};
+				is_sni <= '{2{0}};
 				rfs <= 0;
 			end
 			if (st_num == 4'd7) begin
+				// We've completed a write.
 				write <= '{2{0}};
+				is_sni <= '{2{0}};
+				// If we completed a SNI write, then set sni_ready.
+				if (write[0] && is_sni[0] || write[1] && is_sni[1]) sni_ready <= 1;
+			end
+
+			if (out_read && out_sni) begin
+				// If we've completed a SNI read, then set sini_ready.
+				sni_ready <= 1;
+			end
+
+			if (sni_rd_pending || sni_wr_pending) begin
+				sni_ready <= 0;
 			end
 			
 			{old_rd0,old_rd1} <= {rd0,rd1};
 			{old_wr0,old_wr1} <= {wr0,wr1};
+			{old_sni_rd,old_sni_wr} <= {sni_rd_req,sni_wr_req};
+
+			// If we've started an SNI request, clear the pending flag.
+			if (is_sni[0] || is_sni[1]) begin
+				sni_rd_pending_ <= 0;
+				sni_wr_pending_ <= 0;
+			end
+
+			// If a SNI request was newly requested, set the pending flag.
+			if (sni_wr_req && !old_sni_wr) begin
+				sni_wr_pending_ <= 1;
+				sni_rd_pending_ <= 0;
+			end else if (sni_rd_req && !old_sni_rd) begin
+				sni_rd_pending_ <= 1;
+				sni_wr_pending_ <= 0;
+			end
+
+			// Try to start a pending SNI request.
+			if (sni_write_ch0) begin
+				addr[0] <= sni_addr[23:0];
+				din[0] <= sni_din;
+				word[0] <= sni_word;
+				write[0] <= 1;
+				is_sni[0] <= 1;
+				st_num <= 5;
+			end
+
+			if (sni_write_ch1) begin
+				addr[1] <= sni_addr[23:0];
+				din[1] <= sni_din;
+				word[1] <= sni_word;
+				write[1] <= 1;
+				is_sni[1] <= 1;
+				st_num <= 5;
+			end
+
+			if (sni_read_ch0) begin
+				addr[0] <= sni_addr[23:0];
+				word[0] <= sni_word;
+				read[0] <= 1;
+				is_sni[0] <= 1;
+				st_num <= 1;
+			end
+
+			if (sni_read_ch1) begin
+				addr[1] <= sni_addr[23:0];
+				word[1] <= sni_word;
+				read[1] <= 1;
+				is_sni[1] <= 1;
+				st_num <= 1;
+			end
+
+			// Handle regular requests. If we started a conflicting SNI request, preempt it.
 			if (wr0 && !old_wr0) begin
+				if (sni_read_ch1) begin
+					// A SNI read conflicts with a regular write (or vice versa)
+					// because SNI cannot change the state machine timing.
+					read[1] <= 0;
+					is_sni[1] <= 0;
+				end
 				addr[0] <= addr0;
 				din[0] <= din0;
 				word[0] <= word0;
+				read[0] <= 0;
 				write[0] <= 1;
+				is_sni[0] <= 0;
 				st_num <= 5;
 			end
 			if (wr1 && !old_wr1) begin
+				if (sni_read_ch0) begin
+					read[0] <= 0;
+					is_sni[0] <= 0;
+				end
 				addr[1] <= addr1;
 				din[1] <= din1;
 				word[1] <= word1;
+				read[1] <= 0;
 				write[1] <= 1;
+				is_sni[1] <= 0;
 				st_num <= 5;
 			end
 			
 			if (rd0 && !old_rd0) begin
+				// Make sure we don't accidentally preempt a regular write
+				// that already preempted a SNI write.
+				if (raw_req_test && sni_write_ch1 && !(wr1 && !old_wr1)) begin
+					write[1] <= 0;
+					is_sni[1] <= 0;
+				end
+
+				is_sni[0] <= 0;
+				write[0] <= 0;
 				addr[0] <= addr0;
 				word[0] <= word0;
 				read[0] <= raw_req_test;
 				rfs <= ~raw_req_test & rfs1;
-				st_num <= 1;
+
+				if (raw_req_test || rfs1) st_num <= 1;
 			end
 			if (rd1 && !old_rd1) begin
+				if (sni_write_ch0 && !(wr0 && !old_wr0)) begin
+					write[0] <= 0;
+					is_sni[0] <= 0;
+				end
 				addr[1] <= addr1;
 				word[1] <= word1;
 				read[1] <= 1;
+				write[1] <= 0;
+				is_sni[1] <= 0;
 				st_num <= 1;
 			end
-			
+
 			if ((wr0 && !old_wr0) || (wr1 && !old_wr1) || (rd1 && !old_rd1) || read[1] || write[0] || write[1]) begin
 				rfs <= 0;
 			end
@@ -187,14 +327,25 @@ module sdram
 								                             CTRL_IDLE;
 			state[0].RFS <= 1;
 		end else begin
-			if (rd0 && !old_rd0 && raw_req_test) begin
-				            state[0].CMD  <= CTRL_RAS;
+			// Directly test the channel 0 read/write conditions instead of
+			// waiting for state 0 or 4. This reduces the latency of memory
+			// access requests by one cycle since we don't have to wait for
+			// the request to reach registers.
+			if (rd0 && !old_rd0) begin
+							state[0].CMD  <= raw_req_test ? CTRL_RAS : CTRL_IDLE;
 								state[0].ADDR <= addr0[22:0];
 								state[0].BANK <= {1'b0,addr0[23]};
 			end else if (wr0 && !old_wr0 && !rd0) begin
-				            state[0].CMD  <= CTRL_RAS;
+							state[0].CMD  <= CTRL_RAS;
 								state[0].ADDR <= addr0[22:0];
 								state[0].BANK <= {1'b0,addr0[23]};
+			end else if (sni_read_ch0 && !(wr1 && !old_wr1) || sni_write_ch0 && !(rd1 && !old_rd1)) begin
+							// Handle SNI reads/writes on ch0 as well, because SNI should
+							// not change the timing of the state machine to avoid impacting
+							// regular requests.
+							state[0].CMD  <= CTRL_RAS;
+								state[0].ADDR <= sni_addr[22:0];
+								state[0].BANK <= {1'b0,sni_addr[23]};
 			end else
 			case (st_num[2:0])
 //				3'd0: begin state[0].CMD  <= read[0]     ? CTRL_RAS : CTRL_IDLE;
@@ -208,12 +359,14 @@ module sdram
 
 				3'd2: begin state[0].CMD  <= read[0] && !rfs    ? CTRL_CAS : CTRL_IDLE;
 								state[0].ADDR <= addr[0][22:0];
-				            state[0].RD   <= read[0] & ~rfs;
+								state[0].RD   <= read[0] & ~rfs;
+								state[0].SNI <= is_sni[0];
 								state[0].BANK <= {1'b0,addr[0][23]}; end
 
 				3'd3: begin state[0].CMD  <= read[1]           ? CTRL_CAS : CTRL_IDLE;
 								state[0].ADDR <= addr[1][22:0];
-				            state[0].RD   <= read[1];
+								state[0].RD   <= read[1];
+								state[0].SNI <= is_sni[1];
 								state[0].BANK <= {1'b1,addr[1][23]}; end
 								
 				3'd4: begin state[0].CMD  <= write[0]           ? CTRL_RAS : CTRL_IDLE;
@@ -261,25 +414,32 @@ module sdram
 	wire       data_read = state[3].RD;
 	wire [1:0] data_bank  = state[3].BANK;
 	wire       data_rfs  = state[3].RFS;
+	wire       data_sni  = state[3].SNI;
 	wire       out_read  = state[4].RD;
 //	wire       out_addr0  = state[4].ADDR[0];
 	wire [1:0] out_bank  = state[4].BANK;
+	wire       out_sni   = state[4].SNI;
 	
 	reg [15:0] rbuf;
-	reg [15:0] dout_buf[2];
+	reg [15:0] dout_buf[2], sni_dout_buf;
 	reg data_read0_new;
 	always @(posedge clk) begin
 		if (data_read) rbuf <= SDRAM_DQ;
 		
 		data_read0_new <= 0;
-		if (data_read && !data_bank[1] && !data_rfs) data_read0_new <= 1;
+		if (data_read && !data_bank[1] && !data_rfs && !data_sni) begin
+			data_read0_new <= 1;
+		end
 
-		if (out_read) dout_buf[out_bank[1]] <= rbuf;
+		if (out_read) begin
+			if (out_sni) sni_dout_buf <= rbuf; 
+			else dout_buf[out_bank[1]] <= rbuf;
+		end
 	end
 	wire [15:0] dout_temp_0 = data_read0_new ? rbuf : dout_buf[0];
-	assign dout0 = addr[0][0] && !word[0] ? {dout_temp_0[15:8],dout_temp_0[15:8]} : dout_temp_0;
-	assign dout1 = addr[1][0] && !word[1] ? {dout_buf[1][15:8],dout_buf[1][15:8]} : dout_buf[1];
-	
+	assign dout0 = addr0[0] && !word[0] ? {dout_temp_0[15:8],dout_temp_0[15:8]} : dout_temp_0;
+	assign dout1 = addr1[0] && !word[1] ? {dout_buf[1][15:8],dout_buf[1][15:8]} : dout_buf[1];
+	assign sni_dout = sni_addr[0] && !sni_word ? {sni_dout_buf[15:8],sni_dout_buf[15:8]} : sni_dout_buf;
 
 	localparam CMD_NOP             = 3'b111;
 	localparam CMD_ACTIVE          = 3'b011;
