@@ -622,6 +622,7 @@ BWRAM_OE_N <= '0'									                        when ENABLE = '0' else
 				  '0'									                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
 				  DMA_EN								                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
 				  P65_WR								                        when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else 
+				  '0'									                        when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '0' else 
 				  '1';
 
 --IRAM
