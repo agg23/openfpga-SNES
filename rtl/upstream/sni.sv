@@ -16,6 +16,7 @@ module sni(
 
 	output wire[19:0]	bsram_addr,
 	input  wire[7:0]	bsram_q,
+	output wire			bsram_rd,
 	output wire			bsram_wr,
 	output wire[7:0]	bsram_data,
 	input  wire			bsram_ready,
@@ -72,7 +73,8 @@ module sni(
 	assign bsram_addr = addr[19:0];
 	assign bsram_data = inbuffer_rdata;
 	reg last_bsram_ready;
-	reg bsram_wr_;
+	reg bsram_rd_, bsram_wr_;
+	assign bsram_rd = bsram_rd_;
 	assign bsram_wr = bsram_wr_;
 
 	reg[7:0] len;
@@ -119,7 +121,7 @@ module sni(
 
 		{rd_req, wr_req} <= 2'b0;
 		tdata_i <= 1'b0;
-		bsram_wr_ <= 1'b0;
+		{bsram_rd_, bsram_wr_} <= 2'b0;
 
 		if (reset) begin
 			addr <= 24'b0;
@@ -231,6 +233,7 @@ module sni(
 						else tdata <= 8'b0;
 						tinprogress <= 1'b1;
 						tdata_i <= 1'b1;
+						bsram_rd_ <= 1'b0;
 
 						// Use blocking assignments so that the if statement below can issue another SDRAM read
 						// request immediately, allowing read requests to be pipelined with UART transmissionss.
@@ -241,6 +244,8 @@ module sni(
 					if (sdram_sel && !sdram_busy && len != 24'h0) begin
 						rd_req <= 1'b1;
 						sdram_busy <= 1'b1;
+					end else if (bsram_sel) begin
+						bsram_rd_ <= 1'b1;
 					end
 				end
 			end else if (state == STATE_WAITNMI) begin
