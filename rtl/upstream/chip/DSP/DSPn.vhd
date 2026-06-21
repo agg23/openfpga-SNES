@@ -556,22 +556,35 @@ begin
 			if ENABLE = '1' then
 				WR_Nr <= WR_Nr(1 downto 0) & WR_N;
 				RD_Nr <= RD_Nr(1 downto 0) & RD_N;
-				
-				if WR_Nr = "110" and CS_N = '0' and A0 = '0' then
-					if DRC = '0' then
-						if DRS = '0' then
-							DR(7 downto 0) <= DI;
-						else
-							DR(15 downto 8) <= DI;
-						end if;
-					else
-						DR(7 downto 0) <= DI;
+
+				-- DR and RQM can be overridden below by WR_N
+				if EN = '1' then
+					if OP_INSTR /= INSTR_JP and OP_DST = x"6" then
+						DR <= OP_ID;
+						RQM <= '1';
+					elsif (OP_INSTR = INSTR_OP or OP_INSTR = INSTR_RT) and OP_SRC = x"8" then
+						RQM <= '1';
 					end if;
-					PORT_ACTIVE <= '1';
-				elsif RD_Nr = "110" and CS_N = '0' and A0 = '0' then
-					PORT_ACTIVE <= '1';
 				end if;
-				
+
+				if CS_N = '0' and A0 = '0' then
+					if WR_N = '0' then
+						if DRC = '0' then
+							if DRS = '0' then
+								DR(7 downto 0) <= DI;
+							else
+								DR(15 downto 8) <= DI;
+							end if;
+						else
+							DR(7 downto 0) <= DI;
+						end if;
+					end if;
+
+					if (WR_Nr(0) = '1' and WR_N = '0') or (RD_Nr(0) = '1' and RD_N = '0') then
+						PORT_ACTIVE <= '1';
+					end if;
+				end if;
+
 				if (WR_Nr = "001" or RD_Nr = "001") and PORT_ACTIVE = '1' then
 					if DRC = '0' then
 						if DRS = '0' then
@@ -584,13 +597,6 @@ begin
 						RQM <= '0';
 					end if;
 					PORT_ACTIVE <= '0';
-				elsif EN = '1' then
-					if OP_INSTR /= INSTR_JP and OP_DST = x"6" then
-						DR <= OP_ID;
-						RQM <= '1';
-					elsif (OP_INSTR = INSTR_OP or OP_INSTR = INSTR_RT) and OP_SRC = x"8" then
-						RQM <= '1';
-					end if;
 				end if;
 			end if;
 
