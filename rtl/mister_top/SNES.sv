@@ -858,10 +858,11 @@ module MAIN_SNES (
       .JOYSTICK1((joy_swap ^ raw_serial) ? joy0 : joy1),
       .JOYSTICK2(joy2),
       .JOYSTICK3(joy3),
-      // .JOYSTICK4(joy4),
 
-      // .MOUSE(ps2_mouse),
-      // .MOUSE_EN(mouse_mode[1])
+      .JOY_X(8'b0),
+      .JOY_Y(8'b0),
+      .DPAD_AIM_SPEED(8'b0),
+      .MOUSE_EN(1'b0)
   );
 
   wire LG_P6_out;
