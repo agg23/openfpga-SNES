@@ -1,6 +1,6 @@
 {
     "name": "snes",
-    "displayName": "snes",
+    "displayName": "SNES",
     "description": "Super Nintendo and Super Famicom. Nintendo's second major home console",
     "author": "agg23",
     "version": "0.4.4",
@@ -13,6 +13,20 @@
         "verilator": "echo \"Error: no simulation specified\" && exit 1",
         "build:pocket": "pwsh build.ps1",
         "program:pocket": "quartus_pgm -m jtag -c 1 -o \"p;projects/output_files/nes_pocket.sof@1\""
+    },
+    "release": {
+        "folders": {
+            "output_folder": "projects/output_files",
+            "pkg_folder": "pkg/pocket",
+            "meta_folder": "pkg/meta",
+            "stage_folder": "staging",
+            "release_folder": "release"
+        },
+        "target": {
+            "pocket": {
+                "release_file": "{author}.{core}_{version}-{date}"
+            }
+        }
     },
     "platforms": {
         "pocket": "1.3.0"
