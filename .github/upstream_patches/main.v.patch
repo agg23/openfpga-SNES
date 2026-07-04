@@ -1,5 +1,3 @@
-diff --git a/rtl/upstream/main.v b/rtl/upstream/main.v
-index 7f5ed57..4bd2af6 100644
 --- a/rtl/upstream/main.v
 +++ b/rtl/upstream/main.v
 @@ -1,4 +1,13 @@
@@ -17,7 +15,7 @@ index 7f5ed57..4bd2af6 100644
  	input             RESET_N,
  
  	input             MCLK,
-@@ -112,14 +121,6 @@ module main (
+@@ -117,15 +126,6 @@
  );
  
  parameter USE_DLH = 1'b1;
@@ -28,6 +26,7 @@ index 7f5ed57..4bd2af6 100644
 -parameter USE_DSPn = 1'b1;
 -parameter USE_SPC7110 = 1'b1;
 -parameter USE_BSX = 1'b1;
+-parameter USE_SUFAMI = 1'b1;
 -parameter USE_MSU = 1'b1;
  
  wire [23:0] CA;
