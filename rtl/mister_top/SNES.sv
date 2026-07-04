@@ -155,6 +155,7 @@ module MAIN_SNES (
   parameter USE_SPC7110 = 1'b0;
   parameter USE_BSX = 1'b0;
   parameter USE_MSU = 1'b0;
+  parameter USE_SS = 1'b0;
 
   initial begin
     $info("Selected chips");
@@ -166,6 +167,7 @@ module MAIN_SNES (
     $info("SPC7110 %d", USE_SPC7110);
     $info("BSX %d", USE_BSX);
     $info("MSU %d", USE_MSU);
+    $info("SS %d", USE_SS);
   end
 
   // Hardcoded wires
@@ -321,7 +323,8 @@ module MAIN_SNES (
       .USE_DSPn(USE_DSPn),
       .USE_SPC7110(USE_SPC7110),
       .USE_BSX(USE_BSX),
-      .USE_MSU(USE_MSU)
+      .USE_MSU(USE_MSU),
+      .USE_SS(USE_SS)
   ) main (
       .RESET_N(RESET_N),
 
@@ -439,7 +442,36 @@ module MAIN_SNES (
       .MSU_ENABLE(0),  // TODO
 
       .AUDIO_L(audio_l),
-      .AUDIO_R(audio_r)
+      .AUDIO_R(audio_r),
+
+      // New upstream ports since fork — tied to safe defaults
+      .RAM_SIZE(4'b0),
+      .GSU_FASTROM(1'b0),
+      .SUFAMI_SWAP(1'b0),
+      .CC_DIP(8'b0),
+      .DSP_FREQ(1'b0),
+      .MSU_AUDIO_SECTOR(22'b0),
+      .SS_SAVE(1'b0),
+      .SS_TOSD(1'b0),
+      .SS_LOAD(1'b0),
+      .SS_SLOT(2'b0),
+      .SS_DDR_DI(64'b0),
+      .SS_DDR_ACK(1'b0),
+
+      // Outputs — unconnected
+      .SYSCLKR_CE(),
+      .SYSCLKF_CE(),
+      .REFRESH(),
+      .V224_MODE(),
+      .SNI_JOY(),
+      .MSU_AUDIO_RESUME(),
+      .MSU_RESUME_SECTOR(),
+      .SS_AVAIL(),
+      .SS_DDR_DO(),
+      .SS_DDR_ADDR(),
+      .SS_DDR_WE(),
+      .SS_DDR_BE(),
+      .SS_DDR_REQ()
   );
 
   wire reset = core_reset | cart_download | spc_download | bk_loading | clearing_ram | msu_data_download | parser_delay != 0;
