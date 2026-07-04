@@ -1,4 +1,3 @@
-
 module ioport
 (
 	input        CLK,
@@ -9,7 +8,7 @@ module ioport
 	input        PORT_CLK,
 	input        PORT_P6,
 	output [1:0] PORT_DO,
-
+	output [15:0] JOYSTICK1_RUMBLE,  // 15:8 - 'large' rumble motor magnitude, 7:0 'small' rumble motor magnitude
 	input	[11:0] JOYSTICK1,
 	input	[11:0] JOYSTICK2,
 	input	[11:0] JOYSTICK3,
@@ -43,7 +42,6 @@ wire [15:0] JOY1 = {JOYSTICK[{JOYn,1'b1}][5],  JOYSTICK[{JOYn,1'b1}][7],
                     JOYSTICK[{JOYn,1'b1}][4],  JOYSTICK[{JOYn,1'b1}][6],
                     JOYSTICK[{JOYn,1'b1}][8],  JOYSTICK[{JOYn,1'b1}][9], 4'b0000};
 
-// Gamepads
 reg [15:0] JOY_LATCH0;
 always @(posedge CLK) begin
 	reg old_clk, old_n;
@@ -62,6 +60,43 @@ always @(posedge CLK) begin
 	else if (~old_clk & PORT_CLK) JOY_LATCH1 <= JOY_LATCH1 << 1;
 end
 
+// Rumble Support
+// only Port 1 (JOYn==0) ever drives rumble
+wire doing_port1 = ~MULTITAP || (MULTITAP && (JOYn == 1'b0));
+
+// shift‑in window to spot 0x72
+localparam [7:0] RUMBLE_SENTRY = 8'h72;
+reg  [15:0] shift16;
+reg  [15:0] current_rumble;
+reg         prev_clk, prev_latch;
+
+always @(posedge CLK) begin
+  // sample the raw lines
+  prev_clk   <= PORT_CLK;
+  prev_latch <= PORT_LATCH;
+
+  // on P/S Out falling edge: new frame → clear everything
+  if (prev_latch & ~PORT_LATCH) begin
+    shift16        <= 16'h0000;
+    current_rumble <= 16'h0000;
+  end
+
+  // during frame (PORT_LATCH low), only for Port 1, shift in each PORT_CLK rising
+  if (~prev_clk & PORT_CLK && ~PORT_LATCH && doing_port1) begin
+    shift16 <= { shift16[14:0], PORT_P6 };
+  end
+
+  // whenever the top‑byte matches 0x72, latch the low nibble intensities
+  if (shift16[15:8] == RUMBLE_SENTRY && doing_port1) begin
+    // expand 4‑bit to 8‑bit by duplicating nibble
+    current_rumble[15:8] <= { shift16[7:4], shift16[7:4] };   // large motor
+    current_rumble[ 7:0] <= { shift16[3:0], shift16[3:0] };   // small motor
+  end
+end
+
+// drive out the two‑byte rumble word
+assign JOYSTICK1_RUMBLE = current_rumble;
+
 // Mouse
 wire dpad_mouse_sdy = JOYSTICK1[3];
 wire dpad_mouse_sdx = JOYSTICK1[1];
@@ -75,10 +110,11 @@ wire mouse_left = JOYSTICK1[5];
 wire mouse_right = JOYSTICK1[4];
 
 reg joystick_detected = 0;
+
 reg  [1:0] speed = 0;
 reg [31:0] MS_LATCH;
 always @(posedge CLK) begin
-	reg old_stb, old_clk, old_latch;
+	reg old_clk, old_latch;
 	reg sdx,sdy;
 
 	old_clk <= PORT_CLK;
