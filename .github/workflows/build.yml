@@ -8,8 +8,9 @@ name: Build/Release
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+*"
+    branches:
+      - master
+  pull_request:
 
 permissions:
   contents: write
@@ -113,4 +114,15 @@ jobs:
 
       - name: "Release"
         run: |
-          python3 .github/publish/release.py
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            python3 .github/publish/release.py --norelease
+          else
+            python3 .github/publish/release.py
+          fi
+
+      - name: "Upload Actions artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          # This must always be wrapped in an outer zip, so give it a name that makes sense
+          name: "agg23.SNES"
+          path: release/*.zip
