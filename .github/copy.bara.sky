@@ -8,10 +8,7 @@ core.workflow(
         url = upstream_url,
         ref = "master",
     ),
-    destination = git.destination(
-        url = "/Users/adam/code/fpga/pocket/openfpga-SNES",
-        push = refspec("vendor/upstream-copybara"),
-    ),
+    destination = git.destination(url = "/tmp/test-copybara-dest.git"),
     mode = "ITERATIVE",
     authoring = authoring.pass_thru("Copybara <copybara@example.com>"),
     origin_files = glob(["rtl/**"]),
