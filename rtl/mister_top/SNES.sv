@@ -547,13 +547,30 @@ module MAIN_SNES (
       .init(0),  //~clock_locked),
       .clk(clk_mem),
 
-      .addr(cart_download ? ioctl_addr : ROM_ADDR),
-      .din (cart_download ? ioctl_dout : ROM_D),
-      .dout(ROM_Q),
-      .rd  (~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),
-      .wr  (cart_download ? ioctl_wr : ~ROM_WE_N),
-      .word(cart_download | ROM_WORD),
-      .busy(),
+      .addr0(cart_download ? ioctl_addr : ROM_ADDR),
+      .din0 (cart_download ? ioctl_dout : ROM_D),
+      .dout0(ROM_Q),
+      .rd0  (~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),
+      .wr0  (cart_download ? ioctl_wr : ~ROM_WE_N),
+      .word0(cart_download | ROM_WORD),
+
+      // Port 1 — unused
+      .addr1(24'b0),
+      .din1(16'b0),
+      .dout1(),
+      .wr1(1'b0),
+      .rd1(1'b0),
+      .rfs1(1'b0),
+      .word1(1'b0),
+
+      // SNI host access — unused
+      .sni_addr(25'b0),
+      .sni_din(16'b0),
+      .sni_dout(),
+      .sni_wr_req(1'b0),
+      .sni_rd_req(1'b0),
+      .sni_word(1'b0),
+      .sni_ready(),
 
       // Actual SDRAM interface
       .SDRAM_DQ(dram_dq),
