@@ -1,6 +1,7 @@
+diff --git a/rtl/upstream/main.v b/rtl/upstream/main.v
 --- a/rtl/upstream/main.v
 +++ b/rtl/upstream/main.v
-@@ -1,4 +1,13 @@
+@@ -1,4 +1,14 @@
 -module main (
 +module main #(
 +	parameter reg USE_CX4 = 1'b0,
@@ -10,12 +11,13 @@
 +	parameter reg USE_DSPn = 1'b0,
 +	parameter reg USE_SPC7110 = 1'b0,
 +	parameter reg USE_BSX = 1'b0,
-+	parameter reg USE_MSU = 1'b0
++	parameter reg USE_MSU = 1'b0,
++	parameter reg USE_SS = 1'b0
 +) (
  	input             RESET_N,
  
  	input             MCLK,
-@@ -117,15 +126,6 @@
+@@ -132,16 +142,6 @@ module main (
  );
  
  parameter USE_DLH = 1'b1;
@@ -28,6 +30,7 @@
 -parameter USE_BSX = 1'b1;
 -parameter USE_SUFAMI = 1'b1;
 -parameter USE_MSU = 1'b1;
+-parameter USE_SS = 1'b1;
  
  wire [23:0] CA;
  wire        CPURD_N;
