@@ -143,7 +143,7 @@ begin
 				PSRAM_CE_N <= not ROM_AREA;
 			elsif ((not CA(23) and EXT_ON(0)) = '1' or (CA(23) and EXT_ON(1)) = '1') and CA(22) = EXT_MAP and CA(21) = '0' then
 				EXTMEM_CE_N <= not ROM_AREA;
-			else
+			elsif CA(23 downto 20) /= x"7" then
 				DPAK_CE_N <= not ROM_AREA;
 			end if;
 			
@@ -166,7 +166,7 @@ begin
 			end if;
 		end if;
 		
-		if ((not CA(23) and PSRAM_ON(0)) = '1' or (CA(23) and PSRAM_ON(1)) = '1') and CA(23 downto 19) = "00010" and CA(15 downto 12) = x"5" then		--10-17:5000-5FFF
+		if CA(23 downto 20) = x"1" and CA(15 downto 12) = x"5" then		--10-1F:5000-5FFF
 			SRAM_CE_N <= '0';
 		else
 			SRAM_CE_N <= '1';

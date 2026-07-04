@@ -6,7 +6,8 @@ module main #(
 	parameter reg USE_DSPn = 1'b0,
 	parameter reg USE_SPC7110 = 1'b0,
 	parameter reg USE_BSX = 1'b0,
-	parameter reg USE_MSU = 1'b0
+	parameter reg USE_MSU = 1'b0,
+	parameter reg USE_SS = 1'b0
 ) (
 	input             RESET_N,
 
@@ -16,9 +17,11 @@ module main #(
 	input       [7:0] ROM_TYPE,
 	input      [23:0] ROM_MASK,
 	input      [23:0] RAM_MASK,
+	input      [ 3:0] RAM_SIZE,
 	
 	output            SYSCLKR_CE,
 	output            SYSCLKF_CE,
+	output            REFRESH,
 
 	output reg [23:0] ROM_ADDR,
 	output reg [15:0] ROM_D,
@@ -52,21 +55,23 @@ module main #(
 	output            VRAM2_WE_N,
 	output            VRAM_OE_N,
 
-	output     [15:0] ARAM_ADDR,
-	output      [7:0] ARAM_D,
+	output reg [15:0] ARAM_ADDR,
+	output reg  [7:0] ARAM_D,
 	input       [7:0] ARAM_Q,
-	output            ARAM_CE_N,
-	output            ARAM_OE_N,
-	output            ARAM_WE_N,
+	output reg        ARAM_CE_N,
+	output reg        ARAM_OE_N,
+	output reg        ARAM_WE_N,
 
 	output            GSU_ACTIVE,
 	input             GSU_TURBO,
 	input             GSU_FASTROM,
 	input             SUFAMI_SWAP,
+	input       [7:0] CC_DIP,
 
 	input             BLEND,
 	input             PAL,
 	output            HIGH_RES,
+	output            V224_MODE,
 	output            FIELD,
 	output            INTERLACE,
 	output            DOTCLK,
@@ -86,6 +91,7 @@ module main #(
 	output            JOY1_P6,
 	output            JOY2_P6,
 	input             JOY2_P6_in,
+	output reg [63:0] SNI_JOY,
 
 	input      [64:0] EXT_RTC,
 
@@ -105,6 +111,8 @@ module main #(
 
 	input             TURBO,
 	output            TURBO_ALLOW,
+	
+	input             DSP_FREQ,
 
 	output     [15:0] MSU_TRACK_NUM,
 	output            MSU_TRACK_REQUEST,
@@ -113,13 +121,30 @@ module main #(
 	output      [7:0] MSU_VOLUME,
 	input             MSU_AUDIO_STOP,
 	output            MSU_AUDIO_REPEAT,
+	output            MSU_AUDIO_RESUME,
 	output            MSU_AUDIO_PLAYING,
+	input      [21:0] MSU_AUDIO_SECTOR,
+	output     [21:0] MSU_RESUME_SECTOR,
 	output     [31:0] MSU_DATA_ADDR,
 	input       [7:0] MSU_DATA,
 	input             MSU_DATA_ACK,
 	output            MSU_DATA_SEEK,
 	output            MSU_DATA_REQ,
 	input             MSU_ENABLE,
+
+	input             SS_SAVE,
+	input             SS_TOSD,
+	input             SS_LOAD,
+	input       [1:0] SS_SLOT,
+	output            SS_AVAIL,
+
+	input      [63:0] SS_DDR_DI,
+	input             SS_DDR_ACK,
+	output     [63:0] SS_DDR_DO,
+	output     [21:3] SS_DDR_ADDR,
+	output            SS_DDR_WE,
+	output      [7:0] SS_DDR_BE,
+	output            SS_DDR_REQ,
 
 	output     [15:0] AUDIO_L,
 	output     [15:0] AUDIO_R
@@ -140,7 +165,13 @@ wire        PARD_N;
 wire        PAWR_N;
 //wire        SYSCLKF_CE;
 //wire        SYSCLKR_CE;
-wire        REFRESH;
+//wire        REFRESH;
+
+wire  [15:0] SNES_ARAM_ADDR;
+wire   [7:0] SNES_ARAM_D;
+wire         SNES_ARAM_CE_N;
+wire         SNES_ARAM_OE_N;
+wire         SNES_ARAM_WE_N;
 
 wire  [6:0] MAP_ACTIVE;
 
@@ -189,12 +220,12 @@ SNES SNES
 	.vram_wra_n(VRAM1_WE_N),
 	.vram_wrb_n(VRAM2_WE_N),
 
-	.aram_addr(ARAM_ADDR),
-	.aram_d(ARAM_D),
+	.aram_addr(SNES_ARAM_ADDR),
+	.aram_d(SNES_ARAM_D),
 	.aram_q(ARAM_Q),
-	.aram_ce_n(ARAM_CE_N),
-	.aram_oe_n(ARAM_OE_N),
-	.aram_we_n(ARAM_WE_N),
+	.aram_ce_n(SNES_ARAM_CE_N),
+	.aram_oe_n(SNES_ARAM_OE_N),
+	.aram_we_n(SNES_ARAM_WE_N),
 
 	.joy1_di(JOY1_DI),
 	.joy2_di(JOY2_DI),
@@ -204,12 +235,14 @@ SNES SNES
 	.joy1_p6(JOY1_P6),
 	.joy2_p6(JOY2_P6),
 	.joy2_p6_in(JOY2_P6_in),
+	.sni_joy(SNI_JOY),
 
 	.blend(BLEND),
 	.pal(PAL),
 	.high_res(HIGH_RES),
 	.field_out(FIELD),
 	.interlace(INTERLACE),
+	.v224_mode(V224_MODE),
 	.dotclk(DOTCLK),
 
 	.rgb_out({B,G,R}),
@@ -228,15 +261,28 @@ SNES SNES
 	.io_addr(IO_ADDR),
 	.io_dat(IO_DAT),
 	.io_wr(IO_WR),
-	
+
+	.ss_addr(SS_EXT_ADDR[8:0]),
+	.ss_regs_sel(SS_DSP_REGS_SEL),
+	.ss_smp_sel(SS_SMP_SEL),
+	.ss_busy(SS_BUSY),
+	.ss_wr(~PAWR_N),
+	.ss_di(SS_DO),
+	.ss_spc_do(SS_SPC_DI),
+	.ss_ppu_do(SS_PPU_DI),
+
 	.DBG_BG_EN(DBG_BG_EN),
 	.DBG_CPU_EN(DBG_CPU_EN),
 	
 	.turbo(TURBO),
+	
+	.dsp_freq(DSP_FREQ),
 
 	.audio_l(AUDIO_L),
 	.audio_r(AUDIO_R)
 );
+
+
 
 wire  [7:0] MSU_DO;
 wire        MSU_SEL;
@@ -270,8 +316,11 @@ MSU MSU
 
 	.status_track_missing(MSU_TRACK_MISSING),
 	.status_audio_repeat(MSU_AUDIO_REPEAT),
+	.audio_resume(MSU_AUDIO_RESUME),
 	.status_audio_playing(MSU_AUDIO_PLAYING),
 	.audio_stop(MSU_AUDIO_STOP),
+	.audio_sector(MSU_AUDIO_SECTOR),
+	.resume_sector(MSU_RESUME_SECTOR),
 
 	.volume(MSU_VOLUME)
 );
@@ -342,7 +391,16 @@ DSP_LHRomMap #(.USE_DSPn(USE_DSPn)) DSP_LHRomMap
 	.rom_mask(ROM_MASK),
 	.bsram_mask(RAM_MASK),
 
-	.ext_rtc(EXT_RTC)
+	.ext_rtc(EXT_RTC),
+	
+	.cc_dip(CC_DIP),
+
+	.ss_busy(SS_BUSY),
+	.ss_ram_a(SS_EXT_ADDR[11:0]),
+	.ss_dspn_regs_sel(SS_DSPN_REGS_SEL),
+	.ss_dspn_ram_sel(SS_DSPN_RAM_SEL),
+	.ss_di(SS_DO),
+	.ss_do(SS_DSPN_DI)
 );
 end else begin
 	assign DLH_DO = 0;
@@ -539,7 +597,11 @@ GSUMap GSUMap
 	.bsram_mask(RAM_MASK),
 
 	.turbo(GSU_TURBO),
-	.fastrom(GSU_FASTROM)
+	.fastrom(GSU_FASTROM),
+
+	.ss_busy(SS_BUSY),
+	.ss_wr(SS_BUSY & SS_GSU_SEL & ~CPUWR_N),
+	.ss_do(SS_GSU_DI)
 );
 end else
 assign MAP_ACTIVE[2] = 0;
@@ -558,6 +620,14 @@ wire [7:0]  SA1_BSRAM_D;
 wire        SA1_BSRAM_CE_N;
 wire        SA1_BSRAM_OE_N;
 wire        SA1_BSRAM_WE_N;
+
+wire [23:0] SA1_P65_A;
+wire  [7:0] SA1_P65_DO;
+wire        SA1_P65_RD_N;
+wire        SA1_P65_WR_N;
+
+wire        SS_SA1_ROMSEL;
+wire        SS_SNS_ROMSEL;
 
 generate
 if (USE_SA1 == 1'b1) begin
@@ -604,7 +674,17 @@ SA1Map SA1Map
 	.map_active(MAP_ACTIVE[3]),
 	.map_ctrl(ROM_TYPE),
 	.rom_mask(ROM_MASK),
-	.bsram_mask(RAM_MASK)
+	.bsram_mask(RAM_MASK),
+
+	.sa1_p65_a(SA1_P65_A),
+	.sa1_p65_do(SA1_P65_DO),
+	.sa1_p65_rd_n(SA1_P65_RD_N),
+	.sa1_p65_wr_n(SA1_P65_WR_N),
+
+	.ss_busy(SS_BUSY),
+
+	.ss_sa1_romsel(SS_SA1_ROMSEL),
+	.ss_sns_romsel(SS_SNS_ROMSEL)
 );
 end else
 assign MAP_ACTIVE[3] = 0;
@@ -802,7 +882,121 @@ end else
 assign MAP_ACTIVE[6] = 0;
 endgenerate
 
-assign TURBO_ALLOW = ~(MAP_ACTIVE[3] | MAP_ACTIVE[1]);
+wire        SS_BUSY;
+wire  [7:0] SS_DO;
+wire [23:0] SS_ROM_ADDR;
+
+wire [19:0] SS_EXT_ADDR;
+wire  [7:0] SS_SPC_DI;
+wire  [7:0] SS_PPU_DI;
+wire  [7:0] SS_DSPN_DI;
+wire  [7:0] SS_GSU_DI;
+wire        SS_DO_OVR;
+wire        SS_ROM_OVR;
+wire        SS_ARAM_SEL, SS_DSP_REGS_SEL, SS_SMP_SEL;
+wire        SS_BSRAM_SEL;
+wire        SS_DSPN_REGS_SEL, SS_DSPN_RAM_SEL;
+wire        SS_GSU_SEL;
+
+
+generate
+if (USE_SS == 1'b1) begin
+savestates ss
+(
+	.reset_n(RESET_N),
+	.clk(MCLK),
+
+	.save(SS_SAVE),
+	.save_sd(SS_TOSD),
+	.load(SS_LOAD),
+	.slot(SS_SLOT),
+
+	.ram_size(RAM_SIZE),
+	.rom_type(ROM_TYPE),
+
+	.sysclkf_ce(SYSCLKF_CE),
+	.sysclkr_ce(SYSCLKR_CE),
+
+	.romsel_n(ROMSEL_N),
+	.rom_q(ROM_Q),
+
+	.ca(CA),
+	.cpurd_n(CPURD_N),
+	.cpuwr_n(CPUWR_N),
+
+	.pa(PA),
+	.pard_n(PARD_N),
+	.pawr_n(PAWR_N),
+
+	.di(DO),
+	.ss_do(SS_DO),
+
+	.rom_addr(SS_ROM_ADDR),
+
+	.ddr_di(SS_DDR_DI),
+	.ddr_ack(SS_DDR_ACK),
+	.ddr_do(SS_DDR_DO),
+	.ddr_addr(SS_DDR_ADDR),
+	.ddr_we(SS_DDR_WE),
+	.ddr_be(SS_DDR_BE),
+	.ddr_req(SS_DDR_REQ),
+
+	.ext_addr(SS_EXT_ADDR),
+
+	.spc_di(SS_SPC_DI),
+	.aram_sel(SS_ARAM_SEL),
+	.dsp_regs_sel(SS_DSP_REGS_SEL),
+	.smp_regs_sel(SS_SMP_SEL),
+
+	.ppu_di(SS_PPU_DI),
+
+	.bsram_sel(SS_BSRAM_SEL),
+	.bsram_di(BSRAM_Q),
+
+	.dspn_regs_sel(SS_DSPN_REGS_SEL),
+	.dspn_ram_sel(SS_DSPN_RAM_SEL),
+	.dspn_di(SS_DSPN_DI),
+
+	.gsu_regs_sel(SS_GSU_SEL),
+	.gsu_di(SS_GSU_DI),
+
+	.sa1_active(MAP_ACTIVE[3]),
+	.sa1_a(SA1_P65_A),
+	.sa1_di(SA1_P65_DO),
+	.sa1_rd_n(SA1_P65_RD_N),
+	.sa1_wr_n(SA1_P65_WR_N),
+	.sa1_sa1_romsel(SS_SA1_ROMSEL),
+	.sa1_sns_romsel(SS_SNS_ROMSEL),
+
+	.ss_do_ovr(SS_DO_OVR),
+	.ss_rom_ovr(SS_ROM_OVR),
+	.ss_busy(SS_BUSY)
+);
+end else begin
+	assign SS_DO = 0;
+	assign SS_ROM_ADDR = 0;
+	assign SS_EXT_ADDR = 0;
+	assign SS_DDR_DO = 0;
+	assign SS_DDR_ADDR = 0;
+	assign SS_DDR_WE = 0;
+	assign SS_DDR_BE = 0;
+	assign SS_DDR_REQ = 0;
+	assign SS_ARAM_SEL = 0;
+	assign SS_DSP_REGS_SEL = 0;
+	assign SS_SMP_SEL = 0;
+	assign SS_BSRAM_SEL = 0;
+	assign SS_DSPN_REGS_SEL = 0;
+	assign SS_DSPN_RAM_SEL = 0;
+	assign SS_GSU_SEL = 0;
+	assign SS_DO_OVR = 0;
+	assign SS_ROM_OVR = 0;
+	assign SS_BUSY = 0;
+end
+endgenerate
+
+assign SS_AVAIL = ~|{ROM_TYPE[7:4]} | MAP_ACTIVE[3] | (ROM_TYPE[7:6] == 2'b10) | MAP_ACTIVE[2]; // Basic carts + SA1 + DSPn + GSU
+
+assign TURBO_ALLOW = ~(MAP_ACTIVE[3] | MAP_ACTIVE[1] | SS_BUSY);
 
 always @(*) begin
 	case (MAP_ACTIVE)
@@ -944,6 +1138,36 @@ always @(*) begin
 	endcase
 	
 	if(MSU_SEL)   DI = MSU_DO;
+
+	if (SS_ARAM_SEL) begin
+		ARAM_ADDR = SS_EXT_ADDR[15:0];
+		ARAM_D    = SS_DO;
+		ARAM_CE_N = 0;
+		ARAM_OE_N = PARD_N;
+		ARAM_WE_N = PAWR_N;
+	end else begin
+		ARAM_ADDR = SNES_ARAM_ADDR;
+		ARAM_D    = SNES_ARAM_D;
+		ARAM_CE_N = SNES_ARAM_CE_N;
+		ARAM_OE_N = SNES_ARAM_OE_N;
+		ARAM_WE_N = SNES_ARAM_WE_N;
+	end
+
+	if (SS_BSRAM_SEL) begin
+		BSRAM_ADDR = SS_EXT_ADDR[19:0];
+		BSRAM_D    = SS_DO;
+		BSRAM_CE_N = 0;
+		BSRAM_OE_N = PARD_N;
+		BSRAM_WE_N = PAWR_N;
+	end
+
+	if (SS_DO_OVR) begin
+		DI         = SS_DO;
+	end
+
+	if (SS_ROM_OVR) begin
+		ROM_ADDR   = SS_ROM_ADDR;
+	end
 end
 
 endmodule

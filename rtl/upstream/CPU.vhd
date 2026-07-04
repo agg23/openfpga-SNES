@@ -40,6 +40,8 @@ entity SCPU is
 		JOY_STRB			: out std_logic;
 		JOY1_CLK			: out std_logic;
 		JOY2_CLK			: out std_logic;
+        -- Mirror of $4218-421F for SNI, automatically latched at the end of auto read
+		SNI_JOY			: out std_logic_vector(63 downto 0);
 
 		TURBO				: in std_logic;
 		
@@ -1256,6 +1258,7 @@ begin
 			JOYRD_BUSY <= '0';
 			AUTO_JOY_STRB <= '0';
 			AUTO_JOY_CLK <= '0';
+			SNI_JOY <= (others => '0');
 		elsif rising_edge(CLK) then
 			if ENABLE = '1' and CLK4_CE_R = '1' then
 				JOY_POLL_CLK <= JOY_POLL_CLK + 1;
@@ -1287,6 +1290,7 @@ begin
 								if JOY_POLL_CNT = 15 then
 									JOYRD_BUSY <= '0';
 									JOY_POLL_STRB <= '0';
+									SNI_JOY <= JOY4_DATA & JOY3_DATA & JOY2_DATA & JOY1_DATA;
 								end if;
 							end if;
 						end if;

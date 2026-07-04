@@ -61,6 +61,7 @@ architecture rtl of SPC7110Map is
 	signal SPC7110_DROM_DO		: std_logic_vector(7 downto 0);
 	signal SPC7110_DROM_OE_N	: std_logic;
 	signal SPC7110_DROM_RDY 	: std_logic;
+	signal SNES_ROM_A 			: std_logic_vector(22 downto 0);
 	signal SNES_DROM_A 			: std_logic_vector(22 downto 0);
 	signal SNES_DROM_OE_N 		: std_logic;
 	
@@ -143,6 +144,7 @@ begin
 			elsif SYSCLKR_CE = '1' then
 				SPC7110_DROM_ACTIVE <= '0';
 				SNES_ROM_ACTIVE <= '1';
+				SNES_ROM_A <= (not CA(23) and CA(22)) & (not CA(23) and CA(22)) & "0" & CA(19 downto 0);
 			end if;
 			
 			ROM_RD_LATE <= ROM_RD;	--waiting for 2 cycles of reading sdram
@@ -169,19 +171,19 @@ begin
 	-- SYSCLK |___|---|
 	-- 0 - slot for SPC7110 for DROM access if need, else same SNES access (for sdram refresh)
 	-- 1 - slot for SNES for PROM/DROM access, first 1 MByte - PROM, rest - DROM
-	process(CA, SPC7110_DROM_A, SNES_DROM_A, SPC7110_DROM_ACTIVE, SNES_DROM_OE_N, SNES_ROM_ACTIVE)
+	process(SNES_ROM_A, SPC7110_DROM_A, SNES_DROM_A, SPC7110_DROM_ACTIVE, SNES_DROM_OE_N, SNES_ROM_ACTIVE)
 	begin
 		if SNES_ROM_ACTIVE = '0' then
 			if SPC7110_DROM_ACTIVE = '1' then
 				ROM_ADDR <= std_logic_vector(unsigned(SPC7110_DROM_A(22 downto 20)) + "001") & SPC7110_DROM_A(19 downto 0);
 			else
-				ROM_ADDR <= (not CA(23) and CA(22)) & (not CA(23) and CA(22)) & "0" & CA(19 downto 0);
+				ROM_ADDR <= SNES_ROM_A;
 			end if;
 		else
 			if SNES_DROM_OE_N = '0' then
 				ROM_ADDR <= std_logic_vector(unsigned(SNES_DROM_A(22 downto 20)) + "001") & SNES_DROM_A(19 downto 0);
 			else
-				ROM_ADDR <= (not CA(23) and CA(22)) & (not CA(23) and CA(22)) & "0" & CA(19 downto 0);
+				ROM_ADDR <= SNES_ROM_A;
 			end if;
 		end if;
 	end process;

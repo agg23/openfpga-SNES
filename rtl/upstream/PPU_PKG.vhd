@@ -28,8 +28,7 @@ package PPU_PKG is
 		BF_TILEDAT3,
 		BF_TILEDATM7,
 		BF_OPT0,
-		BF_OPT1,
-		BF_MODE7
+		BF_OPT1
 	);
 	
 	type BgFetch_r is record
@@ -67,9 +66,9 @@ package PPU_PKG is
 
 	constant BG_FETCH_START		: unsigned(8 downto 0) := "000000000"; 	--0 
 	constant BG_FETCH_END		: unsigned(8 downto 0) := "100001111"; 	--(256+16)-1=271
-	constant M7_FETCH_START		: unsigned(8 downto 0) := "000001111"; 	--15
-	constant M7_FETCH_END		: unsigned(8 downto 0) := "100001110"; 	--(15+256)-1=270
-	constant M7_XY_LATCH			: unsigned(8 downto 0) := "000001000"; 	--8
+	constant M7_FETCH_START		: unsigned(8 downto 0) := "000001110"; 	--14
+	constant M7_FETCH_END		: unsigned(8 downto 0) := "100001101"; 	--(14+256)-1=269
+	constant M7_XY_LATCH			: unsigned(8 downto 0) := "000000111"; 	--7
 	constant SPR_GET_PIX_START	: unsigned(8 downto 0) := "000010000"; 	--16 
 	constant SPR_GET_PIX_END	: unsigned(8 downto 0) := "100001111"; 	--(16+256)-1=271
 	constant BG_GET_PIX_START	: unsigned(8 downto 0) := "000010001"; 	--17
@@ -86,20 +85,6 @@ package PPU_PKG is
 	constant OBJ_FETCH_START	: unsigned(8 downto 0) := "100010000"; 	--(16+256)=272
 	constant OBJ_FETCH_END		: unsigned(8 downto 0) := "101010011"; 	--(16+256+68)-1=339
 	
-	type RangeOam_t is array(0 to 31) of std_logic_vector(6 downto 0);
-	
-	type SprSize_t is array(0 to 15) of unsigned(7 downto 0);
-	constant SPR_WIDTH: SprSize_t := (
-	x"07", x"07", x"07", x"0F", x"0F", x"1F", x"0F", x"0F",
-	x"0F", x"1F", x"3F", x"1F", x"3F", x"3F", x"1F", x"1F"
-	);
-	constant SPR_HEIGHT: SprSize_t := (
-	x"07", x"07", x"07", x"0F", x"0F", x"1F", x"1F", x"1F",
-	x"0F", x"1F", x"3F", x"1F", x"3F", x"3F", x"3F", x"1F"
-	);
-	function SprWidth(size: std_logic_vector(3 downto 0)) return unsigned;
-	function SprHeight(size: std_logic_vector(3 downto 0)) return unsigned;
-		
 	function FlipPlane(bp: std_logic_vector(7 downto 0); flip: std_logic) return std_logic_vector;
 	function FlipBGPlaneHR(bp: std_logic_vector(15 downto 0); flip: std_logic; main: std_logic) return std_logic_vector;
 									  
@@ -141,21 +126,7 @@ package body PPU_PKG is
 		end if;
 		return res;
 	end function;
-	
-	function SprWidth(size: std_logic_vector(3 downto 0)) return unsigned is
-		variable temp: unsigned(7 downto 0); 
-	begin
-		temp := SPR_WIDTH(to_integer(unsigned(size)));
-		return temp(5 downto 0);
-	end function;
-	
-	function SprHeight(size: std_logic_vector(3 downto 0)) return unsigned is
-		variable temp: unsigned(7 downto 0); 
-	begin
-		temp := SPR_HEIGHT(to_integer(unsigned(size)));
-		return temp(5 downto 0);
-	end function;
-	
+
 	function AddSub(a: unsigned(4 downto 0); 
 						 b: unsigned(4 downto 0);
 						 add: std_logic;
@@ -204,9 +175,9 @@ package body PPU_PKG is
 	end function;
 
 	function Mode7Clip(a: signed(13 downto 0)) return signed is
-		variable res: signed(15 downto 0); 
+		variable res: signed(10 downto 0); 
 	begin
-		res := (0 to 5 => a(13)) & a(9 downto 0);
+		res := a(13) & a(9 downto 0);
 		return res;
 	end function;
 

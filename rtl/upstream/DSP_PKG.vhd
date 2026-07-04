@@ -5,9 +5,10 @@ use ieee.numeric_std.all;
 
 package DSP_PKG is  
 
-	constant MCLK_NTSC_FREQ : integer := 2147727;
-	constant MCLK_PAL_FREQ  : integer := 2128137;
-	constant ACLK_FREQ      : integer :=  409600;
+	constant MCLK_NTSC_FREQ : integer := 21477270;
+	constant MCLK_PAL_FREQ  : integer := 21281370;
+	constant ACLK_TYPE_FREQ : integer :=  4096000;
+	constant ACLK_REAL_FREQ : integer :=  4104960;
 	
 	constant V0VOLL: std_logic_vector(7 downto 0) := x"00"; 
 	constant V1VOLL: std_logic_vector(7 downto 0) := x"10"; 
@@ -411,12 +412,18 @@ package DSP_PKG is
 	);
 
 	--Envelope Modes
-	type EnvMode_t is (
-		EM_RELEASE,
-		EM_ATTACK,
-		EM_DECAY,
-		EM_SUSTAIN
-	);
+	--type EnvMode_t is (
+	--	EM_RELEASE,
+	--	EM_ATTACK,
+	--	EM_DECAY,
+	--	EM_SUSTAIN
+	--);
+
+    constant EM_RELEASE: std_logic_vector(1 downto 0) := "00";
+    constant EM_ATTACK:  std_logic_vector(1 downto 0) := "01";
+    constant EM_DECAY:   std_logic_vector(1 downto 0) := "10";
+    constant EM_SUSTAIN: std_logic_vector(1 downto 0) := "11";
+
 	
 	type GaussTbl_t is array(0 to 511) of signed(11 downto 0);
 	constant  GTBL: GaussTbl_t := (
@@ -496,7 +503,8 @@ package DSP_PKG is
 	type EchoFir_t is array (0 to 1) of signed(15 downto 0);
 	type EchoFir17_t is array (0 to 1) of signed(15 downto 0);
 	type EchoFFC_t is array (0 to 7) of signed(7 downto 0);
-	type ChEnvMode_t is array (0 to 7) of EnvMode_t;
+	--type ChEnvMode_t is array (0 to 7) of EnvMode_t;
+	type ChEnvMode_t is array (0 to 7) of std_logic_vector(1 downto 0);
 	type Env_t is array (0 to 7) of signed(11 downto 0);
 	type EnvxBuf_t is array (0 to 7) of std_logic_vector(7 downto 0);
 	type InterpPos_t is array (0 to 7) of unsigned(15 downto 0);

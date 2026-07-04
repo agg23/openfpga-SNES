@@ -78,6 +78,7 @@ architecture rtl of BSXMap is
 	signal PSRAM_MEM_ADDR: std_logic_vector(18 downto 0);
 	signal PSRAM_MEM_DATA: std_logic_vector(7 downto 0);
 	signal PSRAM_MEM_WR	: std_logic;
+	signal PSRAM_RD		: std_logic;
 	
 	--DataPak
 	signal DPAK_ADDR		: std_logic_vector(19 downto 0);
@@ -86,6 +87,7 @@ architecture rtl of BSXMap is
 	signal DPAK_MEM_DO	: std_logic_vector(7 downto 0);
 	signal DPAK_MEM_RD	: std_logic;
 	signal DPAK_MEM_WR	: std_logic;
+	signal DPAK_RD			: std_logic;
 	
 	--Memory 
 	signal MEM_RD_PULSE	: std_logic;
@@ -142,7 +144,18 @@ begin
 	);
 	
 	
-	DPAK_ADDR <= ADDR&CA(14 downto 0);
+--	DPAK_ADDR <= ADDR&CA(14 downto 0);
+	process( RST_N, MCLK)
+	begin
+		if RST_N = '0' then
+			DPAK_RD <= '0';
+		elsif rising_edge(MCLK) then
+			if SYSCLKR_CE = '1' then
+				DPAK_ADDR <= ADDR&CA(14 downto 0);
+				DPAK_RD <= not DPAK_CE_N;
+			end if;
+		end if;
+	end process;
 	
 	DP : entity work.DATAPAK
 	port map(
@@ -150,7 +163,7 @@ begin
 		RST_N			=> RST_N and MAP_SEL,
 		ENABLE		=> ENABLE,
 
-		A				=> DPAK_ADDR,
+		A				=> ADDR&CA(14 downto 0),
 		DI				=> DI,
 		DO				=> DPAK_DO,
 		CE_N			=> DPAK_CE_N,
@@ -167,26 +180,32 @@ begin
 	);
 	
 	
-	PSRAM_ADDR <= ADDR(18 downto 15) & CA(14 downto 0);
-	
+--	PSRAM_ADDR <= ADDR(18 downto 15) & CA(14 downto 0);
 	process( RST_N, MCLK)
 	begin
 		if RST_N = '0' then
 			PSRAM_MEM_WR <= '0';
 			PSRAM_MEM_ADDR <= (others => '0');
 			PSRAM_MEM_DATA <= (others => '0');
+			PSRAM_RD <= '0';
 		elsif rising_edge(MCLK) then
 			if SYSCLKF_CE = '1' then
 				if PSRAM_CE_N = '0' and CPUWR_N = '0'  then
-					PSRAM_MEM_ADDR <= PSRAM_ADDR;
+					PSRAM_MEM_ADDR <= ADDR(18 downto 15) & CA(14 downto 0);
 					PSRAM_MEM_DATA <= DI;
 					PSRAM_MEM_WR <= '1';
 				else
 					PSRAM_MEM_WR <= '0';
 				end if;
 			end if;
+			
+			if SYSCLKR_CE = '1' then
+				PSRAM_ADDR <= ADDR(18 downto 15) & CA(14 downto 0);
+				PSRAM_RD <= not PSRAM_CE_N;
+			end if;
 		end if;
 	end process;
+	
 	
 	process( RST_N, MCLK)
 	begin
@@ -202,15 +221,19 @@ begin
 			elsif SYSCLKR_CE = '1' then
 				MEM_RW_PHASE <= '0';
 			end if;
+			
+			if SYSCLKR_CE = '1' then
+				BIOS_ADDR <= CA(20 downto 16)&CA(14 downto 0);
+			end if;
 		end if;
 	end process;
 	
-	BIOS_ADDR <= CA(20 downto 16)&CA(14 downto 0);
+--	BIOS_ADDR <= CA(20 downto 16)&CA(14 downto 0);
 	
 	ROM_ADDR <= "001"&DPAK_MEM_ADDR      when (DPAK_MEM_WR = '1' or DPAK_MEM_RD = '1') and MEM_RW_PHASE = '1' else	--Datapak write/erase command only
 					"010"&"0"&PSRAM_MEM_ADDR when PSRAM_MEM_WR = '1' and MEM_RW_PHASE = '1'                       else	--PSRAM write only
-					"001"&DPAK_ADDR          when DPAK_CE_N = '0'                                                 else	--Datapak normal read
-					"010"&"0"&PSRAM_ADDR     when PSRAM_CE_N = '0'                                                else	--PSRAM normal read
+					"001"&DPAK_ADDR          when DPAK_RD = '1'                                                   else	--Datapak normal read
+					"010"&"0"&PSRAM_ADDR     when PSRAM_RD = '1'                                                  else	--PSRAM normal read
 					"000"&BIOS_ADDR;
 	ROM_D    <= DPAK_MEM_DO&DPAK_MEM_DO       when DPAK_MEM_WR = '1' else 
 					PSRAM_MEM_DATA&PSRAM_MEM_DATA when PSRAM_MEM_WR = '1' else 
