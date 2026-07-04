@@ -2,41 +2,31 @@ upstream_url = "https://github.com/MiSTer-devel/SNES_MiSTer.git"
 downstream_url = "https://github.com/agg23/openfpga-SNES.git"
 
 core.workflow(
-    # Must be default to run automatically when Copybara runs
     name = "default",
-    
-    # ORIGIN: Where the code comes from
+
     origin = git.origin(
         url = upstream_url,
         ref = "master",
     ),
-
-    destination = git.github_pr_destination(
-        url = downstream_url,
-        destination_ref = "master",
-        pr_branch = "vendor/upstream-sync",
-        title = "Latest upstream",
-        
-        # Make incremental branches, updating the PR as necessary, and restarting once PR is merged
-        integrates = [], 
+    destination = git.destination(
+        url = "/Users/adam/code/fpga/pocket/openfpga-SNES",
+        push = refspec("vendor/upstream-copybara"),
     ),
-
-    # 1:1 commits
     mode = "ITERATIVE",
-
-    # Pass through upstream author
     authoring = authoring.pass_thru("Copybara <copybara@example.com>"),
-
-    # Only pull in rtl/ source files (this strips build artifacts/commits)
     origin_files = glob(["rtl/**"]),
-
-    # Only touch files under rtl/upstream/ - everything else is Pocket-specific
     destination_files = glob(["rtl/upstream/**"], exclude = ["rtl/upstream/snes_mister.qip"]),
-
-    # Move source files to destination location
     transformations = [
         core.move("rtl", "rtl/upstream"),
-        # Apply patches for Pocket-specific modifications
+        # Normalize CRLF→LF before patching (upstream stores mixed/CRLF endings)
+        core.transform(transformations = [
+            core.replace(
+                before = "\r\n",
+                after = "\n",
+                paths = glob(["rtl/upstream/**"]),
+                multiline = True,
+            ),
+        ], noop_behavior = "IGNORE_NOOP"),
         patch.apply(patches = [
           "upstream_patches/main.v.patch",
           "upstream_patches/ioport.patch",
