@@ -7,7 +7,8 @@ module main #(
 	parameter reg USE_SPC7110 = 1'b0,
 	parameter reg USE_BSX = 1'b0,
 	parameter reg USE_MSU = 1'b0,
-	parameter reg USE_SS = 1'b0
+	parameter reg USE_SS = 1'b0,
+	parameter reg USE_SUFAMI = 1'b0
 ) (
 	input             RESET_N,
 

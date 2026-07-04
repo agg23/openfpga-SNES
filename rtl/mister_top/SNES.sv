@@ -156,6 +156,7 @@ module MAIN_SNES (
   parameter USE_BSX = 1'b0;
   parameter USE_MSU = 1'b0;
   parameter USE_SS = 1'b0;
+  parameter USE_SUFAMI = 1'b0;
 
   initial begin
     $info("Selected chips");
@@ -168,6 +169,7 @@ module MAIN_SNES (
     $info("BSX %d", USE_BSX);
     $info("MSU %d", USE_MSU);
     $info("SS %d", USE_SS);
+    $info("SUFAMI %d", USE_SUFAMI);
   end
 
   // Hardcoded wires
@@ -324,7 +326,8 @@ module MAIN_SNES (
       .USE_SPC7110(USE_SPC7110),
       .USE_BSX(USE_BSX),
       .USE_MSU(USE_MSU),
-      .USE_SS(USE_SS)
+      .USE_SS(USE_SS),
+      .USE_SUFAMI(USE_SUFAMI)
   ) main (
       .RESET_N(RESET_N),
 
