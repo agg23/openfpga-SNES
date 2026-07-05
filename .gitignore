@@ -1,4 +1,5 @@
 *.rbf_r
+*.rev
 *.zip
 support/test/roms
 dist/**/*.rev
