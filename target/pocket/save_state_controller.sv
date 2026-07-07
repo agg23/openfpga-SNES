@@ -1,17 +1,28 @@
-module save_state_controller (
+// APF Memories command sequencer for savestates.sv.
+
+module save_state_controller #(
+    // Bridge region (upper nibble) carrying the blob; matches core_top.sv
+    parameter [3:0] SS_REGION = 4'h4,
+
+    // ~10s/~6s/~12s at 21.48 MHz, overridable for sim. The trigger wait must
+    // outlast a full game boot (request fires on the first NMI/IRQ vector fetch).
+    parameter [27:0] TIMEOUT_TRIGGER = 28'd215_000_000,
+    parameter [27:0] TIMEOUT_WALK = 28'd128_000_000,
+    parameter [27:0] TIMEOUT_READBACK = 28'd256_000_000,
+    // Fixed drain delay (clk_sys ticks), not an error timeout
+    parameter [27:0] SAVE_DRAIN_CYCLES = 28'd2048
+) (
     input wire clk_74a,
-    input wire clk_mem_85_9,
-    input wire clk_ppu_21_47,
+    input wire clk_sys_21_48,
 
-    // APF
-    input wire bridge_wr,
+    // APF bridge (clk_74a)
     input wire bridge_rd,
-    input wire bridge_endian_little,
+    input wire bridge_wr,
     input wire [31:0] bridge_addr,
-    input wire [31:0] bridge_wr_data,
-    output wire [31:0] save_state_bridge_read_data,
+    // Declared blob size in bytes; cart dependent, set by the loader
+    input wire [31:0] ss_size,
 
-    // APF Save States
+    // APF savestate handshake (clk_74a)
     input  wire savestate_load,
     output wire savestate_load_ack_s,
     output wire savestate_load_busy_s,
@@ -24,349 +35,346 @@ module save_state_controller (
     output wire savestate_start_ok_s,
     output wire savestate_start_err_s,
 
-    // Save States
-    output reg ss_save,
-    output reg ss_load,
+    // Core (clk_sys)
+    input wire ss_allow,     // save states usable right now (cart ready etc)
+    input wire ss_busy,      // engine walk running
+    input wire stage_lost,   // staging dropped data, the staged blob is torn (clk_mem)
 
-    input wire [63:0] ss_din,
-    output wire [63:0] ss_dout,
-    input wire [25:0] ss_addr,
-    input wire ss_rnw,
-    input wire ss_req,
-    input wire [7:0] ss_be,
-    output reg ss_ack,
-
-    input wire ss_busy
+    output reg ss_save = 0,
+    output reg ss_load = 0,
+    output wire ss_idle      // sequencer idle, clears the stage_lost latch
 );
-  wire savestate_load_s;
-  wire savestate_start_s;
 
-  // Syncing
+  // clock domain: clk_74a
+  wire in_region = bridge_addr[31:28] == SS_REGION;
+
+  // Retriggerable monostable spanning gaps in the firmware write stream
+  // (2^21 at 74.25 MHz ~28 ms); marks that staging started, not that it ended
+  reg [20:0] wr_quiet = 0;
+  wire stage_active = wr_quiet != 0;
+
+  // Latched when the firmware touches the last word of the blob; cleared
+  // whenever the sequencer is idle
+  reg last_read_seen = 0;
+  reg last_write_seen = 0;
+  wire seq_idle_74;
+
+  // ss_size is static for the whole transfer, so no synchronizer is needed
+  wire last_word = bridge_addr[27:0] >= ss_size[27:0] - 28'd4;
+
+  always @(posedge clk_74a) begin
+    if (bridge_wr && in_region) begin
+      wr_quiet <= ~21'd0;
+    end else if (wr_quiet != 0) begin
+      wr_quiet <= wr_quiet - 1'd1;
+    end
+
+    if (seq_idle_74) begin
+      last_read_seen  <= 0;
+      last_write_seen <= 0;
+    end else begin
+      if (bridge_rd && in_region && last_word) begin
+        last_read_seen <= 1;
+      end
+      if (bridge_wr && in_region && last_word) begin
+        last_write_seen <= 1;
+      end
+    end
+  end
+
+  // clock domain: clk_sys_21_48
+  wire start_s;
+  wire load_s;
+  wire stage_active_s;
+  wire last_read_s;
+  wire last_write_s;
+  wire stage_lost_s;
+
   synch_3 #(
-      .WIDTH(2)
-  ) savestate_in (
-      {savestate_load, savestate_start},
-      {savestate_load_s, savestate_start_s},
-      clk_ppu_21_47
+      .WIDTH(5)
+  ) cmd_sync (
+      {savestate_start, savestate_load, stage_active, last_read_seen, last_write_seen},
+      {start_s, load_s, stage_active_s, last_read_s, last_write_s},
+      clk_sys_21_48
   );
 
-  reg savestate_load_ack;
-  reg savestate_load_busy;
-  reg savestate_load_ok;
-  reg savestate_load_err;
+  synch_3 stage_lost_sync (
+      stage_lost,
+      stage_lost_s,
+      clk_sys_21_48
+  );
 
-  reg savestate_start_ack;
-  reg savestate_start_busy;
-  reg savestate_start_ok;
-  reg savestate_start_err;
+  reg start_ack = 0;
+  reg start_busy = 0;
+  reg start_ok = 0;
+  reg start_err = 0;
+  reg load_ack = 0;
+  reg load_busy = 0;
+  reg load_ok = 0;
+  reg load_err = 0;
+
+  localparam IDLE = 4'd0;
+  localparam SAVE_WAIT_BUSY = 4'd1;
+  localparam SAVE_WALK = 4'd2;
+  localparam SAVE_READBACK = 4'd3;
+  localparam PRELOAD_STAGE = 4'd4;
+  localparam LOAD_WAIT_STAGE = 4'd5;
+  localparam LOAD_WAIT_BUSY = 4'd6;
+  localparam LOAD_WALK = 4'd7;
+  localparam SAVE_DRAIN = 4'd9;
+
+  reg [3:0] state = IDLE;
+  reg prev_start = 0;
+  reg prev_load = 0;
+  reg prev_stage = 0;
+  reg [27:0] timeout = 0;
+
+  // ss_allow rises before the console reset tail fully releases; a trigger
+  // fired into that tail is dropped, so wait for the window to settle first
+  reg [6:0] allow_cnt = 0;
+  wire allow_settled = allow_cnt[6];
+
+  assign ss_idle = state == IDLE;
+
+  synch_3 idle_sync (
+      ss_idle,
+      seq_idle_74,
+      clk_74a
+  );
+
+  always @(posedge clk_sys_21_48) begin
+    prev_start <= start_s;
+    prev_load <= load_s;
+    prev_stage <= stage_active_s;
+
+    ss_save <= 0;
+    ss_load <= 0;
+
+    // Drop ack once the firmware releases the request
+    if (~start_s) begin
+      start_ack <= 0;
+    end
+    if (~load_s) begin
+      load_ack <= 0;
+    end
+
+    timeout <= timeout + 1'd1;
+
+    if (~ss_allow) begin
+      allow_cnt <= 0;
+    end else if (~allow_settled) begin
+      allow_cnt <= allow_cnt + 1'd1;
+    end
+
+    case (state)
+      IDLE: begin
+        timeout <= 0;
+
+        if (start_s & ~prev_start) begin
+          start_ack <= 1;
+          start_ok <= 0;
+          start_err <= 0;
+
+          // Need the settled window, else the engine drops the trigger
+          if (ss_allow && allow_settled) begin
+            start_busy <= 1;
+            ss_save <= 1;
+            state <= SAVE_WAIT_BUSY;
+          end else begin
+            start_err <= 1;
+          end
+        end else if (load_s & ~prev_load) begin
+          load_ack <= 1;
+          load_ok <= 0;
+          load_err <= 0;
+
+          if (ss_allow) begin
+            load_busy <= 1;
+            state <= LOAD_WAIT_STAGE;
+          end else begin
+            load_err <= 1;
+          end
+        end else if (stage_active_s & ~prev_stage) begin
+          // Blob arriving ahead of the Load command; track it
+          state <= PRELOAD_STAGE;
+        end
+      end
+
+      SAVE_WAIT_BUSY: begin
+        if (ss_busy) begin
+          timeout <= 0;
+          state <= SAVE_WALK;
+        end else if (~ss_allow) begin
+          // Console reset cleared the armed request; latch is free again
+          start_busy <= 0;
+          start_err <= 1;
+          state <= IDLE;
+        end else if (timeout == TIMEOUT_TRIGGER) begin
+          // Engine never fetched a hijackable vector; report failure
+          start_busy <= 0;
+          start_err <= 1;
+          state <= IDLE;
+        end
+      end
+
+      SAVE_WALK: begin
+        if (~ss_busy && ~ss_allow) begin
+          // Reset killed the walk (ss_allow drops first), not a completion:
+          // the blob is torn, do not offer it
+          start_busy <= 0;
+          start_err <= 1;
+          state <= IDLE;
+        end else if (~ss_busy) begin
+          // Blob complete; the game resumes (helper RTI) and firmware reads it
+          start_busy <= 0;
+          start_ok <= 1;
+          timeout <= 0;
+          state <= SAVE_READBACK;
+        end else if (timeout == TIMEOUT_WALK) begin
+          start_busy <= 0;
+          start_err <= 1;
+          state <= IDLE;
+        end
+      end
+
+      SAVE_READBACK: begin
+        // Stay busy until the firmware reads the whole blob; timeout only
+        // rescues a firmware that walked away mid-transfer
+        if (last_read_s || timeout == TIMEOUT_READBACK) begin
+          timeout <= 0;
+          state <= SAVE_DRAIN;
+        end
+      end
+
+      SAVE_DRAIN: begin
+        // Let the last word finish through the unloader before going idle
+        if (timeout == SAVE_DRAIN_CYCLES) begin
+          state <= IDLE;
+        end
+      end
+
+      PRELOAD_STAGE: begin
+        // Staging is alive while writes arrive; only give up after a long
+        // quiet period so an SD stall is not mistaken for an abandoned load
+        if (stage_active_s) begin
+          timeout <= 0;
+        end
+
+        if (load_s & ~prev_load) begin
+          // No ss_allow test: on wake-from-sleep the Load can arrive while the
+          // download tail still holds ss_allow low; LOAD_WAIT_STAGE waits it out
+          load_ack <= 1;
+          load_ok <= 0;
+          load_err <= 0;
+
+          load_busy <= 1;
+          timeout <= 0;
+          state <= LOAD_WAIT_STAGE;
+        end else if (~stage_active_s && timeout >= TIMEOUT_WALK) begin
+          // Data arrived but no Load command followed
+          state <= IDLE;
+        end
+      end
+
+      LOAD_WAIT_STAGE: begin
+        if (last_write_s && stage_lost_s) begin
+          // Staging overflowed; the blob is torn and would wedge the console
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end else if (last_write_s && allow_settled) begin
+          // Last word landed and any download drained; trigger the engine
+          ss_load <= 1;
+          timeout <= 0;
+          state <= LOAD_WAIT_BUSY;
+        end else if (timeout == TIMEOUT_READBACK) begin
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end
+      end
+
+      LOAD_WAIT_BUSY: begin
+        if (ss_busy) begin
+          timeout <= 0;
+          state <= LOAD_WALK;
+        end else if (~ss_allow) begin
+          // Console reset cleared the armed request
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end else if (timeout == TIMEOUT_TRIGGER) begin
+          // Engine refused the blob or never saw an interrupt
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end
+      end
+
+      LOAD_WALK: begin
+        if (~ss_busy && ~ss_allow) begin
+          // As SAVE_WALK: a mid-walk reset is not a completion
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end else if (~ss_busy) begin
+          load_busy <= 0;
+          load_ok <= 1;
+          state <= IDLE;
+        end else if (timeout == TIMEOUT_WALK) begin
+          load_busy <= 0;
+          load_err <= 1;
+          state <= IDLE;
+        end
+      end
+
+      default: state <= IDLE;
+    endcase
+
+    // Ack a request that lands mid-operation so core_bridge_cmd never hangs;
+    // error unless the same op is already running (busy keeps firmware polling)
+    if ((start_s & ~prev_start) && state != IDLE) begin
+      start_ack <= 1;
+      if (~start_busy) begin
+        start_ok  <= 0;
+        start_err <= 1;
+      end
+    end
+    if ((load_s & ~prev_load) && state != IDLE && state != PRELOAD_STAGE) begin
+      load_ack <= 1;
+      if (~load_busy) begin
+        load_ok  <= 0;
+        load_err <= 1;
+      end
+    end
+  end
+
+
+  // Flags and ack cross to clk_74a on independent synchronizers and
+  // core_bridge_cmd latches on the ack; delay the ack so flags land first
+  reg [1:0] start_ack_dly = 0;
+  reg [1:0] load_ack_dly = 0;
+
+  always @(posedge clk_sys_21_48) begin
+    start_ack_dly <= {start_ack_dly[0], start_ack};
+    load_ack_dly  <= {load_ack_dly[0], load_ack};
+  end
 
   synch_3 #(
       .WIDTH(8)
-  ) savestate_out (
+  ) status_sync (
+      {start_ack_dly[1], start_busy, start_ok, start_err, load_ack_dly[1], load_busy, load_ok, load_err},
       {
-        savestate_load_ack,
-        savestate_load_busy,
-        savestate_load_ok,
-        savestate_load_err,
-        savestate_start_ack,
-        savestate_start_busy,
-        savestate_start_ok,
-        savestate_start_err
-      },
-      {
-        savestate_load_ack_s,
-        savestate_load_busy_s,
-        savestate_load_ok_s,
-        savestate_load_err_s,
         savestate_start_ack_s,
         savestate_start_busy_s,
         savestate_start_ok_s,
-        savestate_start_err_s
+        savestate_start_err_s,
+        savestate_load_ack_s,
+        savestate_load_busy_s,
+        savestate_load_ok_s,
+        savestate_load_err_s
       },
       clk_74a
   );
 
-  wire save_state_loader_write;
-  wire [22:0] save_state_loader_addr;
-  wire [15:0] save_state_loader_data;
-
-  wire save_state_unloader_read;
-  wire [22:0] save_state_unloader_addr;
-
-  wire fifo_load_empty;
-  reg fifo_load_read_req = 0;
-  wire [63:0] fifo_load_dout;
-  reg fifo_load_clr = 0;
-
-  // TODO: Add endianness
-  // assign ss_dout = {fifo_load_dout[47:32], fifo_load_dout[63:48], fifo_load_dout[15:0], fifo_load_dout[31:16]};
-  assign ss_dout = {
-    fifo_load_dout[39:32],
-    fifo_load_dout[47:40],
-    fifo_load_dout[55:48],
-    fifo_load_dout[63:56],
-    fifo_load_dout[7:0],
-    fifo_load_dout[15:8],
-    fifo_load_dout[23:16],
-    fifo_load_dout[31:24]
-  };
-
-  dcfifo_mixed_widths fifo_load (
-      .data(bridge_wr_data),
-      .rdclk(clk_ppu_21_47),
-      .rdreq(fifo_load_read_req),
-      .wrclk(clk_74a),
-      .wrreq(bridge_wr && bridge_addr[31:28] == 4'h4),
-      .q(fifo_load_dout),
-      .rdempty(fifo_load_empty),
-      .aclr(fifo_load_clr)
-      // .eccstatus(),
-      // .rdfull(),
-      // .rdusedw(),
-      // .wrempty(),
-      // .wrfull(),
-      // .wrusedw()
-  );
-  defparam fifo_load.intended_device_family = "Cyclone V", fifo_load.lpm_numwords = 4096,
-      fifo_load.lpm_showahead = "OFF", fifo_load.lpm_type = "dcfifo_mixed_widths",
-      fifo_load.lpm_width = 32, fifo_load.lpm_widthu = 12,
-      fifo_load.lpm_widthu_r = 11, fifo_load.lpm_width_r = 64, fifo_load.overflow_checking = "OFF",
-      fifo_load.rdsync_delaypipe = 5, fifo_load.underflow_checking = "ON", fifo_load.use_eab = "ON",
-      fifo_load.wrsync_delaypipe = 5, fifo_load.write_aclr_synch = "ON";
-
-  reg  fifo_save_write_req;
-  reg  fifo_save_read_req;
-
-  wire fifo_save_rd_empty;
-  wire fifo_save_wr_empty;
-
-  dcfifo_mixed_widths fifo_save (
-      .data(ss_din),
-      .rdclk(clk_74a),
-      .rdreq(fifo_save_read_req),
-      .wrclk(clk_ppu_21_47),
-      .wrreq(fifo_save_write_req),
-      .q({
-        save_state_bridge_read_data[7:0],
-        save_state_bridge_read_data[15:8],
-        save_state_bridge_read_data[23:16],
-        save_state_bridge_read_data[31:24]
-      }),
-      .rdempty(fifo_save_rd_empty),
-      .wrempty(fifo_save_wr_empty),
-      .aclr(1'b0)
-      // .eccstatus(),
-      // .rdfull(),
-      // .rdusedw(),
-      // .wrfull(),
-      // .wrusedw()
-  );
-  defparam fifo_save.intended_device_family = "Cyclone V", fifo_save.lpm_numwords = 4,
-      fifo_save.lpm_showahead = "OFF", fifo_save.lpm_type = "dcfifo_mixed_widths",
-      fifo_save.lpm_width = 64, fifo_save.lpm_widthu = 2, fifo_save.lpm_widthu_r = 3,
-      fifo_save.lpm_width_r = 32, fifo_save.overflow_checking = "ON",
-      fifo_save.rdsync_delaypipe = 5, fifo_save.underflow_checking = "ON", fifo_save.use_eab = "ON",
-      fifo_save.wrsync_delaypipe = 5;
-
-
-  reg prev_bridge_rd;
-  reg [1:0] save_read_state = NONE;
-
-  wire [27:0] bridge_save_addr = bridge_addr[27:0];
-  wire bridge_save_rd = bridge_rd && bridge_addr[31:28] == 4'h4;
-
-  localparam SAVE_READ_REQ = 1;
-
-  always @(posedge clk_74a) begin
-    prev_bridge_rd <= bridge_rd;
-
-    if (bridge_rd && ~prev_bridge_rd && bridge_addr[31:28] == 4'h4) begin
-      if (~fifo_save_rd_empty && bridge_save_addr[22:2] != last_unloader_addr) begin
-        save_read_state <= SAVE_READ_REQ;
-
-        fifo_save_read_req <= 1;
-
-        last_unloader_addr <= bridge_save_addr[22:2];
-      end
-    end
-
-    case (save_read_state)
-      SAVE_READ_REQ: begin
-        save_read_state <= NONE;
-
-        fifo_save_read_req <= 0;
-      end
-    endcase
-  end
-
-  reg  [20:0] last_unloader_addr = 21'hFFFF;
-  wire [15:0] save_state_unloader_data;
-
-  localparam NONE = 0;
-
-  localparam SAVE_BUSY = 1;
-  localparam SAVE_WAIT_REQ = SAVE_BUSY + 1;
-  localparam SAVE_WAIT_REQ_DELAY = SAVE_WAIT_REQ + 1;
-  localparam SAVE_WAIT_ACK = SAVE_WAIT_REQ_DELAY + 1;
-  localparam SAVE_SHIFT = SAVE_WAIT_ACK + 1;
-
-  localparam LOAD_WAIT_REQ = 20;
-  localparam LOAD_READ_REQ = LOAD_WAIT_REQ + 1;
-  localparam LOAD_WAIT_APF_START = LOAD_READ_REQ + 1;
-
-  localparam LOAD_APF_COMPLETE = LOAD_WAIT_APF_START + 1;
-
-  reg [7:0] state = NONE;
-
-  reg save_state_saving_req = 0;
-  reg save_state_loading = 0;
-  reg [63:0] ss_buffer = 0;
-  // Used for duplicate reads
-  reg [63:0] last_ss_buffer = 0;
-  reg [1:0] save_shift_count = 0;
-
-  reg did_req = 0;
-  reg is_dup_read = 0;
-
-  reg prev_savestate_start = 0;
-  reg prev_savestate_load = 0;
-  reg prev_ss_busy = 0;
-  reg prev_bridge_save_rd = 0;
-
-  always @(posedge clk_ppu_21_47) begin
-    prev_ss_busy <= ss_busy;
-    prev_savestate_start <= savestate_start_s;
-    prev_savestate_load <= savestate_load_s;
-    prev_bridge_save_rd <= bridge_save_rd;
-
-    ss_load <= 0;
-    ss_save <= 0;
-    ss_ack <= 0;
-    fifo_save_write_req <= 0;
-
-    if (~fifo_load_empty && ~save_state_loading) begin
-      // Begin save stating
-      state <= LOAD_WAIT_REQ;
-
-      save_state_loading <= 1;
-
-      ss_load <= 1;
-    end
-
-    if (savestate_start_s && ~prev_savestate_start) begin
-      // Begin saving state
-      state <= SAVE_BUSY;
-
-      savestate_start_ack <= 1;
-      savestate_start_ok <= 0;
-      savestate_start_err <= 0;
-
-      savestate_load_ok <= 0;
-      savestate_load_err <= 0;
-
-      ss_save <= 1;
-    end else if (savestate_load_s && ~prev_savestate_load) begin
-      // Begin APF savestate load (data is already copied into ss manager)
-      save_state_saving_req <= 1;
-
-      savestate_load_ack <= 1;
-      savestate_load_ok <= 0;
-      savestate_load_err <= 0;
-
-      savestate_start_ok <= 0;
-      savestate_start_err <= 0;
-    end
-
-    case (state)
-      // Saving
-      SAVE_BUSY: begin
-        savestate_start_ack  <= 0;
-        savestate_start_busy <= 1;
-
-        if (ss_req) begin
-          // First req, end busy, start loading out
-          // Duplicate of SAVE_WAIT_REQ
-          state <= SAVE_WAIT_REQ_DELAY;
-
-          // Latch data
-          fifo_save_write_req <= 1;
-
-          savestate_start_busy <= 0;
-          savestate_start_ok <= 1;
-        end
-      end
-      SAVE_WAIT_REQ: begin
-        // Wait for SS manager to send us more data
-        if (ss_req) begin
-          state <= SAVE_WAIT_REQ_DELAY;
-
-          // Latch data
-          fifo_save_write_req <= 1;
-        end else if (prev_ss_busy && ~ss_busy) begin
-          // Left busy, SS manager is done
-          state <= NONE;
-        end
-      end
-      SAVE_WAIT_REQ_DELAY: begin
-        // Delay for empty to go low
-        state <= SAVE_WAIT_ACK;
-      end
-      SAVE_WAIT_ACK: begin
-        // Wait for bridge to read word
-        if (fifo_save_wr_empty) begin
-          state  <= SAVE_WAIT_REQ;
-
-          ss_ack <= 1;
-        end
-      end
-
-      // Loading
-      LOAD_WAIT_REQ: begin
-        if (prev_ss_busy && ~ss_busy) begin
-          // Finished load. Wait for APF ack
-          state <= LOAD_WAIT_APF_START;
-        end else if (~fifo_load_empty) begin
-          if (did_req || ss_req) begin
-            // Request and FIFO has data
-            state <= LOAD_READ_REQ;
-            fifo_load_read_req <= 1;
-            did_req <= 0;
-          end
-        end else if (ss_req) begin
-          // Request. Wait for data to arrive
-          did_req <= 1;
-        end
-      end
-      LOAD_READ_REQ: begin
-        // Data should be available from FIFO read
-        state <= LOAD_WAIT_REQ;
-
-        fifo_load_read_req <= 0;
-        ss_ack <= 1;
-      end
-      LOAD_WAIT_APF_START: begin
-        if (save_state_saving_req) begin
-          // Begin APF savestate load (data is already copied into ss manager)
-          state <= LOAD_APF_COMPLETE;
-
-          fifo_load_clr <= 1;
-
-          savestate_load_ack <= 0;
-          savestate_load_busy <= 1;
-
-          save_state_saving_req <= 0;
-        end
-      end
-      LOAD_APF_COMPLETE: begin
-        state <= NONE;
-
-        fifo_load_clr <= 0;
-
-        savestate_load_busy <= 0;
-        savestate_load_ok <= 1;
-
-        save_state_loading <= 0;
-      end
-    endcase
-  end
 endmodule

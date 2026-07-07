@@ -224,6 +224,11 @@ module core_top (
 
 );
 
+  parameter USE_SS = 1'b0;
+
+  // Bridge region carrying the savestate blob
+  localparam [3:0] SS_REGION = 4'h4;
+
   // not using the IR port, so turn off both the LED, and
   // disable the receive circuit to save power
   assign port_ir_tx              = 0;
@@ -293,13 +298,6 @@ module core_top (
   //   assign dram_cas_n              = 'h1;
   //   assign dram_we_n               = 'h1;
 
-  assign sram_a                  = 'h0;
-  assign sram_dq                 = {16{1'bZ}};
-  assign sram_oe_n               = 1;
-  assign sram_we_n               = 1;
-  assign sram_ub_n               = 1;
-  assign sram_lb_n               = 1;
-
   assign dbg_tx                  = 1'bZ;
   assign user1                   = 1'bZ;
   assign aux_scl                 = 1'bZ;
@@ -325,6 +323,10 @@ module core_top (
 
     if (bridge_addr[31:28] == 4'h2) begin
       bridge_rd_data <= sd_read_data;
+    end
+
+    if (bridge_addr[31:28] == SS_REGION) begin
+      bridge_rd_data <= ss_read_data;
     end
   end
 
@@ -408,10 +410,19 @@ module core_top (
 
   wire dataslot_allcomplete;
 
-  wire savestate_supported = 0;
-  wire [31:0] savestate_addr;
-  wire [31:0] savestate_size;
-  wire [31:0] savestate_maxloadsize;
+  // Blob = fixed sections (0x44000) + cart RAM (1KB << RAMSZ), RAMSZ clamped so
+  // a bad header cannot oversize it
+  localparam [31:0] SS_BLOB_FIXED = 32'h44000;
+  localparam [3:0] SS_RAMSZ_MAX = 4'd8;  // SA-1 BWRAM 256KB, largest cart RAM
+
+  wire [3:0] ss_ramsz = ram_size > SS_RAMSZ_MAX ? SS_RAMSZ_MAX : ram_size;
+  wire [31:0] ss_blob_size = SS_BLOB_FIXED + (ss_ramsz != 0 ? (32'd1024 << ss_ramsz) : 32'd0);
+
+  // ss_avail is low for carts without savestates (e.g. CX4 on the SA-1 build)
+  wire savestate_supported = USE_SS & ss_avail;
+  wire [31:0] savestate_addr = {SS_REGION, 28'h0};
+  wire [31:0] savestate_size = ss_blob_size;
+  wire [31:0] savestate_maxloadsize = ss_blob_size;
 
   wire savestate_start;
   wire savestate_start_ack;
@@ -517,7 +528,8 @@ module core_top (
 
   reg [7:0] rom_type;
   reg [3:0] rom_size;
-  reg [3:0] ram_size;
+  // ram_size also sizes the blob; init so the size is sane before the loader runs
+  reg [3:0] ram_size = 0;
   reg PAL;
 
   wire save_download_s;
@@ -598,6 +610,130 @@ module core_top (
       .read_addr(sd_buff_addr_out),
       .read_data(sd_buff_din)
   );
+
+  //
+  // save states
+  //
+
+  wire [31:0] ss_read_data;
+
+  wire ss_save;
+  wire ss_load;
+  wire ss_busy;
+  wire ss_avail;
+  wire ss_ctrl_idle;
+  wire ss_stage_lost;
+
+  wire ss_stage_wr;
+  wire [19:0] ss_stage_addr;
+  wire [15:0] ss_stage_data;
+
+  wire ss_blob_rd;
+  wire [19:0] ss_blob_addr;
+  wire [15:0] ss_blob_q;
+
+  generate
+    if (USE_SS == 1'b1) begin
+      data_loader #(
+          .ADDRESS_MASK_UPPER_4(SS_REGION),
+          .ADDRESS_SIZE(20),
+          .WRITE_MEM_CLOCK_DELAY(16),
+          .OUTPUT_WORD_SIZE(2)
+      ) ss_data_loader (
+          .clk_74a(clk_74a),
+          .clk_memory(clk_mem_85_9),
+
+          .bridge_wr(bridge_wr),
+          .bridge_endian_little(bridge_endian_little),
+          .bridge_addr(bridge_addr),
+          .bridge_wr_data(bridge_wr_data),
+
+          .write_en  (ss_stage_wr),
+          .write_addr(ss_stage_addr),
+          .write_data(ss_stage_data)
+      );
+
+      // READ_MEM_CLOCK_DELAY: one psram read is ~15 clk_mem in tb, 24 for margin
+      data_unloader #(
+          .ADDRESS_MASK_UPPER_4(SS_REGION),
+          .ADDRESS_SIZE(20),
+          .READ_MEM_CLOCK_DELAY(24),
+          .INPUT_WORD_SIZE(2)
+      ) ss_data_unloader (
+          .clk_74a(clk_74a),
+          .clk_memory(clk_mem_85_9),
+
+          .bridge_rd(bridge_rd),
+          .bridge_endian_little(bridge_endian_little),
+          .bridge_addr(bridge_addr),
+          .bridge_rd_data(ss_read_data),
+
+          .read_en  (ss_blob_rd),
+          .read_addr(ss_blob_addr),
+          .read_data(ss_blob_q)
+      );
+
+      wire ss_ready_s;
+
+      synch_3 ss_ready_sync (
+          pll_core_locked && ~ioctl_download,
+          ss_ready_s,
+          clk_sys_21_48
+      );
+
+      wire ss_allow = ss_avail && ss_ready_s && ~reset_button_s;
+
+      save_state_controller #(
+          .SS_REGION(SS_REGION)
+      ) save_state_controller (
+          .clk_74a(clk_74a),
+          .clk_sys_21_48(clk_sys_21_48),
+
+          .bridge_rd  (bridge_rd),
+          .bridge_wr  (bridge_wr),
+          .bridge_addr(bridge_addr),
+          .ss_size    (ss_blob_size),
+
+          .savestate_load(savestate_load),
+          .savestate_load_ack_s(savestate_load_ack),
+          .savestate_load_busy_s(savestate_load_busy),
+          .savestate_load_ok_s(savestate_load_ok),
+          .savestate_load_err_s(savestate_load_err),
+
+          .savestate_start(savestate_start),
+          .savestate_start_ack_s(savestate_start_ack),
+          .savestate_start_busy_s(savestate_start_busy),
+          .savestate_start_ok_s(savestate_start_ok),
+          .savestate_start_err_s(savestate_start_err),
+
+          .ss_allow(ss_allow),
+          .ss_busy (ss_busy),
+          .stage_lost(ss_stage_lost),
+
+          .ss_save (ss_save),
+          .ss_load (ss_load),
+          .ss_idle (ss_ctrl_idle)
+      );
+    end else begin
+      assign ss_read_data = 32'd0;
+      assign ss_save = 1'b0;
+      assign ss_load = 1'b0;
+      assign ss_ctrl_idle = 1'b1;
+      assign ss_stage_wr = 1'b0;
+      assign ss_stage_addr = 20'd0;
+      assign ss_stage_data = 16'd0;
+      assign ss_blob_rd = 1'b0;
+      assign ss_blob_addr = 20'd0;
+      assign savestate_start_ack = 1'b0;
+      assign savestate_start_busy = 1'b0;
+      assign savestate_start_ok = 1'b0;
+      assign savestate_start_err = 1'b0;
+      assign savestate_load_ack = 1'b0;
+      assign savestate_load_busy = 1'b0;
+      assign savestate_load_ok = 1'b0;
+      assign savestate_load_err = 1'b0;
+    end
+  endgenerate
 
   always @(posedge clk_74a or negedge pll_core_locked) begin
     if (~pll_core_locked) begin
@@ -857,6 +993,22 @@ module core_top (
 
       .sram_size(sram_size),
 
+      // Save states
+      .ss_save (ss_save),
+      .ss_load (ss_load),
+      .ss_ctrl_idle(ss_ctrl_idle),
+      .ss_busy (ss_busy),
+      .ss_avail(ss_avail),
+      .ss_stage_lost(ss_stage_lost),
+
+      .ss_stage_wr(ss_stage_wr),
+      .ss_stage_addr(ss_stage_addr),
+      .ss_stage_data(ss_stage_data),
+
+      .ss_blob_rd(ss_blob_rd),
+      .ss_blob_addr(ss_blob_addr),
+      .ss_blob_q(ss_blob_q),
+
       // SDRAM
       .dram_a(dram_a),
       .dram_ba(dram_ba),
@@ -894,6 +1046,14 @@ module core_top (
       .cram1_we_n(cram1_we_n),
       .cram1_ub_n(cram1_ub_n),
       .cram1_lb_n(cram1_lb_n),
+
+      // Async SRAM (ARAM)
+      .sram_a(sram_a),
+      .sram_dq(sram_dq),
+      .sram_oe_n(sram_oe_n),
+      .sram_we_n(sram_we_n),
+      .sram_ub_n(sram_ub_n),
+      .sram_lb_n(sram_lb_n),
 
       // Video
       .hblank (h_blank),
