@@ -147,6 +147,8 @@ module main #(
 	output      [7:0] SS_DDR_BE,
 	output            SS_DDR_REQ,
 
+	output            SS_BUSY,
+
 	output     [15:0] AUDIO_L,
 	output     [15:0] AUDIO_R
 );
@@ -883,7 +885,6 @@ end else
 assign MAP_ACTIVE[6] = 0;
 endgenerate
 
-wire        SS_BUSY;
 wire  [7:0] SS_DO;
 wire [23:0] SS_ROM_ADDR;
 
