@@ -4,6 +4,8 @@ set_global_assignment -name SDC_FILE              [file join $::quartus(qip_path
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_loader.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_unloader.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "psram.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sram.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sram_ctrl.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "save_state_controller.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sound_i2s.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sync_fifo.sv"]

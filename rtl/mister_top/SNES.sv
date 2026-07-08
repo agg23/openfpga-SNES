@@ -95,6 +95,22 @@ module MAIN_SNES (
 
     output reg [3:0] sram_size,
 
+    // Savestates
+    input wire ss_save,
+    input wire ss_load,
+    input wire ss_ctrl_idle,
+    output wire ss_busy,
+    output wire ss_avail,
+    output wire ss_stage_lost,
+
+    input wire ss_stage_wr,
+    input wire [19:0] ss_stage_addr,
+    input wire [15:0] ss_stage_data,
+
+    input wire ss_blob_rd,
+    input wire [19:0] ss_blob_addr,
+    output wire [15:0] ss_blob_q,
+
     // SDRAM
     output wire [12:0] dram_a,
     output wire [ 1:0] dram_ba,
@@ -132,6 +148,14 @@ module MAIN_SNES (
     output wire cram1_we_n,
     output wire cram1_ub_n,
     output wire cram1_lb_n,
+
+    // SRAM
+    output wire [16:0] sram_a,
+    inout wire [15:0] sram_dq,
+    output wire sram_oe_n,
+    output wire sram_we_n,
+    output wire sram_ub_n,
+    output wire sram_lb_n,
 
     // Video
     output wire vblank,
@@ -447,35 +471,123 @@ module MAIN_SNES (
       .AUDIO_L(audio_l),
       .AUDIO_R(audio_r),
 
-      // New upstream ports since fork — tied to safe defaults
-      .RAM_SIZE(4'b0),
+      .RAM_SIZE(ram_size),
       .GSU_FASTROM(1'b0),
       .SUFAMI_SWAP(1'b0),
       .CC_DIP(8'b0),
       .DSP_FREQ(1'b0),
       .MSU_AUDIO_SECTOR(22'b0),
-      .SS_SAVE(1'b0),
-      .SS_TOSD(1'b0),
-      .SS_LOAD(1'b0),
+      .SS_SAVE(ss_save),
+      // Disable writing total count of known savestates to SS output
+      .SS_TOSD(1'b1),
+      .SS_LOAD(ss_load),
       .SS_SLOT(2'b0),
-      .SS_DDR_DI(64'b0),
-      .SS_DDR_ACK(1'b0),
+      .SS_DDR_DI(ss_ddr_di),
+      .SS_DDR_ACK(ss_ddr_ack),
+      .SS_BUSY(ss_busy),
 
-      // Outputs — unconnected
+      // Outputs
       .SYSCLKR_CE(),
       .SYSCLKF_CE(),
-      .REFRESH(),
+      .REFRESH(sdram_refresh),
       .V224_MODE(),
       .SNI_JOY(),
       .MSU_AUDIO_RESUME(),
       .MSU_RESUME_SECTOR(),
-      .SS_AVAIL(),
-      .SS_DDR_DO(),
-      .SS_DDR_ADDR(),
-      .SS_DDR_WE(),
-      .SS_DDR_BE(),
-      .SS_DDR_REQ()
+      .SS_AVAIL(ss_avail),
+      .SS_DDR_DO(ss_ddr_do),
+      .SS_DDR_ADDR(ss_ddr_addr),
+      .SS_DDR_WE(ss_ddr_we),
+      .SS_DDR_BE(ss_ddr_be),
+      .SS_DDR_REQ(ss_ddr_req)
   );
+
+  wire [63:0] ss_ddr_di;
+  wire ss_ddr_ack;
+  wire [63:0] ss_ddr_do;
+  wire [21:3] ss_ddr_addr;
+  wire [7:0] ss_ddr_be;
+  wire ss_ddr_we;
+  wire ss_ddr_req;
+
+  wire sdram_refresh;
+
+  generate
+    if (USE_SS == 1'b1) begin
+      savestate ss_mem (
+          .clk_sys(clk_sys),
+          .clk_mem(clk_mem_85_9),
+
+          .ss_ddr_do(ss_ddr_do),
+          .ss_ddr_addr(ss_ddr_addr),
+          .ss_ddr_be(ss_ddr_be),
+          .ss_ddr_we(ss_ddr_we),
+          .ss_ddr_req(ss_ddr_req),
+          .ss_ddr_di(ss_ddr_di),
+          .ss_ddr_ack(ss_ddr_ack),
+
+          .ss_busy(ss_busy),
+
+          .blocked(cart_download),
+          .ctrl_idle(ss_ctrl_idle),
+          .stage_lost(ss_stage_lost),
+
+          .stage_wr(ss_stage_wr),
+          .stage_addr(ss_stage_addr),
+          .stage_data(ss_stage_data),
+
+          .blob_rd(ss_blob_rd),
+          .blob_addr(ss_blob_addr),
+          .blob_q(ss_blob_q),
+
+          .cram_a(cram1_a),
+          .cram_dq(cram1_dq),
+          .cram_wait(cram1_wait),
+          .cram_clk(cram1_clk),
+          .cram_adv_n(cram1_adv_n),
+          .cram_cre(cram1_cre),
+          .cram_ce0_n(cram1_ce0_n),
+          .cram_ce1_n(cram1_ce1_n),
+          .cram_oe_n(cram1_oe_n),
+          .cram_we_n(cram1_we_n),
+          .cram_ub_n(cram1_ub_n),
+          .cram_lb_n(cram1_lb_n)
+      );
+
+      wire [15:0] savestate_rom_q;
+
+      boot1_rom savestate_rom (
+          .clk (clk_mem),
+          .addr(ROM_ADDR[11:0]),
+          .word(ROM_WORD),
+          .q(savestate_rom_q)
+      );
+
+      assign inject_savestate_rom = ss_busy & (ROM_ADDR[23:16] == 8'hFF) & ~cart_download;
+
+      assign ROM_Q = inject_savestate_rom ? savestate_rom_q : rom_sdram_q;
+    end else begin
+      assign ss_ddr_di = 64'd0;
+      assign ss_ddr_ack = 1'b0;
+      assign ss_blob_q = 16'd0;
+      assign ss_stage_lost = 1'b0;
+      assign inject_savestate_rom = 1'b0;
+      assign ROM_Q = rom_sdram_q;
+
+      // Park unused cram1 die
+      assign cram1_a = 6'h0;
+      assign cram1_dq = {16{1'bZ}};
+      assign cram1_clk = 1'b0;
+      assign cram1_adv_n = 1'b1;
+      assign cram1_cre = 1'b0;
+      assign cram1_ce0_n = 1'b1;
+      assign cram1_ce1_n = 1'b1;
+      assign cram1_oe_n = 1'b1;
+      assign cram1_we_n = 1'b1;
+      assign cram1_ub_n = 1'b1;
+      assign cram1_lb_n = 1'b1;
+    end
+  endgenerate
 
   wire reset = core_reset | cart_download | spc_download | bk_loading | clearing_ram | msu_data_download | parser_delay != 0;
 
@@ -542,6 +654,8 @@ module MAIN_SNES (
   wire ROM_WORD;
   wire [15:0] ROM_D;
   wire [15:0] ROM_Q;
+  wire [15:0] rom_sdram_q;
+  wire inject_savestate_rom;
 
   sdram sdram (
       .init(0),  //~clock_locked),
@@ -549,18 +663,17 @@ module MAIN_SNES (
 
       .addr0(cart_download ? ioctl_addr : ROM_ADDR),
       .din0 (cart_download ? ioctl_dout : ROM_D),
-      .dout0(ROM_Q),
+      .dout0(rom_sdram_q),
       .rd0  (~cart_download & (RESET_N ? ~ROM_OE_N : RFSH)),
       .wr0  (cart_download ? ioctl_wr : ~ROM_WE_N),
       .word0(cart_download | ROM_WORD),
 
-      // Port 1 — unused
       .addr1(24'b0),
       .din1(16'b0),
       .dout1(),
       .wr1(1'b0),
       .rd1(1'b0),
-      .rfs1(1'b0),
+      .rfs1(~cart_download & (RESET_N ? sdram_refresh : RFSH)),
       .word1(1'b0),
 
       // SNI host access — unused
@@ -605,7 +718,7 @@ module MAIN_SNES (
       .clk(clk_mem_85_9),
 
       .bank_sel(0),
-      // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
+      // Byte address to word address; the low bit picks the byte lane
       .addr(psram_wram_addr[16:1]),
 
       .write_en(clearing_ram ? 1'b1 : ~WRAM_CE_N & ~WRAM_WE_N),
@@ -676,13 +789,11 @@ module MAIN_SNES (
   wire [ 7:0] aram_data = clearing_ram ? aram_fill_data : ARAM_D;
   wire [15:0] aram_16_data = psram_aram_addr[0] ? {aram_data, 8'h0} : {8'h0, aram_data};
 
-  psram #(
-      .CLOCK_SPEED(85.9)
-  ) aram (
+  // ARAM on the Pocket's async SRAM
+  sram_ctrl aram (
       .clk(clk_mem_85_9),
 
-      .bank_sel(0),
-      // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
+      // Byte address to word address; the low bit picks the byte lane
       .addr(psram_aram_addr[15:1]),
 
       .write_en(clearing_ram ? 1'b1 : ~ARAM_CE_N & ~ARAM_WE_N),
@@ -693,19 +804,13 @@ module MAIN_SNES (
       .read_en (~ARAM_CE_N & ~ARAM_OE_N),
       .data_out(aram_16_out),
 
-      // Actual PSRAM interface
-      .cram_a(cram1_a),
-      .cram_dq(cram1_dq),
-      .cram_wait(cram1_wait),
-      .cram_clk(cram1_clk),
-      .cram_adv_n(cram1_adv_n),
-      .cram_cre(cram1_cre),
-      .cram_ce0_n(cram1_ce0_n),
-      .cram_ce1_n(cram1_ce1_n),
-      .cram_oe_n(cram1_oe_n),
-      .cram_we_n(cram1_we_n),
-      .cram_ub_n(cram1_ub_n),
-      .cram_lb_n(cram1_lb_n)
+      // SRAM interface
+      .sram_a(sram_a),
+      .sram_dq(sram_dq),
+      .sram_oe_n(sram_oe_n),
+      .sram_we_n(sram_we_n),
+      .sram_ub_n(sram_ub_n),
+      .sram_lb_n(sram_lb_n)
   );
 
   localparam BSRAM_BITS = 17;  // 1Mbits

@@ -20,9 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # core: ["main", "pal", "spc", "sa1gsu", "pal_sa1gsu"]
-        # TODO: Add SA1/GSU cores
-        core: ["main", "pal", "spc"]
+        core: ["main", "pal", "spc", "sa1cx4", "pal_sa1cx4"]
       fail-fast: false
 
     steps:
@@ -49,11 +47,11 @@ jobs:
                   spc)
                       echo "ntsc_spc"
                       ;;
-                  sa1gsu)
-                      echo "ntsc_sa1gsu"
+                  sa1cx4)
+                      echo "ntsc_sa1cx4"
                       ;;
-                  pal_sa1gsu)
-                      echo "pal_sa1gsu"
+                  pal_sa1cx4)
+                      echo "pal_sa1cx4"
                       ;;
                   *)
                       echo "Unknown input"
