@@ -254,6 +254,7 @@ begin
 		SNI_JOY		=> SNI_JOY,
 
 		TURBO			=> TURBO,
+		SS_BUSY		=> SS_BUSY,
 		DBG_CPU_EN	=> DBG_CPU_EN
 	);
 
