@@ -28,6 +28,8 @@ module MSU
 	output reg        audio_resume,
 	input      [21:0] audio_sector,
 	output reg [21:0] resume_sector,
+	input      [31:0] audio_loop_index,
+	output reg [31:0] resume_loop_index,
 
 	// Data track read
 	output reg [31:0] data_addr,
@@ -131,6 +133,7 @@ always @(posedge CLK) begin
 					if (DIN[2] && !DIN[0]) begin
 						resume_track_num <= track_num;
 						resume_sector <= audio_sector;
+						resume_loop_index <= audio_loop_index;
 						resume_valid <= 1;
 					end
 				end
