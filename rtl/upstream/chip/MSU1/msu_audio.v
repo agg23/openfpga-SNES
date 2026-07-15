@@ -26,8 +26,10 @@ module msu_audio
 	output reg        audio_seek,
 	output reg [21:0] audio_sector,
 	input      [21:0] resume_sector,
- 
-	output     [15:0] audio_l,	 
+	output     [31:0] audio_loop_index,
+	input      [31:0] resume_loop_index,
+
+	output     [15:0] audio_l,
 	output     [15:0] audio_r
 );
 
@@ -38,6 +40,7 @@ localparam PLAYING_CHECKS_STATE   = 3;
 localparam END_SECTOR_STATE       = 4;
 
 reg [31:0] loop_index;
+assign     audio_loop_index = loop_index;
 reg  [2:0] state;
 reg        partial_sector_state;
 reg        looping, resuming;
@@ -70,6 +73,7 @@ always @(posedge clk) begin
 					looping <= 0;
 					audio_req <= 0;
 					audio_sector <= resuming ? resume_sector : 22'd0;
+					if (resuming) loop_index <= resume_loop_index;
 					if (~track_processing & ctl_play) begin
 						audio_seek <= 1;
 						resuming <= 0;
