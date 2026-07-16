@@ -92,10 +92,9 @@ always @(posedge CLK) begin
 
 		// Set/reset pulsed signals
 		data_req <= 0;
-		audio_resume <= 0;
 		if (audio_stop) status_audio_playing <= 0;
 
-		// Rising edge of data busy
+		// Rising edge of data ack
 		data_ack_old <= data_ack;
 		if (!data_ack_old && data_ack) begin
 			status_data_busy <= 0;
@@ -121,13 +120,16 @@ always @(posedge CLK) begin
 				5: begin
 					track_num <= {DIN, MSU_TRACK};
 					track_request <= 1;
+					status_audio_playing <= 0;
+					status_audio_repeat <= 0;
 					if (resume_valid && resume_track_num == {DIN, MSU_TRACK}) begin
 						audio_resume <= 1;
 						resume_valid <= 0;
 					end
+					else audio_resume <= 0;
 				end
 				6: volume <= DIN;
-				7: begin
+				7: if (!status_audio_busy && !status_track_missing) begin
 					status_audio_repeat <= DIN[1];
 					status_audio_playing <= DIN[0];
 					if (DIN[2] && !DIN[0]) begin

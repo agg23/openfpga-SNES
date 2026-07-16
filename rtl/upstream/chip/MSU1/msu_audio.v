@@ -43,7 +43,7 @@ reg [31:0] loop_index;
 assign     audio_loop_index = loop_index;
 reg  [2:0] state;
 reg        partial_sector_state;
-reg        looping, resuming;
+reg        looping;
 
 always @(posedge clk) begin
 	if (reset) begin
@@ -53,13 +53,11 @@ always @(posedge clk) begin
 		audio_seek <= 0;
 		fifo_wren <= 0;
 		audio_req <= 0;
-		resuming <= 0;
 	end
 	else begin
 
 		// Set/reset pulsed signals
 		ctl_stop <= 0;
-		if (ctl_resume) resuming <= 1;
 
 		// Loop sector handling - also need to take into account the 8 bytes for file header (msu1 and loop index = 8 bytes)
 		if (audio_sector == 0 && data_cnt == 1 && data_wr && audio_ack) loop_index <= data + 2;
@@ -72,11 +70,10 @@ always @(posedge clk) begin
 					fifo_wren <= 0;
 					looping <= 0;
 					audio_req <= 0;
-					audio_sector <= resuming ? resume_sector : 22'd0;
-					if (resuming) loop_index <= resume_loop_index;
+					audio_sector <= ctl_resume ? resume_sector : 22'd0;
+					if (ctl_resume) loop_index <= resume_loop_index;
 					if (~track_processing & ctl_play) begin
 						audio_seek <= 1;
-						resuming <= 0;
 						state <= WAITING_ACK_STATE;
 					end
 				end
