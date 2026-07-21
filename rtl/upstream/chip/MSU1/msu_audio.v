@@ -72,7 +72,7 @@ always @(posedge clk) begin
 					audio_req <= 0;
 					audio_sector <= ctl_resume ? resume_sector : 22'd0;
 					if (ctl_resume) loop_index <= resume_loop_index;
-					if (ctl_play) begin
+					if (ctl_play && !ctl_stop) begin
 						audio_seek <= 1;
 						state <= WAITING_ACK_STATE;
 					end
