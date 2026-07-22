@@ -197,7 +197,7 @@ CEGen sample_clock
 	.CE(sample_ce)
 );
 
-wire        playing = ctl_play & ~track_processing & ~fifo_empty;
+wire        playing = ctl_play & ~fifo_empty;
 wire        fifo_full;
 wire  [9:0] fifo_usedw;
 wire        fifo_empty;
