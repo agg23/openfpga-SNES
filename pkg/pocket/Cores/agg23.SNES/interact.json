@@ -33,6 +33,17 @@
         "value": 1
       },
       {
+        "name": "Swap P1 & P2",
+        "id": 18,
+        "type": "check",
+        "enabled": true,
+        "address": "0x90",
+        "persist": false,
+        "writeonly": true,
+        "defaultval": 0,
+        "value": 1
+      },
+      {
         "name": "Use Multitap",
         "id": 20,
         "type": "check",
