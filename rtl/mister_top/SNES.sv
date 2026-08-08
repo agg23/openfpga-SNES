@@ -9,7 +9,7 @@ module MAIN_SNES (
     // Settings
     input wire cpu_turbo_enabled,
     input wire gsu_turbo_enabled,
-
+    input wire swap_controllers,
     input wire multitap_enabled,
     input wire lightgun_enabled,
     input wire lightgun_type,
@@ -178,7 +178,7 @@ module MAIN_SNES (
   wire GUN_BTN = status[27];
   wire [1:0] GUN_MODE = lightgun_enabled ? 2'd1 : 0;
   wire [1:0] mouse_mode = status[6:5];
-  wire joy_swap = status[7] | piano;
+  wire joy_swap = swap_controllers | status[7] | piano;
 
   wire [6:0] USER_IN = 0;
   wire [6:0] USER_OUT;
