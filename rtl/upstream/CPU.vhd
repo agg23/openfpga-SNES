@@ -1178,7 +1178,7 @@ begin
 		end if;
 	end process;
 
-	DMA_CH_EN <= HDMA_CH_EN and HDMA_CH_WORK when HDMA_RUN = '1' else MDMAEN;
+	DMA_CH_EN <= HDMA_CH_WORK and HDMA_CH_RUN and HDMA_CH_DO when HDMA_RUN = '1' else MDMAEN;
 	DMA_CH <= GetDMACh(DMA_CH_EN);
 
 	process( RST_N, CLK )
