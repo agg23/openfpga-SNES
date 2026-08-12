@@ -53,7 +53,8 @@ entity SPPU is
 		VSYNC			: out std_logic;
 		HDE 			: out std_logic;
 		VDE 			: out std_logic;
-		
+		HVCNT_ATZERO	: out std_logic;
+
 		BG_EN			: in std_logic_vector(4 downto 0);
 
 		SS_A			: in std_logic_vector(7 downto 0);
@@ -63,10 +64,10 @@ end SPPU;
 
 architecture rtl of SPPU is
 
-signal DOT_CLK 			: std_logic;
-signal DOT_CLKR_CE 		: std_logic;
-signal DOT_CLKF_CE 		: std_logic;
-signal CLK_CNT 			: unsigned(2 downto 0);
+signal DOT_CLK 			: std_logic := '0';
+signal DOT_CLKR_CE 		: std_logic := '0';
+signal DOT_CLKF_CE 		: std_logic := '0';
+signal CLK_CNT 			: unsigned(2 downto 0) := (others => '0');
 signal MDR1					: std_logic_vector(7 downto 0);
 signal MDR2					: std_logic_vector(7 downto 0);
 signal D_OUT 				: std_logic_vector(7 downto 0);
@@ -155,15 +156,15 @@ signal VRAMPRERD_REQ 	: std_logic;
 signal VRAMRD_CNT 		: unsigned(1 downto 0);
 
 -- HV COUNTERS
-signal H_CNT 				: unsigned(8 downto 0);
-signal V_CNT 				: unsigned(8 downto 0);
-signal FIELD 				: std_logic;
+signal H_CNT 				: unsigned(8 downto 0) := (others => '0');
+signal V_CNT 				: unsigned(8 downto 0) := (others => '0');
+signal FIELD 				: std_logic := '0';
 signal LAST_VIS_LINE 	: unsigned(8 downto 0);
 signal LAST_LINE			: unsigned(8 downto 0);
 signal LAST_DOT			: unsigned(8 downto 0);
-signal IN_HBL 				: std_logic;
-signal IN_VBL 				: std_logic;
-signal FIRST_VBLANK_LINE: std_logic;
+signal IN_HBL 				: std_logic := '0';
+signal IN_VBL 				: std_logic := '0';
+signal FIRST_VBLANK_LINE: std_logic := '0';
 signal NO_BLANK			: std_logic;
 signal VBLANK_LINE		: std_logic;
 
@@ -308,15 +309,10 @@ signal MATH_Y				: unsigned(7 downto 0);
 	
 begin
 
-process( RST_N, CLK )
+process( CLK )
 variable DOT_CYCLES: unsigned(2 downto 0);
 begin
-	if RST_N = '0' then
-		CLK_CNT <= (others => '0');
-		DOT_CLK <= '0';
-		DOT_CLKR_CE <= '0';
-		DOT_CLKF_CE <= '0';
-	elsif rising_edge(CLK) then
+	if rising_edge(CLK) then
 		if ENABLE = '0' then
 			DOT_CYCLES := "100";
 		elsif V_CNT = 240 and BGINTERLACE = '0' and FIELD = '1' and PAL = '0' then
@@ -823,18 +819,11 @@ end process;
 
 LAST_VIS_LINE <= '0' & x"E0" when OVERSCAN = '0' else '0' & x"EF";
 
-process( RST_N, CLK )
+process( CLK )
 variable VSYNC_LINE: unsigned(8 downto 0);
 variable VSYNC_HSTART: unsigned(8 downto 0);
 begin
-	if RST_N = '0' then
-		H_CNT <= (others => '0');
-		V_CNT <= (others => '0');
-		FIELD <= '0';
-		IN_HBL <= '0';
-		IN_VBL <= '0';
-		FIRST_VBLANK_LINE <= '0';
-	elsif rising_edge(CLK) then
+	if rising_edge(CLK) then
 		if ENABLE = '1' and DOT_CLKR_CE = '1' then
 			if PAL = '0' then
 				VSYNC_LINE := LINE_VSYNC_NTSC;
@@ -854,10 +843,10 @@ begin
 			end if;
 
 			H_CNT <= H_CNT + 1;
-			if H_CNT = LAST_DOT then
+			if H_CNT >= LAST_DOT then
 				H_CNT <= (others => '0');
 				V_CNT <= V_CNT + 1;			
-				if V_CNT = LAST_LINE then
+				if V_CNT >= LAST_LINE then
 					V_CNT <= (others => '0');
 					FIELD <= not FIELD;
 				end if;
@@ -900,6 +889,9 @@ begin
 end process;
 
 VBLANK_LINE <= FIRST_VBLANK_LINE and not FORCE_BLANK;
+
+HVCNT_ATZERO <= '1' when ENABLE = '1' and DOT_CLKR_CE = '1' and FIELD = '1' and
+                        H_CNT >= LAST_DOT and V_CNT >= LAST_LINE else '0';
 
 process( H_CNT, V_CNT, LAST_VIS_LINE )
 begin
