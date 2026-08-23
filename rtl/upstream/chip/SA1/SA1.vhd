@@ -1485,6 +1485,7 @@ port map (
 
 DIV: entity work.SA1DIV
 port map (
+	clock    => CLK,
 	numer		=> MA,
 	denom		=> MB,
 	quotient	=> DIVQ,

@@ -1,56 +1,71 @@
-library ieee;
-use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.numeric_std.all;
 
 -- Hardware accurate SNES SA-1 arithmetic-unit divider (sign-magnitude division).
 -- Based on the SA-1 reverse engineering effort by Vitor Vilela, his test rom and the
 -- validation table on sneslab.net.
 
--- This logic is resource optimized for the Cyclone V because ALMs are getting scarce.
--- ALMs are reclaimed by offloading the remainder math to a multiplier in a DSP block.
+LIBRARY lpm;
+USE lpm.all;
 
--- Access timing is out of scope and modeled by the SA-1 state machine.
+ENTITY SA1DIV IS
+	PORT
+	(
+		clock    : IN  STD_LOGIC ;
+		denom    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
+		numer    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
+		quotient : OUT STD_LOGIC_VECTOR (15 DOWNTO 0);
+		remain   : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
+	);
+END SA1DIV;
 
-entity SA1DIV is
-    port (
-        numer    : in  std_logic_vector(15 downto 0);       -- numerator, signed
-        denom    : in  std_logic_vector(15 downto 0);       -- denominator, unsigned
-        quotient : out std_logic_vector(15 downto 0);       -- quotient, signed (sign of numerator)
-        remain   : out std_logic_vector(15 downto 0)        -- remainder, unsigned magnitude
-    );
-end entity;
 
-architecture rtl of SA1DIV is
-begin
-    process(numer, denom)
-        variable n_s  : signed(16 downto 0);                -- sign-extended numerator
-        variable nmag : unsigned(16 downto 0);              -- |numerator|, 0..32768
-        variable d_u  : unsigned(16 downto 0);              -- denominator, 0..65535
-        variable qmag : unsigned(16 downto 0);              -- |quotient|
-        variable r_u  : unsigned(16 downto 0);              -- |remainder|
-        variable q_s  : signed(17 downto 0);                -- signed quotient (holds -|q| for |q|=32768)
-    begin
-        n_s := resize(signed(numer), 17);
-        d_u := unsigned('0' & denom);
-        nmag := unsigned(abs(n_s));
+ARCHITECTURE SYN OF sa1div IS
 
-        if d_u = 0 then                                     -- Reproduce the SA-1 divide-by-zero quirk
-            r_u := nmag;
-            if n_s < 0 then
-                q_s := to_signed(1, 18);
-            else
-                q_s := to_signed(-1, 18);
-            end if;
-        else
-            qmag := nmag / d_u;                             -- unsigned magnitude division
-            r_u := nmag - resize(qmag * d_u, 17);           -- remainder = nmag - qmag*denominator
-            q_s  := signed(resize(qmag, 18));               -- apply the numerator's sign
-            if n_s < 0 then
-                q_s := -q_s;
-            end if;
-        end if;
+	SIGNAL sub_wire0 : STD_LOGIC_VECTOR (15 DOWNTO 0);
+	SIGNAL sub_wire1 : STD_LOGIC_VECTOR (15 DOWNTO 0);
 
-        quotient <= std_logic_vector(q_s(15 downto 0));
-        remain   <= std_logic_vector(r_u(15 downto 0));
-    end process;
-end architecture;
+
+	COMPONENT lpm_divide
+	GENERIC (
+		lpm_drepresentation : STRING;
+		lpm_hint            : STRING;
+		lpm_nrepresentation : STRING;
+		lpm_pipeline        : NATURAL;
+		lpm_type            : STRING;
+		lpm_widthd          : NATURAL;
+		lpm_widthn          : NATURAL
+	);
+	PORT (
+			clock    : IN  STD_LOGIC ;
+			remain   : OUT STD_LOGIC_VECTOR (15 DOWNTO 0);
+			denom    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
+			numer    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
+			quotient : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
+	);
+	END COMPONENT;
+
+BEGIN
+	remain   <= sub_wire0(15 DOWNTO 0) when denom /= x"0000" else std_logic_vector(abs(signed(numer)));
+	quotient <= sub_wire1(15 DOWNTO 0) when denom /= x"0000" else x"FFFF" when numer(15) = '0' else x"0001";
+
+	LPM_DIVIDE_component : LPM_DIVIDE
+	GENERIC MAP (
+		lpm_drepresentation => "UNSIGNED",
+		lpm_nrepresentation => "SIGNED",
+		lpm_hint     => "LPM_REMAINDERPOSITIVE=TRUE",
+		lpm_pipeline => 6,
+		lpm_type     => "LPM_DIVIDE",
+		lpm_widthd   => 16,
+		lpm_widthn   => 16
+	)
+	PORT MAP (
+		clock    => clock,
+		denom    => denom,
+		numer    => numer,
+		remain   => sub_wire0,
+		quotient => sub_wire1
+	);
+
+END SYN;
