@@ -24,6 +24,7 @@ END SA1DIV;
 ARCHITECTURE SYN OF sa1div IS
 
 	SIGNAL sub_wire0 : STD_LOGIC_VECTOR (15 DOWNTO 0);
+	SIGNAL srem      : STD_LOGIC_VECTOR (15 DOWNTO 0);
 	SIGNAL sub_wire1 : STD_LOGIC_VECTOR (15 DOWNTO 0);
 
 
@@ -47,8 +48,9 @@ ARCHITECTURE SYN OF sa1div IS
 	END COMPONENT;
 
 BEGIN
-	remain   <= sub_wire0(15 DOWNTO 0) when denom /= x"0000" else std_logic_vector(abs(signed(numer)));
-	quotient <= sub_wire1(15 DOWNTO 0) when denom /= x"0000" else x"FFFF" when numer(15) = '0' else x"0001";
+	srem     <= sub_wire0 when denom /= x"0000" else numer;
+	remain   <= std_logic_vector(abs(signed(srem)));
+	quotient <= sub_wire1 when denom /= x"0000" else x"FFFF" when numer(15) = '0' else x"0001";
 
 	LPM_DIVIDE_component : LPM_DIVIDE
 	GENERIC MAP (
