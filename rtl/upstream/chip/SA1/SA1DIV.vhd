@@ -1,13 +1,13 @@
-LIBRARY ieee;
-USE ieee.std_logic_1164.all;
-USE ieee.numeric_std.all;
+-- ============================================================================
+--
+-- SA1DIV.vhd
+-- (C) 2026 Alexey Melnikov
+--
+-- ============================================================================
 
--- Hardware accurate SNES SA-1 arithmetic-unit divider (sign-magnitude division).
--- Based on the SA-1 reverse engineering effort by Vitor Vilela, his test rom and the
--- validation table on sneslab.net.
-
-LIBRARY lpm;
-USE lpm.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 ENTITY SA1DIV IS
 	PORT
@@ -20,54 +20,73 @@ ENTITY SA1DIV IS
 	);
 END SA1DIV;
 
+ARCHITECTURE rtl OF SA1DIV IS
 
-ARCHITECTURE SYN OF sa1div IS
-
-	SIGNAL sub_wire0 : STD_LOGIC_VECTOR (15 DOWNTO 0);
-	SIGNAL srem      : STD_LOGIC_VECTOR (15 DOWNTO 0);
-	SIGNAL sub_wire1 : STD_LOGIC_VECTOR (15 DOWNTO 0);
-
-
-	COMPONENT lpm_divide
-	GENERIC (
-		lpm_drepresentation : STRING;
-		lpm_hint            : STRING;
-		lpm_nrepresentation : STRING;
-		lpm_pipeline        : NATURAL;
-		lpm_type            : STRING;
-		lpm_widthd          : NATURAL;
-		lpm_widthn          : NATURAL
-	);
-	PORT (
-			clock    : IN  STD_LOGIC ;
-			remain   : OUT STD_LOGIC_VECTOR (15 DOWNTO 0);
-			denom    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
-			numer    : IN  STD_LOGIC_VECTOR (15 DOWNTO 0);
-			quotient : OUT STD_LOGIC_VECTOR (15 DOWNTO 0)
-	);
-	END COMPONENT;
+	SIGNAL dividend_neg : STD_LOGIC := '0';
+	SIGNAL denom_r      : UNSIGNED(16 DOWNTO 0) := (OTHERS => '0');
+	SIGNAL cnt          : UNSIGNED(1 DOWNTO 0)  := (OTHERS => '0');
 
 BEGIN
-	srem     <= sub_wire0 when denom /= x"0000" else numer;
-	remain   <= std_logic_vector(abs(signed(srem)));
-	quotient <= sub_wire1 when denom /= x"0000" else x"FFFF" when numer(15) = '0' else x"0001";
 
-	LPM_DIVIDE_component : LPM_DIVIDE
-	GENERIC MAP (
-		lpm_drepresentation => "UNSIGNED",
-		lpm_nrepresentation => "SIGNED",
-		lpm_hint     => "LPM_REMAINDERPOSITIVE=TRUE",
-		lpm_pipeline => 6,
-		lpm_type     => "LPM_DIVIDE",
-		lpm_widthd   => 16,
-		lpm_widthn   => 16
-	)
-	PORT MAP (
-		clock    => clock,
-		denom    => denom,
-		numer    => numer,
-		remain   => sub_wire0,
-		quotient => sub_wire1
-	);
+	PROCESS (clock)
+		VARIABLE Q : UNSIGNED(15 DOWNTO 0);
+		VARIABLE R : UNSIGNED(16 DOWNTO 0);
+	BEGIN
+		IF rising_edge(clock) THEN
+			R := R(15 DOWNTO 0) & Q(15);
+			IF R >= denom_r THEN
+				R := R - denom_r;
+				Q := Q(14 DOWNTO 0) & '1';
+			ELSE
+				Q := Q(14 DOWNTO 0) & '0';
+			END IF;
 
-END SYN;
+			R := R(15 DOWNTO 0) & Q(15);
+			IF R >= denom_r THEN
+				R := R - denom_r;
+				Q := Q(14 DOWNTO 0) & '1';
+			ELSE
+				Q := Q(14 DOWNTO 0) & '0';
+			END IF;
+
+			R := R(15 DOWNTO 0) & Q(15);
+			IF R >= denom_r THEN
+				R := R - denom_r;
+				Q := Q(14 DOWNTO 0) & '1';
+			ELSE
+				Q := Q(14 DOWNTO 0) & '0';
+			END IF;
+
+			R := R(15 DOWNTO 0) & Q(15);
+			IF R >= denom_r THEN
+				R := R - denom_r;
+				Q := Q(14 DOWNTO 0) & '1';
+			ELSE
+				Q := Q(14 DOWNTO 0) & '0';
+			END IF;
+
+			cnt <= cnt + 1;
+			IF cnt = 0 THEN
+				IF dividend_neg = '1' THEN
+					quotient <= STD_LOGIC_VECTOR((NOT Q) + 1);
+				ELSE
+					quotient <= STD_LOGIC_VECTOR(Q);
+				END IF;
+
+				remain   <= STD_LOGIC_VECTOR(R(15 DOWNTO 0));
+
+				-- new round
+				dividend_neg <= numer(15);
+				IF numer(15) = '1' THEN
+					Q := (NOT UNSIGNED(numer)) + 1;
+				ELSE
+					Q := UNSIGNED(numer);
+				END IF;
+
+				R       := (OTHERS => '0');
+				denom_r <= UNSIGNED('0' & denom);
+			END IF;
+		END IF;
+	END PROCESS;
+
+END rtl;
