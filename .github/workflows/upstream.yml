@@ -33,8 +33,7 @@ jobs:
           -v /home/runner/.ssh/known_hosts:/root/.ssh/known_hosts \
           -v /home/runner/.gitconfig:/root/.gitconfig \
           -v /home/runner/.git-credentials:/root/.git-credentials \
-          ghcr.io/anipos/copybara-docker-image \
-          --ignore-noop migrate /usr/src/app/.github/copy.bara.sky
+          ghcr.io/anipos/copybara-docker-image@sha256:f73da1e601e761dc64582d2d68b316541f41ec0e47e64482364acf4d456a239c \          --ignore-noop migrate /usr/src/app/.github/copy.bara.sky
           EXIT_CODE=$?
           set -e
           if [ $EXIT_CODE -eq 4 ]; then
