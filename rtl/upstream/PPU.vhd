@@ -182,6 +182,9 @@ signal BG_MATH 			: std_logic;
 signal BG_OUT 				: std_logic;
 signal GET_PIXEL_X		: unsigned(7 downto 0);
 signal WINDOW_X			: unsigned(7 downto 0);
+signal WIN_ACTIVE		: std_logic_vector(1 downto 0);
+signal WIN_PRE_STOP		: std_logic_vector(1 downto 0);
+signal WIN_STOP			: std_logic_vector(1 downto 0);
 signal BG_MOSAIC_X 		: unsigned(3 downto 0);
 signal BG_MOSAIC_Y 		: unsigned(3 downto 0);
 signal BF 					: BgFetch_r;
@@ -1969,8 +1972,8 @@ begin
 end process;
 
 
-process( RST_N, CLK, WH0, WH1, WH2, WH3, W12SEL, W34SEL, WOBJSEL, WBGLOG, WOBJLOG, CGWSEL, CGADSUB, TMW, TSW, TM, TS, BG_MODE_SYNC, BG3PRIO, M7EXTBG,
-			WINDOW_X, SPR_PIX_DATA, BG1_PIX_DATA, BG2_PIX_DATA, BG3_PIX_DATA, BG4_PIX_DATA, DOT_CLK, BG_EN)
+process( RST_N, CLK, W12SEL, W34SEL, WOBJSEL, WBGLOG, WOBJLOG, CGWSEL, CGADSUB, TMW, TSW, TM, TS, BG_MODE_SYNC, BG3PRIO, M7EXTBG,
+			WIN_ACTIVE, WIN_STOP, SPR_PIX_DATA, BG1_PIX_DATA, BG2_PIX_DATA, BG3_PIX_DATA, BG4_PIX_DATA, DOT_CLK, BG_EN)
 variable PAL1,PAL2,PAL3,PAL4,OBJ_PAL : std_logic_vector(7 downto 0);
 variable PRIO1,PRIO2,PRIO3,PRIO4 : std_logic;
 variable BGPR0EN, BGPR1EN : std_logic_vector(3 downto 0);
@@ -1985,12 +1988,12 @@ variable COLOR_MASK : std_logic_vector(4 downto 0);
 variable MATH_R, MATH_G, MATH_B	: unsigned(4 downto 0);
 variable HALF : std_logic;
 begin
-	if WINDOW_X >= unsigned(WH0) and WINDOW_X <= unsigned(WH1) then
+	if WIN_ACTIVE(0) = '1' and WIN_STOP(0) = '0' then
 		win1 := not (WOBJSEL(4)&WOBJSEL(0)&W34SEL(4)&W34SEL(0)&W12SEL(4)&W12SEL(0));
 	else
 		win1 := WOBJSEL(4)&WOBJSEL(0)&W34SEL(4)&W34SEL(0)&W12SEL(4)&W12SEL(0);
 	end if;
-	if WINDOW_X >= unsigned(WH2) and WINDOW_X <= unsigned(WH3) then
+	if WIN_ACTIVE(1) = '1' and WIN_STOP(1) = '0' then
 		win2 := not (WOBJSEL(6)&WOBJSEL(2)&W34SEL(6)&W34SEL(2)&W12SEL(6)&W12SEL(2));
 	else
 		win2 := WOBJSEL(6)&WOBJSEL(2)&W34SEL(6)&W34SEL(2)&W12SEL(6)&W12SEL(2);
@@ -2360,6 +2363,9 @@ begin
 	
 	if RST_N = '0' then
 		WINDOW_X <= (others => '0');
+		WIN_ACTIVE <= (others => '0');
+		WIN_PRE_STOP <= (others => '0');
+		WIN_STOP <= (others => '0');
 		MATH_SUB_R <= (others => '0');
 		MATH_SUB_G <= (others => '0');
 		MATH_SUB_B <= (others => '0');
@@ -2375,6 +2381,29 @@ begin
 		if ENABLE = '1' then
 			if BG_GET_PIXEL = '1' and DOT_CLKR_CE = '1' then
 				WINDOW_X <= GET_PIXEL_X;
+			end if;
+
+			if DOT_CLKF_CE = '1' then
+				if WINDOW_X = unsigned(WH0) then
+					WIN_ACTIVE(0) <= '1';
+				end if;
+				if WINDOW_X = unsigned(WH1) then
+					WIN_PRE_STOP(0) <= '1';
+				end if;
+				if WINDOW_X = unsigned(WH2) then
+					WIN_ACTIVE(1) <= '1';
+				end if;
+				if WINDOW_X = unsigned(WH3) then
+					WIN_PRE_STOP(1) <= '1';
+				end if;
+
+				WIN_STOP <= WIN_PRE_STOP;
+			end if;
+
+			if H_CNT = BG_GET_PIX_START then
+				WIN_ACTIVE <= (others => '0');
+				WIN_PRE_STOP <= (others => '0');
+				WIN_STOP <= (others => '0');
 			end if;
 
 			if H_CNT = LAST_DOT and DOT_CLKR_CE = '1' then
