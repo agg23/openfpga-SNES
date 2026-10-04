@@ -130,6 +130,7 @@ architecture rtl of CX4 is
 	signal RD_Nr, WR_Nr : std_logic_vector(3 downto 0);
 	signal MMIO_WR, RAMIO_WR : std_logic;
 	signal MMIO_SEL, RAMIO_SEL : std_logic;
+	signal GPR_ADDR : std_logic_vector(7 downto 0);
 	signal ROM_SEL, SRAM_SEL, RAM_SEL : std_logic;
 	signal BUSY : std_logic;
 	signal IRQ, IRQ_FLAG : std_logic;
@@ -144,6 +145,7 @@ architecture rtl of CX4 is
 	signal DMA_SRC_ADDR : std_logic_vector(23 downto 0);
 	signal DMA_DAT : std_logic_vector(7 downto 0);
 	signal DMA_STATE : std_logic;
+	signal DMA_DST_RAM : std_logic;
 	signal DMA_CNT : unsigned(15 downto 0);
 	signal ROM_ACCESS, SRAM_ACCESS, SRAM_WR : std_logic;
 	signal BUS_ACCESS_CNT : unsigned(2 downto 0);
@@ -193,7 +195,7 @@ begin
 		MMIO_SEL <= '0';
 		if (MAPPER = '0' and ADDR(22) = '0' and ADDR(15 downto 13) = "011") or												--LoROM: 00-3F:6000-7FFF, 80-BF:6000-7FFF 
 			(MAPPER = '1' and ADDR(22) = '0' and ADDR(21 downto 20) <= "10" and ADDR(15 downto 13) = "011") then	--HiROM: 00-2F:6000-7FFF, 80-AF:6000-7FFF
-			if ADDR(12) = '0' then
+			if ADDR(12) = '0' or ADDR(11 downto 10) /= "11" then	--6000-6FFF, 7000-7BFF
 				RAMIO_SEL <= '1';
 			else
 				MMIO_SEL <= '1';
@@ -203,6 +205,7 @@ begin
 	
 	MMIO_WR <= not WR_N and MMIO_SEL and SYSCLKF_CE;
 	RAMIO_WR <= not WR_N and RAMIO_SEL and SYSCLKF_CE;
+	GPR_ADDR <= ADDR(7) & '0' & ADDR(5 downto 0);	--7F80-7FBF, 7FC0-7FFF
 	
 	process(CLK, RST_N, WR_Nr, RAMIO_SEL, MMIO_SEL, SYSCLKF_CE)
 	begin
@@ -298,7 +301,7 @@ begin
 	SS_IDLE <= not BUSY;
 
 	process( MMIO_SEL, RAMIO_SEL, ADDR, DMA_SRC, DMA_LEN, DMA_DST, PAGE_SEL, PAGE_LOCK, ROM_BASE, ROM_PAGE, WS1, WS2, IRQ_EN, ROM_MODE, 
-			   ROM_ACCESS, SRAM_ACCESS, VEC_MEM, GPR, CPU_RUN, DATA_RAM_Q_B, BUS_DI, IRQ_FLAG, SUSPEND, BUSY )
+			   ROM_ACCESS, SRAM_ACCESS, VEC_MEM, GPR, GPR_ADDR, CPU_RUN, DATA_RAM_Q_B, BUS_DI, IRQ_FLAG, SUSPEND, BUSY )
 	begin
 		DO <= x"00";
 		if MMIO_SEL = '1' then
@@ -353,8 +356,8 @@ begin
 					end case;
 				elsif ADDR(7 downto 5) = "011" then											-- 7F60-7F7F
 					DO <= VEC_MEM(to_integer(unsigned(ADDR(4 downto 0))));
-				elsif ADDR(7 downto 4) >= x"8" and ADDR(7 downto 4) <= x"A" then	-- 7F80-7FAF
-					case ADDR(7 downto 0) is
+				elsif ADDR(7) = '1' then													-- 7F80-7FAF, 7FC0-7FEF
+					case GPR_ADDR is
 						when x"80" => DO <= GPR(0)(7 downto 0);
 						when x"81" => DO <= GPR(0)(15 downto 8);
 						when x"82" => DO <= GPR(0)(23 downto 16);
@@ -407,7 +410,7 @@ begin
 					end case;
 				end if;
 			end if;
-		elsif RAMIO_SEL = '1' then											--6000-6FFF
+		elsif RAMIO_SEL = '1' then	--6000-6FFF, 7000-7BFF
 			DO <= DATA_RAM_Q_B;
 		elsif ADDR(23 downto 16) = x"00" and ADDR(15 downto 5) = "11111111111" and BUSY = '1' then	--00:FFE0-FFFF
 			DO <= VEC_MEM(to_integer(unsigned(ADDR(4 downto 0))));
@@ -616,6 +619,9 @@ begin
 	end process;
 
 	--DMA
+	DMA_DST_RAM <= '1' when (MAPPER = '0' and DMA_DST_ADDR(22) = '0' and DMA_DST_ADDR(15 downto 12) = "0110") or
+	                        (MAPPER = '1' and DMA_DST_ADDR(22 downto 20) <= "010" and DMA_DST_ADDR(15 downto 12) = "0110") else '0';
+
 	process(CLK, RST_N)
 	begin
 		if RST_N = '0' then
@@ -638,7 +644,7 @@ begin
 					end if;
 				elsif SUSPEND = '0' and EN = '1' then
 					if DMA_STATE = '0' then
-						if DMA_WAIT_CNT = unsigned(WS1) then
+						if DMA_WAIT_CNT = unsigned(WS1) or (DMA_DST_RAM = '1' and DMA_WAIT_CNT = unsigned(WS1) - 1) then
 							DMA_WAIT_CNT <= (others => '0');
 							DMA_SRC_ADDR <= std_logic_vector(unsigned(DMA_SRC_ADDR) + 1);
 							DMA_DAT <= BUS_DI;
@@ -1279,8 +1285,8 @@ begin
 			GPR <= (others => (others => '0'));
 		elsif rising_edge(CLK) then
 			if ENABLE = '1' and CPU_RUN = '0' then
-				if MMIO_WR = '1' and ADDR(11 downto 8) = x"F" then	--7F80-7FAF
-					case ADDR(7 downto 0) is
+				if MMIO_WR = '1' and ADDR(11 downto 8) = x"F" then	--7F80-7FAF, 7FC0-7FEF
+					case GPR_ADDR is
 						when x"80" => GPR(0)(7 downto 0) <= DI;
 						when x"81" => GPR(0)(15 downto 8) <= DI;
 						when x"82" => GPR(0)(23 downto 16) <= DI;
