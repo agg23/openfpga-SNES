@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# Local-only Quartus build wrapper. No installation, upload, or device programming.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: tools/build_msu1.sh PROFILE
+       tools/build_msu1.sh --check-tools
+
+Profiles: msu_ntsc msu_pal ntsc pal ntsc_spc none none_pal
+Experimental standard-refresh: msu_standard_ntsc msu_standard_pal standard_ntsc_spc
+
+Set QUARTUS_SH to the installed quartus_sh executable, or put it on PATH.
+QUARTUS_ROOTDIR/bin/quartus_sh is also recognized.
+MSU1_BUILD_ROOT optionally selects the local build archive directory.
+The default is projects/output_files/msu1-builds, with a new folder per run.
+
+Requires an already installed, licensed/accepted Quartus Lite 21.1 toolchain
+with Cyclone V device support, Python 3, and flock (util-linux).
+Successful compilation is not proof of timing closure or hardware operation.
+EOF
+}
+
+[[ $# == 1 ]] || { usage >&2; exit 2; }
+case "$1" in
+  -h|--help) usage; exit 0 ;;
+  --check-tools) check_only=1 ;;
+  msu_ntsc|msu_pal|ntsc|pal|ntsc_spc|none|none_pal|msu_standard_ntsc|msu_standard_pal|standard_ntsc_spc) check_only=0; profile=$1 ;;
+  *) printf 'Unknown profile: %s\n' "$1" >&2; usage >&2; exit 2 ;;
+esac
+
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+quartus=${QUARTUS_SH:-}
+if [[ -z "$quartus" && -n "${QUARTUS_ROOTDIR:-}" ]]; then
+  quartus="$QUARTUS_ROOTDIR/bin/quartus_sh"
+fi
+quartus=${quartus:-quartus_sh}
+if ! quartus=$(command -v -- "$quartus"); then
+  printf '%s\n' 'Quartus is not installed or not on PATH. See docs/msu1-toolchain.md.' >&2
+  printf '%s\n' 'No fitter, resource, timing, or bitstream result has been produced.' >&2
+  exit 127
+fi
+for dependency in python3 flock; do
+  command -v "$dependency" >/dev/null || {
+    printf 'Missing required program: %s\n' "$dependency" >&2
+    exit 127
+  }
+done
+version=$("$quartus" --version)
+printf '%s\n' "$version"
+if ! grep -Eq 'Version 21\.1([.[:space:]]|$)' <<<"$version"; then
+  printf '%s\n' 'Warning: upstream uses Quartus 21.1; record any tool-version differences.' >&2
+fi
+if ((check_only)); then
+  printf '%s\n' 'Executable checks passed. Cyclone V installation is checked by compilation.'
+  exit 0
+fi
+
+build_root=${MSU1_BUILD_ROOT:-"$root/projects/output_files/msu1-builds"}
+mkdir -p -- "$build_root"
+build_root=$(cd -- "$build_root" && pwd)
+# All profiles and archive roots share the project database and QSF.
+mkdir -p -- "$root/projects/output_files"
+exec 9>"$root/projects/output_files/.msu1-build.lock"
+flock -n 9 || { printf '%s\n' 'Another local build is running.' >&2; exit 75; }
+run_dir=$(mktemp -d "$build_root/${profile}-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")
+printf '%s\n' "$version" >"$run_dir/quartus-version.log"
+export MSU1_OUTPUT_DIR="$run_dir"
+export MSU1_BUILD_PROFILE="$profile" MSU1_BUILD_TOOL="$quartus"
+
+cd -- "$root"
+python3 - "$run_dir/build.json" <<'PY'
+import datetime, json, os, pathlib, subprocess, sys
+
+def git(*args):
+    try:
+        return subprocess.check_output(["git", *args], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+manifest = {
+    "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "profile": os.environ["MSU1_BUILD_PROFILE"],
+    "parallel_processors_override": os.environ.get("MSU1_BUILD_JOBS"),
+    "quartus_sh": os.environ["MSU1_BUILD_TOOL"],
+    "device": "5CEBA4F23C8",
+    "source_commit": git("rev-parse", "HEAD"),
+    "source_status": git("status", "--short"),
+    "state": "running",
+    "timing_verified": False,
+    "hardware_verified": False,
+}
+pathlib.Path(sys.argv[1]).write_text(json.dumps(manifest, indent=2) + "\n")
+PY
+
+printf 'Building %s; logs and reports: %s\n' "$profile" "$run_dir"
+set +e
+"$quartus" -t generate.tcl "$profile" 2>&1 | tee "$run_dir/compile.log"
+pipeline_status=("${PIPESTATUS[@]}")
+set -e
+status=${pipeline_status[0]}
+if ((status == 0 && pipeline_status[1] != 0)); then status=${pipeline_status[1]}; fi
+
+python3 - "$run_dir/build.json" "$status" <<'PY'
+import datetime, json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+manifest = json.loads(path.read_text())
+manifest.update(
+    finished_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    compile_exit_code=int(sys.argv[2]),
+    state="compile_succeeded" if sys.argv[2] == "0" else "compile_failed",
+)
+path.write_text(json.dumps(manifest, indent=2) + "\n")
+PY
+
+if ((status != 0)); then
+  printf 'Compilation failed (%s); inspect %s/compile.log\n' "$status" "$run_dir" >&2
+  exit "$status"
+fi
+rbf="$run_dir/snes_pocket.rbf"
+if [[ ! -s "$rbf" ]]; then
+  printf 'Quartus returned success without a new RBF at %s\n' "$rbf" >&2
+  printf '%s\n' 'Check generate.tcl output-directory support and the assembler report.' >&2
+  exit 1
+fi
+case "$profile" in
+  msu_ntsc) rev=snes_msu_ntsc.rev ;;
+  msu_pal) rev=snes_msu_pal.rev ;;
+  msu_standard_ntsc) rev=snes_msu_standard_ntsc.rev ;;
+  msu_standard_pal) rev=snes_msu_standard_pal.rev ;;
+  standard_ntsc_spc) rev=snes_standard_spc.rev ;;
+  ntsc|none) rev=snes_main.rev ;;
+  pal|none_pal) rev=snes_pal.rev ;;
+  ntsc_spc) rev=snes_spc.rev ;;
+esac
+# Pocket .rev files reverse the bits within each RBF byte; byte order is unchanged.
+python3 - "$rbf" "$run_dir/$rev" "$run_dir/build.json" <<'PY'
+import hashlib, json, pathlib, sys
+source, target, manifest_path = map(pathlib.Path, sys.argv[1:])
+data = source.read_bytes()
+reverse_byte = bytes(int(f"{value:08b}"[::-1], 2) for value in range(256))
+converted = data.translate(reverse_byte)
+target.write_bytes(converted)
+manifest = json.loads(manifest_path.read_text())
+manifest["state"] = "bitstream_generated_unverified"
+manifest["outputs"] = {
+    path.name: {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+    for path, payload in ((source, data), (target, converted))
+}
+manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+PY
+printf 'Generated %s/%s\n' "$run_dir" "$rev"
+printf '%s\n' 'Next: inspect fitter utilization, TimeQuest timing/unconstrained paths, and test on hardware.'
+printf '%s\n' 'Nothing has been copied to a Pocket or published.'

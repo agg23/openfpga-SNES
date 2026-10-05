@@ -214,12 +214,19 @@ python3 -m unittest discover -s tests -p test_standard_save_testrom.py -v
 
 The clean PR includes the historical regression sources, but not the private
 engineering Git history or bulk evidence archives. The aggregate runners
-`tools/test_msu1.py` and `tools/run_standard_memory_regression.py`, and the
-historical packaging regression, still require pinned engineering references.
+`tools/test_msu1.py` and `tools/run_standard_memory_regression.py`
+still require pinned engineering references.
 They are not advertised as runnable from this clean checkout alone. Supplying
 reviewable, self-contained reference fixtures is an outstanding draft-review
-item; replacing missing references with current RTL would invalidate the
-comparisons. See [test scope](../tests/README.md). The two commands above use
+item for the remaining HDL comparisons; replacing missing references with current RTL would invalidate the
+comparisons. The packaging regression now has independently checked, test-only
+source snapshots and all 81 original assertions pass without engineering Git
+history. Seven additional tests cover real Git transport and snapshot integrity;
+combined with the original asset checks, 113 tests passed from a Linux source
+export containing no `.git` directory. One snapshot uses explicitly documented
+hardware-inventory equivalence rather than pretending to reconstruct a missing
+historical commit. Production package generation still requires real Git evidence.
+See [test scope](../tests/README.md). The two commands above use
 original generated assets and do not require that historical Git history.
 
 For source builds, use an existing Quartus Lite 21.1 installation with Cyclone V

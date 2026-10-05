@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
+from standard_package_fixtures import SourceFixtures
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,6 +35,14 @@ def snapshot(path):
 class StandardPackageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Exercise all existing policy/mutation assertions against pinned source
+        # bytes without importing private engineering Git history. Production
+        # git_files remains unchanged and is tested separately with real Git.
+        fixture = SourceFixtures(pack)
+        for name in ('git', 'git_files'):
+            patcher = mock.patch.object(pack, name, getattr(fixture, name))
+            patcher.start()
+            cls.addClassCleanup(patcher.stop)
         cls.shared = tempfile.TemporaryDirectory(prefix="STANDARD-SYNTHETIC-assets-")
         homebrew.write_assets(Path(cls.shared.name), basename=pack.BASENAME)
 

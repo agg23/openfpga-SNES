@@ -1,0 +1,23 @@
+name: MSU source tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  source-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packaging policy and real Git transport
+        run: |
+          python3 -m unittest discover -s tests -p test_package_standard_msu1.py -v
+          python3 -m unittest discover -s tests -p test_standard_package_sources.py -v
+      - name: Original diagnostic assets
+        run: |
+          python3 -m unittest discover -s tests -p test_assets.py -v
+          python3 -m unittest discover -s tests -p test_standard_save_testrom.py -v
