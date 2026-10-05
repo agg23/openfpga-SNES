@@ -5,7 +5,33 @@ use IEEE.NUMERIC_STD.ALL;
 library work;
 
 entity CX4 is
+    generic (ROM_HANDSHAKE : boolean := false);
 	port(
+        -- Standard-refresh transaction transport. Soft reset cancels, hard reset
+        -- alone discards accepted tokens when the physical engine also resets.
+        ROM_MASK : in std_logic_vector(22 downto 0) := (others => '1');
+        ROM_HARD_RESET_N : in std_logic := '1';
+        ROM_EPOCH : in std_logic_vector(7 downto 0) := (others => '0');
+        ROM_FLUSH : in std_logic := '0';
+        ROM_FLUSH_ACK : out std_logic;
+        ROM_FAULT : out std_logic;
+        ROM_SNES_READ_INTENT : in std_logic := '0';
+        ROM_SNES_OWNER : in std_logic_vector(1 downto 0) := "00";
+        ROM_SNES_RETIRE : in std_logic := '0';
+        ROM_SNES_WAIT : out std_logic;
+        ROM_REQ_VALID : out std_logic;
+        ROM_REQ_READY : in std_logic := '0';
+        ROM_REQ_ADDR : out std_logic_vector(22 downto 0);
+        ROM_REQ_OWNER : out std_logic_vector(1 downto 0);
+        ROM_REQ_SNES_OWNER : out std_logic_vector(1 downto 0);
+        ROM_REQ_TAG, ROM_REQ_EPOCH : out std_logic_vector(7 downto 0);
+        ROM_RSP_VALID : in std_logic := '0';
+        ROM_RSP_READY : out std_logic;
+        ROM_RSP_DATA : in std_logic_vector(15 downto 0) := (others => '0');
+        ROM_RSP_OWNER : in std_logic_vector(1 downto 0) := "00";
+        ROM_RSP_TAG, ROM_RSP_EPOCH : in std_logic_vector(7 downto 0) := (others => '0');
+        ROM_RSP_ERROR : in std_logic := '0';
+
 		CLK			: in std_logic;
 		CE				: in std_logic;
 		RST_N			: in std_logic;
@@ -51,6 +77,34 @@ entity CX4 is
 end CX4;
 
 architecture rtl of CX4 is
+    -- One retained result per logical owner; byte lane is captured before
+    -- the physical aligned-word interface. Raw intent never uses RD_N.
+    signal TX_RAW_NEED, TX_NEED, TX_RETIRE, TX_READY, TX_LANES : std_logic_vector(3 downto 0);
+    signal TX_ADDRS, TX_SEEN_ADDRS : std_logic_vector(91 downto 0);
+    signal TX_TRACKED : std_logic_vector(3 downto 0) := (others => '0');
+    signal TX_WORDS : std_logic_vector(63 downto 0);
+    type tx_byte_array is array(0 to 3) of std_logic_vector(7 downto 0);
+    signal TX_DATA : tx_byte_array;
+    signal TX_FLUSH, TX_RESTART : std_logic;
+    signal TX_SNES_PENDING : std_logic := '0';
+    signal TX_SNES_ADDR : std_logic_vector(22 downto 0) := (others=>'0');
+    signal TX_SNES_LOOKUP : std_logic_vector(22 downto 0);
+
+    signal DMA_DEST_RETIRE, CACHE_BEAT_READY, DMA_SOURCE_READY, EXT_FINISH_READY : std_logic;
+    signal TX_VECTOR, TX_SOURCE_ROM, TX_CACHE_ROM, TX_SNES_ROM : std_logic;
+    function is_rom(a : std_logic_vector(23 downto 0); mapper : std_logic) return std_logic is
+    begin
+        if (mapper='0' and a(15)='1') or (mapper='1' and a(23 downto 22)="11") then return '1';
+        else return '0'; end if;
+    end function;
+    function map_rom(a : std_logic_vector(23 downto 0); mapper, mode : std_logic) return std_logic_vector is
+        variable chip : std_logic;
+    begin
+        if (mapper='0' and mode='0') or (mapper='1' and mode='1') then chip:=a(21);
+        elsif mapper='0' then chip:='0'; else chip:=a(20); end if;
+        return '0' & a(22) & chip & a(20 downto 16) & a(14 downto 0);
+    end function;
+
 
 	constant FLAG_Z : integer range 0 to 3 := 0;
 	constant FLAG_N : integer range 0 to 3 := 1;
@@ -183,6 +237,98 @@ architecture rtl of CX4 is
 	
 begin
 
+    TX_FLUSH <= ROM_FLUSH or not RST_N;
+    -- Once SNES owns an operation, an autonomous chip bus selection cannot
+    -- cancel it or change its mapping. Only the CPU retire/flush releases it.
+    process(CLK, ROM_HARD_RESET_N)
+    begin
+        if ROM_HARD_RESET_N='0' then TX_SNES_PENDING<='0'; TX_SNES_ADDR<=(others=>'0');
+        elsif rising_edge(CLK) then
+            if TX_FLUSH='1' or ROM_SNES_RETIRE='1' then TX_SNES_PENDING<='0';
+            elsif TX_SNES_PENDING='0' and TX_RAW_NEED(0)='1' then
+                TX_SNES_PENDING<='1'; TX_SNES_ADDR<=TX_SNES_LOOKUP;
+            end if;
+        end if;
+    end process;
+    TX_ADDRS(22 downto 0) <= TX_SNES_ADDR when TX_SNES_PENDING='1' else TX_SNES_LOOKUP;
+    transactional_rom : if ROM_HANDSHAKE generate
+        slots : entity work.SA1RomBridge
+        generic map (P1=>1, P2=>2, P3=>3)
+        port map (CLK=>CLK, ENABLE=>'1', FLUSH=>TX_FLUSH,
+            HARD_RESET_N=>ROM_HARD_RESET_N, EPOCH=>ROM_EPOCH,
+            FLUSH_ACK=>ROM_FLUSH_ACK, FAULT=>ROM_FAULT,
+            NEED=>TX_NEED, RETIRE=>TX_RETIRE, ADDRS=>TX_ADDRS,
+            SNES_OWNER=>ROM_SNES_OWNER, READY=>TX_READY, BYTES=>TX_LANES, WORDS=>TX_WORDS,
+            REQ_VALID=>ROM_REQ_VALID, REQ_READY=>ROM_REQ_READY, REQ_ADDR=>ROM_REQ_ADDR,
+            REQ_OWNER=>ROM_REQ_OWNER, REQ_SNES_OWNER=>ROM_REQ_SNES_OWNER,
+            REQ_TAG=>ROM_REQ_TAG, REQ_EPOCH=>ROM_REQ_EPOCH,
+            RSP_VALID=>ROM_RSP_VALID, RSP_READY=>ROM_RSP_READY, RSP_DATA=>ROM_RSP_DATA,
+            RSP_OWNER=>ROM_RSP_OWNER, RSP_TAG=>ROM_RSP_TAG, RSP_EPOCH=>ROM_RSP_EPOCH,
+            RSP_ERROR=>ROM_RSP_ERROR);
+        lanes : for i in 0 to 3 generate
+            TX_DATA(i) <= TX_WORDS(i*16+15 downto i*16+8) when TX_LANES(i)='1'
+                          else TX_WORDS(i*16+7 downto i*16);
+            -- A live-address change denotes a superseding operation. Give the
+            -- transport a cancellation edge before describing its replacement;
+            -- an already accepted old token is still drained by the transport.
+            TX_NEED(i) <= TX_RAW_NEED(i) when TX_TRACKED(i)='0' or
+                TX_ADDRS(i*23+22 downto i*23)=TX_SEEN_ADDRS(i*23+22 downto i*23) else '0';
+        end generate;
+        process(CLK, ROM_HARD_RESET_N)
+        begin
+            if ROM_HARD_RESET_N='0' then
+                TX_TRACKED <= (others=>'0'); TX_SEEN_ADDRS <= (others=>'0');
+            elsif rising_edge(CLK) then
+                for i in 0 to 3 loop
+                    if TX_FLUSH='1' or TX_RAW_NEED(i)='0' or TX_NEED(i)='0' or TX_RETIRE(i)='1' then
+                        TX_TRACKED(i)<='0';
+                    elsif TX_TRACKED(i)='0' then
+                        TX_TRACKED(i)<='1';
+                        TX_SEEN_ADDRS(i*23+22 downto i*23)<=TX_ADDRS(i*23+22 downto i*23);
+                    end if;
+                end loop;
+            end if;
+        end process;
+        ROM_SNES_WAIT <= TX_RAW_NEED(0) and not TX_READY(0);
+    end generate;
+    legacy_rom : if not ROM_HANDSHAKE generate
+        TX_NEED<=TX_RAW_NEED; TX_READY<=(others=>'1');
+        TX_DATA <= (others=>BUS_DI);
+        ROM_REQ_VALID<='0'; ROM_REQ_ADDR<=(others=>'0'); ROM_REQ_OWNER<="00";
+        ROM_REQ_SNES_OWNER<="00"; ROM_REQ_TAG<=(others=>'0'); ROM_REQ_EPOCH<=(others=>'0');
+        ROM_RSP_READY<='1'; ROM_FLUSH_ACK<='1'; ROM_FAULT<='0'; ROM_SNES_WAIT<='0';
+    end generate;
+
+    TX_RESTART <= '1' when (ENABLE='1' and MMIO_WR='1' and ADDR(11 downto 0)=x"F4F" and CPU_RUN='0') or
+        (CPU_EN='1' and INST=I_MOV and IR(10 downto 8)="001" and IR(7 downto 1)="0010111") else '0';
+    TX_VECTOR <= '1' when ADDR(23 downto 16)=x"00" and ADDR(15 downto 5)="11111111111" else '0';
+    TX_SNES_ROM <= is_rom(ADDR, MAPPER);
+    TX_SOURCE_ROM <= is_rom(DMA_SRC_ADDR, MAPPER);
+    TX_CACHE_ROM <= is_rom(CACHE_BUS_ADDR, MAPPER);
+    TX_RAW_NEED(0) <= TX_SNES_PENDING or (ROM_SNES_READ_INTENT and TX_SNES_ROM and not CACHE_RUN and not DMA_RUN and
+                      not ROM_ACCESS and not SRAM_ACCESS and not MMIO_SEL and not RAMIO_SEL and
+                      not (BUSY and TX_VECTOR));
+    TX_RAW_NEED(1) <= CACHE_RUN and TX_CACHE_ROM;
+    TX_RAW_NEED(2) <= DMA_RUN and not DMA_STATE and TX_SOURCE_ROM;
+    TX_RAW_NEED(3) <= ROM_ACCESS and CPU_RUN and not TX_RESTART;
+    TX_SNES_LOOKUP <= map_rom(ADDR, MAPPER, ROM_MODE) and ROM_MASK;
+    TX_ADDRS(45 downto 23) <= map_rom(CACHE_BUS_ADDR, MAPPER, ROM_MODE) and ROM_MASK;
+    TX_ADDRS(68 downto 46) <= map_rom(DMA_SRC_ADDR, MAPPER, ROM_MODE) and ROM_MASK;
+    TX_ADDRS(91 downto 69) <= map_rom(EXT_BUS_ADDR, MAPPER, ROM_MODE) and ROM_MASK;
+    TX_RETIRE(0) <= ROM_SNES_RETIRE and TX_READY(0);
+    TX_RETIRE(1) <= CACHE_BEAT_READY and TX_CACHE_ROM;
+    TX_RETIRE(2) <= DMA_SOURCE_READY and TX_SOURCE_ROM and EN and not SUSPEND and DMA_RUN and not DMA_STATE;
+    TX_RETIRE(3) <= EXT_FINISH_READY and ROM_ACCESS and CPU_EN when INST=I_FINEXT else '0';
+    CACHE_BEAT_READY <= '1' when CACHE_RUN='1' and EN='1' and SUSPEND='0' and
+        ((ROM_SEL='1' and CACHE_WAIT_CNT>=unsigned(WS1) and TX_READY(1)='1') or
+         (SRAM_SEL='1' and CACHE_WAIT_CNT>=unsigned(WS2))) else '0';
+    DMA_SOURCE_READY <= '1' when (not ROM_HANDSHAKE and DMA_WAIT_CNT=unsigned(WS1)) or
+        (ROM_HANDSHAKE and DMA_WAIT_CNT>=unsigned(WS1) and CACHE_RUN='0' and (TX_SOURCE_ROM='0' or TX_READY(2)='1')) else '0';
+    DMA_DEST_RETIRE <= '1' when DMA_RUN='1' and DMA_STATE='1' and EN='1' and SUSPEND='0' and CACHE_RUN='0' and
+        ((DMA_WAIT_CNT>=unsigned(WS2) and SRAM_SEL='1') or (DMA_WAIT_CNT=0 and RAM_SEL='1')) else '0';
+    EXT_FINISH_READY <= '1' when BUS_ACCESS_CNT=0 and
+        (not ROM_HANDSHAKE or ROM_ACCESS='0' or TX_READY(3)='1') else '0';
+
 	EN <= ENABLE and CE and not SS_BUSY;
 	CPU_EN <= EN and CPU_RUN and (not CACHE_RUN) and (not DMA_RUN) and (not SUSPEND);
 	
@@ -298,7 +444,7 @@ begin
 	SS_IDLE <= not BUSY;
 
 	process( MMIO_SEL, RAMIO_SEL, ADDR, DMA_SRC, DMA_LEN, DMA_DST, PAGE_SEL, PAGE_LOCK, ROM_BASE, ROM_PAGE, WS1, WS2, IRQ_EN, ROM_MODE, 
-			   ROM_ACCESS, SRAM_ACCESS, VEC_MEM, GPR, CPU_RUN, DATA_RAM_Q_B, BUS_DI, IRQ_FLAG, SUSPEND, BUSY )
+			   ROM_ACCESS, SRAM_ACCESS, VEC_MEM, GPR, CPU_RUN, DATA_RAM_Q_B, BUS_DI, IRQ_FLAG, SUSPEND, BUSY, TX_DATA, TX_RAW_NEED )
 	begin
 		DO <= x"00";
 		if MMIO_SEL = '1' then
@@ -409,8 +555,11 @@ begin
 			end if;
 		elsif RAMIO_SEL = '1' then											--6000-6FFF
 			DO <= DATA_RAM_Q_B;
+		elsif ROM_HANDSHAKE and TX_RAW_NEED(0)='1' then
+            DO <= TX_DATA(0);
 		elsif ADDR(23 downto 16) = x"00" and ADDR(15 downto 5) = "11111111111" and BUSY = '1' then	--00:FFE0-FFFF
 			DO <= VEC_MEM(to_integer(unsigned(ADDR(4 downto 0))));
+
 		else
 			DO <= BUS_DI;
 		end if;
@@ -469,7 +618,7 @@ begin
 		
 	BUS_A <= INT_ADDR;
 
-	process(SUSPEND, SRAM_SEL, DMA_RUN, DMA_STATE, SRAM_ACCESS, SRAM_WR, ROM_SEL, INT_ADDR, MAPPER, ROM_MODE, WR_N, RD_N)
+	process(SUSPEND, SRAM_SEL, DMA_RUN, DMA_STATE, SRAM_ACCESS, SRAM_WR, ROM_SEL, INT_ADDR, MAPPER, ROM_MODE, WR_N, RD_N, DMA_DEST_RETIRE)
 	begin
 		if SUSPEND = '1' then
 			ROM_CE1_N <= '1';
@@ -482,7 +631,7 @@ begin
 			ROM_CE2_N <= '1';
 			SRAM_CE_N <= '0';
 			BUS_OE_N <= DMA_STATE;
-			BUS_WE_N <= not DMA_STATE;
+			if ROM_HANDSHAKE then BUS_WE_N<=not DMA_DEST_RETIRE; else BUS_WE_N <= not DMA_STATE; end if;
 		elsif SRAM_SEL = '1' then
 			ROM_CE1_N <= '1';
 			ROM_CE2_N <= '1';
@@ -589,8 +738,13 @@ begin
 						end if;
 					end if;
 				elsif SUSPEND = '0' and EN = '1' then
-					CACHE_WAIT_CNT <= CACHE_WAIT_CNT + 1;
-					if (CACHE_WAIT_CNT = unsigned(WS1) and ROM_SEL = '1') or (CACHE_WAIT_CNT = unsigned(WS2) and SRAM_SEL = '1') then
+					if not ROM_HANDSHAKE or
+                       (ROM_SEL='1' and CACHE_WAIT_CNT<unsigned(WS1)) or
+                       (SRAM_SEL='1' and CACHE_WAIT_CNT<unsigned(WS2)) then
+                        CACHE_WAIT_CNT <= CACHE_WAIT_CNT + 1;
+                    end if;
+					if (ROM_HANDSHAKE and CACHE_BEAT_READY='1') or
+                       (not ROM_HANDSHAKE and ((CACHE_WAIT_CNT=unsigned(WS1) and ROM_SEL='1') or (CACHE_WAIT_CNT=unsigned(WS2) and SRAM_SEL='1'))) then
 						CACHE_ADDR <= std_logic_vector(unsigned(CACHE_ADDR) + 1);
 						if CACHE_ADDR = "111111111" then
 							CACHE_RUN <= '0';
@@ -638,26 +792,26 @@ begin
 					end if;
 				elsif SUSPEND = '0' and EN = '1' then
 					if DMA_STATE = '0' then
-						if DMA_WAIT_CNT = unsigned(WS1) then
+						if DMA_SOURCE_READY='1' then
 							DMA_WAIT_CNT <= (others => '0');
 							DMA_SRC_ADDR <= std_logic_vector(unsigned(DMA_SRC_ADDR) + 1);
-							DMA_DAT <= BUS_DI;
+							if ROM_HANDSHAKE and TX_SOURCE_ROM='1' then DMA_DAT<=TX_DATA(2); else DMA_DAT<=BUS_DI; end if;
 							DMA_STATE <= not DMA_STATE;
 						else
-							DMA_WAIT_CNT <= DMA_WAIT_CNT + 1;
+							if not ROM_HANDSHAKE or DMA_WAIT_CNT<unsigned(WS1) then DMA_WAIT_CNT <= DMA_WAIT_CNT + 1; end if;
 						end if;
 					else
-						if (DMA_WAIT_CNT = unsigned(WS2) and SRAM_SEL = '1') or
-							(DMA_WAIT_CNT = 0 and RAM_SEL = '1') then
+						if (ROM_HANDSHAKE and DMA_DEST_RETIRE='1') or (not ROM_HANDSHAKE and ((DMA_WAIT_CNT = unsigned(WS2) and SRAM_SEL = '1') or
+							(DMA_WAIT_CNT = 0 and RAM_SEL = '1'))) then
 							DMA_WAIT_CNT <= (others => '0');
 							DMA_DST_ADDR <= std_logic_vector(unsigned(DMA_DST_ADDR) + 1);
-							DMA_CNT <= DMA_CNT - 1;
+							if not ROM_HANDSHAKE or DMA_CNT/=0 then DMA_CNT <= DMA_CNT - 1; end if;
 							if DMA_CNT = 0 then
 								DMA_RUN <= '0';
 							end if;
 							DMA_STATE <= not DMA_STATE;
 						else
-							DMA_WAIT_CNT <= DMA_WAIT_CNT + 1;
+							if not ROM_HANDSHAKE or (SRAM_SEL='1' and DMA_WAIT_CNT<unsigned(WS2)) then DMA_WAIT_CNT <= DMA_WAIT_CNT + 1; end if;
 						end if;
 					end if;
 				end if;
@@ -998,7 +1152,7 @@ begin
 			if CPU_EN = '1' then
 				if ROM_ACCESS = '1' or SRAM_ACCESS = '1' then 
 					if BUS_ACCESS_CNT = 0 then
-						ROM_ACCESS <= '0';
+						if not ROM_HANDSHAKE or (INST=I_FINEXT and EXT_FINISH_READY='1') then ROM_ACCESS <= '0'; end if;
 						SRAM_ACCESS <= '0';
 						SRAM_WR <= '0';
 					else
@@ -1014,10 +1168,10 @@ begin
 								EXT_BUS_ADDR <= MAR;
 								if IR(0) = '0' then
 									ROM_ACCESS <= '1';
-									BUS_ACCESS_CNT <= unsigned(WS1) - 1;
+									if ROM_HANDSHAKE and unsigned(WS1)=0 then BUS_ACCESS_CNT<=(others=>'0'); else BUS_ACCESS_CNT <= unsigned(WS1) - 1; end if;
 								else
 									SRAM_ACCESS <= '1';
-									BUS_ACCESS_CNT <= unsigned(WS2) - 1;
+									if ROM_HANDSHAKE and unsigned(WS2)=0 then BUS_ACCESS_CNT<=(others=>'0'); else BUS_ACCESS_CNT <= unsigned(WS2) - 1; end if;
 									SRAM_WR <= '0';
 								end if;
 							end if;
@@ -1032,8 +1186,8 @@ begin
 				elsif INST = I_INCEXT then
 					MAR <= std_logic_vector(unsigned(MAR) + 1);
 				elsif INST = I_FINEXT then
-					if BUS_ACCESS_CNT = 0 then
-						MBR <= BUS_DI;
+					if EXT_FINISH_READY='1' then
+						if ROM_HANDSHAKE and ROM_ACCESS='1' then MBR<=TX_DATA(3); else MBR<=BUS_DI; end if;
 					end if;
 				elsif INST = I_ST then
 					if IR(8) = '0' and IR(6 downto 0) = "0010011" then
@@ -1042,11 +1196,16 @@ begin
 						MBR <= A(7 downto 0);
 					elsif IR(8) = '1' and IR(7 downto 0) = "00101111" then
 						SRAM_ACCESS <= '1';
-						BUS_ACCESS_CNT <= unsigned(WS2) - 1;
+						if ROM_HANDSHAKE and unsigned(WS2)=0 then BUS_ACCESS_CNT<=(others=>'0'); else BUS_ACCESS_CNT <= unsigned(WS2) - 1; end if;
 						SRAM_WR <= '1';
 					end if;
 				end if;
 			end if;
+            if ROM_HANDSHAKE and CPU_RUN='0' then ROM_ACCESS<='0'; end if;
+            if ROM_HANDSHAKE and ENABLE='1' and MMIO_WR='1' and CPU_RUN='0' and ADDR(11 downto 0)=x"F4F" then
+                ROM_ACCESS<='0'; SRAM_ACCESS<='0'; SRAM_WR<='0'; BUS_ACCESS_CNT<=(others=>'0');
+            end if;
+
 			if SS_WR = '1' then
 				case ADDR(7 downto 0) is
 					when x"05" =>
@@ -1206,7 +1365,7 @@ begin
 					end if;
 
 				elsif INST = I_FINEXT then
-					if BUS_ACCESS_CNT = 0 then
+					if EXT_FINISH_READY='1' then
 						PC <= NEXT_PC;
 					end if;
 				else
@@ -1426,7 +1585,8 @@ begin
 		q			=> DATA_ROM_Q
 	);
 	
-	DATA_RAM_WE_A <= '1' when (CPU_EN = '1' and INST = I_WRRAM) or (EN = '1' and DMA_RUN = '1' and RAM_SEL = '1' and DMA_STATE = '1') else '0';
+	DATA_RAM_WE_A <= '1' when ROM_HANDSHAKE and ((CPU_EN='1' and INST=I_WRRAM) or (DMA_DEST_RETIRE='1' and RAM_SEL='1')) else
+                         '1' when not ROM_HANDSHAKE and ((CPU_EN = '1' and INST = I_WRRAM) or (EN = '1' and DMA_RUN = '1' and RAM_SEL = '1' and DMA_STATE = '1')) else '0';
 	-- Port B always follows the SNES CPU bus.  During a savestate the firmware reaches the Data
 	-- RAM through the RAMIO $6000 window (read on save, write on load), so no dedicated SS port.
 	DATA_RAM_ADDR_B <= ADDR(11 downto 0);
@@ -1508,8 +1668,8 @@ begin
 
 	CACHE_ADDR_RD <= BANK & PC;
 	CACHE_ADDR_WR <= CACHE_BANK & CACHE_ADDR;
-	CACHE_WE <= '1' when CACHE_RUN = '1' and EN = '1' and CACHE_WAIT_CNT = unsigned(WS1) else '0';
-	CACHE_DI <= BUS_DI;
+	CACHE_WE <= CACHE_BEAT_READY when ROM_HANDSHAKE else '1' when CACHE_RUN = '1' and EN = '1' and CACHE_WAIT_CNT = unsigned(WS1) else '0';
+	CACHE_DI <= TX_DATA(1) when ROM_HANDSHAKE and TX_CACHE_ROM='1' else BUS_DI;
 
 	-- Cache port mux: SS serializes the program cache over SS_CACHE_* (A(0)=L/H, A(9:1)=index); else the normal CPU/fill paths drive it.
 	CACHE_RDADDR <= SS_CACHE_A(9 downto 1) when SS_BUSY = '1' else CACHE_ADDR_RD;

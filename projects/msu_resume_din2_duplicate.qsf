@@ -1,0 +1,15 @@
+# EXPERIMENT ONLY: one combinational source clone, no sequential/clock changes.
+# These two names are transcribed from the completed 43c9ec5 NTSC post-fit path.
+# Before compiling, confirm source and destination each resolve exactly once in
+# a read-only map/atom inspection of the isolated experiment. Fail closed if a
+# name changed or the destination is not a direct fanout. Do not guess a wildcard.
+set_instance_assignment -name DUPLICATE_ATOM msu_resume_din2_local \
+    -from {core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|DO[2]~6} \
+    -to {core_top:ic|MAIN_SNES:snes|main:main|MSU:MSU|resume_loop_index[22]~0}
+set expected_duplicate [get_instance_assignment -name DUPLICATE_ATOM \
+    -from {core_top:ic|MAIN_SNES:snes|main:main|SNES:SNES|DO[2]~6} \
+    -to {core_top:ic|MAIN_SNES:snes|main:main|MSU:MSU|resume_loop_index[22]~0}]
+if {$expected_duplicate ne "msu_resume_din2_local"} {
+    error "MSU resume duplicate assignment was not accepted exactly"
+}
+puts "MSU_RESUME_DUPLICATE_ASSIGNMENT_ACCEPTED $expected_duplicate"

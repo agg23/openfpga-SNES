@@ -5,6 +5,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 
 entity SA1 is
+    generic (ROM_HANDSHAKE : boolean := false);
 	port(
 		RST_N			: in std_logic;
 		CLK			: in std_logic;
@@ -23,6 +24,34 @@ entity SA1 is
 		
 		PAL			: in std_logic;
 		
+
+        -- Optional transaction transport. Legacy fixed-latency behavior is
+        -- retained when ROM_HANDSHAKE is false. Owner 0=SNES, 1=CPU, 2=DMA, 3=VBP.
+        ROM_HARD_RESET_N : in std_logic := '1';
+        ROM_FLUSH       : in std_logic := '0';
+        ROM_EPOCH       : in std_logic_vector(7 downto 0) := x"00";
+        ROM_ADDR_MASK   : in std_logic_vector(22 downto 0) := (others=>'1');
+        ROM_FLUSH_ACK   : out std_logic;
+        ROM_SNES_READ_INTENT : in std_logic := '0';
+        ROM_SNES_RETIRE : in std_logic := '0';
+        ROM_SNES_OWNER  : in std_logic_vector(1 downto 0) := "00";
+        ROM_SNES_WAIT   : out std_logic;
+        ROM_REQ_VALID   : out std_logic;
+        ROM_REQ_READY   : in std_logic := '0';
+        ROM_REQ_ADDR    : out std_logic_vector(22 downto 0);
+        ROM_REQ_OWNER   : out std_logic_vector(1 downto 0);
+        ROM_REQ_SNES_OWNER : out std_logic_vector(1 downto 0);
+        ROM_REQ_TAG     : out std_logic_vector(7 downto 0);
+        ROM_REQ_EPOCH   : out std_logic_vector(7 downto 0);
+        ROM_RSP_VALID   : in std_logic := '0';
+        ROM_RSP_READY   : out std_logic;
+        ROM_RSP_OWNER   : in std_logic_vector(1 downto 0) := "00";
+        ROM_RSP_TAG     : in std_logic_vector(7 downto 0) := x"00";
+        ROM_RSP_EPOCH   : in std_logic_vector(7 downto 0) := x"00";
+        ROM_RSP_DATA    : in std_logic_vector(15 downto 0) := x"FFFF";
+        ROM_RSP_ERROR   : in std_logic := '0';
+        ROM_FAULT       : out std_logic;
+
 		ROM_A       : out std_logic_vector(22 downto 0);
 		ROM_DI		: in std_logic_vector(15 downto 0);
 		ROM_RD_N		: out std_logic;							--for MISTer sdram
@@ -56,7 +85,47 @@ signal WINDOW					: std_logic;
 signal DOT_CLK					: std_logic; 
 signal SNES_SYSCLK			: std_logic; 
 signal SYSCLKR_CE_NEXT: std_logic; 
-signal SA1_EN					: std_logic;
+signal SA1_EN                     : std_logic;
+signal SA1_ROM_CE                 : std_logic;
+signal CPU_ROM_LOCAL, SNES_ROM_LOCAL : std_logic;
+signal CPU_ROM_WAIT               : std_logic;
+signal ROM_NEED, ROM_READY, ROM_RETIRE : std_logic_vector(3 downto 0);
+signal ROM_ADDRS                  : std_logic_vector(91 downto 0);
+signal ROM_WORDS                  : std_logic_vector(63 downto 0);
+signal ROM_BYTES                  : std_logic_vector(3 downto 0);
+signal CPU_ROM_DATA, SNES_ROM_DATA, DMA_ROM_DATA, VBP_ROM_DATA : std_logic_vector(15 downto 0);
+signal CPU_ROM_BYTE, SNES_ROM_BYTE, DMA_ROM_BYTE : std_logic;
+signal ROM_TRANSPORT_FLUSH        : std_logic;
+signal ROM_DMA_WRITE              : std_logic;
+
+-- Snapshot this mapping before arbitration, not after a shared owner changes.
+function map_rom(a : std_logic_vector(23 downto 0);
+                 cb, db, eb, fb : std_logic;
+                 cx, dx, ex, fx : std_logic_vector(2 downto 0)) return std_logic_vector is
+    variable r : std_logic_vector(23 downto 0);
+begin
+    r := a;
+    case a(23 downto 21) is
+        when "000" => if a(15)='1' then
+            if cb='0' then r := "0000" & a(20 downto 16) & a(14 downto 0);
+            else r := '0' & cx & a(20 downto 16) & a(14 downto 0); end if; end if;
+        when "001" => if a(15)='1' then
+            if db='0' then r := "0001" & a(20 downto 16) & a(14 downto 0);
+            else r := '0' & dx & a(20 downto 16) & a(14 downto 0); end if; end if;
+        when "100" => if a(15)='1' then
+            if eb='0' then r := "0010" & a(20 downto 16) & a(14 downto 0);
+            else r := '0' & ex & a(20 downto 16) & a(14 downto 0); end if; end if;
+        when "101" => if a(15)='1' then
+            if fb='0' then r := "0011" & a(20 downto 16) & a(14 downto 0);
+            else r := '0' & fx & a(20 downto 16) & a(14 downto 0); end if; end if;
+        when "110" => if a(20)='0' then r := '0' & cx & a(19 downto 0);
+                      else r := '0' & dx & a(19 downto 0); end if;
+        when "111" => if a(20)='0' then r := '0' & ex & a(19 downto 0);
+                      else r := '0' & fx & a(19 downto 0); end if;
+        when others => null;
+    end case;
+    return r(22 downto 0);
+end function;
 
 --65C816
 signal P65_R_WN				: std_logic;
@@ -301,8 +370,9 @@ EN <= ENABLE and CLK_CE;
 
 -- 65C816
 P65_RST_N <= not SA1RST and RST_N;
-P65_EN <= not SA1WAIT and ENABLE;
-P65_CE <= SA1_EN and CLK_CE;
+P65_EN <= not SA1WAIT and ENABLE and not CPU_ROM_WAIT;
+-- Keep the 65C816 interrupt edge sampler clocked while RDY stalls retirement.
+P65_CE <= (SA1_INT_EN or SA1_ROM_CE or SA1_BWRAM_EN or SA1_IRAM_EN) and CLK_CE;
 P65_NMI_N <= not SA1_NMI;
 P65_IRQ_N <= not SA1_IRQ;
 
@@ -369,7 +439,8 @@ begin
 	end if;
 end process;
 
-SA1_ROM_EN <= SA1_ROM_SEL and not SNES_ROM_SEL;
+SA1_ROM_CE <= SA1_ROM_SEL and not SNES_ROM_SEL;
+SA1_ROM_EN <= SA1_ROM_CE and not CPU_ROM_WAIT;
 SA1_BWRAM_EN <= SA1_BWRAM_SEL and not SA1_BWRAM_WAIT and not SNES_BWRAM_SEL and SA1_BWRAM_VALID;
 SA1_IRAM_EN <= SA1_IRAM_SEL and not SA1_IRAM_WAIT and not SNES_IRAM_SEL;
 SA1_INT_EN <= SA1_INT_SEL;
@@ -408,7 +479,7 @@ begin
 	end if;
 end process;
 
-process( P65_A, P65_VPB, ROM_DI, SA1_MMIO_READ_ACCESS, SA1_BWRAM_ACCESS, SA1_BBF_ACCESS, SA1_IRAM_ACCESS, SA1_ROM_ACCESS, IRAM_DO, BWRAM_DI, SBW46, 
+process( P65_A, P65_VPB, CPU_ROM_DATA, CPU_ROM_BYTE, SA1_MMIO_READ_ACCESS, SA1_BWRAM_ACCESS, SA1_BBF_ACCESS, SA1_IRAM_ACCESS, SA1_ROM_ACCESS, IRAM_DO, BWRAM_DI, SBW46,
 			CRV, CIV, CNV, SA1_IRQ_FLAG, TM_IRQ_FLAG, DMA_IRQ_FLAG, SA1_NMI_FLAG, SMSG, MR, MOF, VDP, BBF, HCR, VCR, H_CNT, MDR, SA1_SSIO_READ_ACCESS, SS_P65_DO)
 begin
 	if SA1_ROM_ACCESS = '1' then												--ROM 00h-3Fh/80h-BFh:8000h-FFFFh, C0h-FFh:0000h-FFFFh 
@@ -431,10 +502,10 @@ begin
 				P65_DI <= CNV(15 downto 8);
 			end if;
 		else
-			if P65_A(0) = '0' then
-				P65_DI <= ROM_DI(7 downto 0);
+			if CPU_ROM_BYTE = '0' then
+				P65_DI <= CPU_ROM_DATA(7 downto 0);
 			else
-				P65_DI <= ROM_DI(15 downto 8);
+				P65_DI <= CPU_ROM_DATA(15 downto 8);
 			end if;
 		end if;
 	elsif SA1_MMIO_READ_ACCESS = '1' then	--SA1 Port Read
@@ -537,6 +608,60 @@ ROM_A <= ROM_MAP_A(22 downto 0);
 ROM_RD_N <= CLK_CE;
 
 
+
+-- Four independently captured clients; the physical bridge serializes requests.
+-- CPU vector substitution and SNES remapped interrupt vectors need no ROM read.
+CPU_ROM_LOCAL <= '1' when P65_VPB='0' and
+    (P65_A(3 downto 1)="101" or P65_A(3 downto 1)="110" or P65_A(3 downto 1)="111") else '0';
+SNES_ROM_LOCAL <= '1' when
+    (SNES_A(23 downto 1)=x"00FFE" & "101" and NMISEL='1') or
+    (SNES_A(23 downto 1)=x"00FFE" & "111" and IRQSEL='1') else '0';
+ROM_NEED(0) <= ROM_SNES_READ_INTENT and SNES_ROM_ACCESS and not SNES_ROM_LOCAL;
+ROM_NEED(1) <= SA1_ROM_ACCESS and P65_RD and not CPU_ROM_LOCAL and P65_RST_N;
+ROM_NEED(2) <= DMA_SRC_ROM_SEL;
+ROM_NEED(3) <= VBP_RUN;
+ROM_ADDRS(22 downto 0) <= map_rom(SNES_A, CBMAP, DBMAP, EBMAP, FBMAP, CXB, DXB, EXB, FXB) and ROM_ADDR_MASK;
+ROM_ADDRS(45 downto 23) <= map_rom(P65_A, CBMAP, DBMAP, EBMAP, FBMAP, CXB, DXB, EXB, FXB) and ROM_ADDR_MASK;
+ROM_ADDRS(68 downto 46) <= map_rom(SDA, CBMAP, DBMAP, EBMAP, FBMAP, CXB, DXB, EXB, FXB) and ROM_ADDR_MASK;
+ROM_ADDRS(91 downto 69) <= map_rom(VDA, CBMAP, DBMAP, EBMAP, FBMAP, CXB, DXB, EXB, FXB) and ROM_ADDR_MASK;
+ROM_RETIRE(0) <= ROM_NEED(0) and ROM_SNES_RETIRE and ENABLE and ROM_READY(0);
+ROM_RETIRE(1) <= ROM_NEED(1) and P65_CE and P65_EN;
+ROM_RETIRE(2) <= DMA_SRC_ROM_SEL and DMA_EN and EN;
+ROM_RETIRE(3) <= VBP_EN and EN;
+ROM_TRANSPORT_FLUSH <= ROM_FLUSH or not RST_N;
+ROM_DMA_WRITE <= DMA_EN and EN when ROM_HANDSHAKE and DMA_SRC_ROM_SEL='1' else DMA_EN;
+
+transaction_rom: if ROM_HANDSHAKE generate
+    CPU_ROM_WAIT <= ROM_NEED(1) and not ROM_READY(1);
+    ROM_SNES_WAIT <= ROM_NEED(0) and not ROM_READY(0);
+    SNES_ROM_DATA <= ROM_WORDS(15 downto 0);
+    CPU_ROM_DATA <= ROM_WORDS(31 downto 16);
+    DMA_ROM_DATA <= ROM_WORDS(47 downto 32);
+    VBP_ROM_DATA <= ROM_WORDS(63 downto 48);
+    SNES_ROM_BYTE <= ROM_BYTES(0);
+    CPU_ROM_BYTE <= ROM_BYTES(1);
+    DMA_ROM_BYTE <= ROM_BYTES(2);
+    bridge: entity work.SA1RomBridge port map (
+        CLK=>CLK, HARD_RESET_N=>ROM_HARD_RESET_N, ENABLE=>ENABLE,
+        FLUSH=>ROM_TRANSPORT_FLUSH, EPOCH=>ROM_EPOCH, FLUSH_ACK=>ROM_FLUSH_ACK,
+        NEED=>ROM_NEED, ADDRS=>ROM_ADDRS, SNES_OWNER=>ROM_SNES_OWNER,
+        RETIRE=>ROM_RETIRE, READY=>ROM_READY, WORDS=>ROM_WORDS, BYTES=>ROM_BYTES,
+        REQ_VALID=>ROM_REQ_VALID, REQ_READY=>ROM_REQ_READY, REQ_ADDR=>ROM_REQ_ADDR,
+        REQ_OWNER=>ROM_REQ_OWNER, REQ_SNES_OWNER=>ROM_REQ_SNES_OWNER,
+        REQ_TAG=>ROM_REQ_TAG, REQ_EPOCH=>ROM_REQ_EPOCH,
+        RSP_VALID=>ROM_RSP_VALID, RSP_READY=>ROM_RSP_READY, RSP_OWNER=>ROM_RSP_OWNER,
+        RSP_TAG=>ROM_RSP_TAG, RSP_EPOCH=>ROM_RSP_EPOCH, RSP_DATA=>ROM_RSP_DATA,
+        RSP_ERROR=>ROM_RSP_ERROR, FAULT=>ROM_FAULT);
+end generate;
+legacy_rom: if not ROM_HANDSHAKE generate
+    CPU_ROM_WAIT <= '0'; ROM_SNES_WAIT <= '0'; ROM_READY <= (others=>'1');
+    CPU_ROM_DATA <= ROM_DI; SNES_ROM_DATA <= ROM_DI; DMA_ROM_DATA <= ROM_DI; VBP_ROM_DATA <= ROM_DI;
+    CPU_ROM_BYTE <= P65_A(0); SNES_ROM_BYTE <= SNES_A(0); DMA_ROM_BYTE <= SDA(0);
+    ROM_REQ_VALID <= '0'; ROM_REQ_ADDR <= (others=>'0'); ROM_REQ_OWNER <= "00";
+    ROM_REQ_SNES_OWNER <= "00"; ROM_REQ_TAG <= x"00"; ROM_REQ_EPOCH <= x"00";
+    ROM_RSP_READY <= '1'; ROM_FLUSH_ACK <= '1'; ROM_FAULT <= '0';
+end generate;
+
 --BWRAM
 process( SNES_A, BMAPS)
 begin
@@ -613,14 +738,14 @@ BWRAM_WE_N <= '1'									                        when ENABLE = '0' else
 				  '1'									                        when CCDMA_SRC_BWRAM_SEL = '1' else 
 				  not(not SNES_WR_N and SNES_BWRAM_WE and SYSCLKF_CE) when SNES_BWRAM_SEL = '1' else 
 				  '1'									                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  not DMA_EN						                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  not ROM_DMA_WRITE						                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else
 				  not (P65_WR and SA1_BWRAM_WE)						      when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else --
 				  '1';
 BWRAM_OE_N <= '0'									                        when ENABLE = '0' else 
 				  '0'									                        when CCDMA_SRC_BWRAM_SEL = '1' else 
 				  SNES_RD_N							                        when SNES_BWRAM_SEL = '1' else 
 				  '0'									                        when DMA_SRC_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
-				  DMA_EN								                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else 
+				  ROM_DMA_WRITE								                        when DMA_DST_BWRAM_SEL = '1' and DMA_BWRAM_WAIT = '0' else
 				  P65_WR								                        when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '1' else 
 				  '0'									                        when SA1_BWRAM_SEL = '1' and SA1_BWRAM_VALID = '0' else 
 				  '1';
@@ -644,7 +769,7 @@ IRAM_WE <= '0'										               when ENABLE = '0' else
 			  not SNES_WR_N and SNES_IRAM_WE and SYSCLKF_CE	when SNES_IRAM_SEL = '1' and SNES_IRAM_ACCESS = '1' else 
 			  '0'										               when SNES_IRAM_SEL = '1' and SNES_CCDMA_IRAM_ACCESS = '1' else 
 			  '0'										               when DMA_SRC_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
-			  DMA_EN									               when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else 
+			  ROM_DMA_WRITE									               when DMA_DST_IRAM_SEL = '1' and DMA_IRAM_WAIT = '0' else
 			  CCDMA_IRAM_EN						               when CCDMA_DST_IRAM_SEL = '1' else 
 			  P65_WR and SA1_IRAM_WE			               when SA1_IRAM_SEL = '1' else 
 			  '0';
@@ -707,7 +832,7 @@ begin
 	end if;
 end process;
 
-DMA_SRC_ROM_EN <= DMA_SRC_ROM_SEL and not SNES_ROM_SEL and NDMA_EN;
+DMA_SRC_ROM_EN <= DMA_SRC_ROM_SEL and not SNES_ROM_SEL and NDMA_EN and ROM_READY(2);
 DMA_SRC_BWRAM_EN <= DMA_SRC_BWRAM_SEL and not DMA_BWRAM_WAIT and not SNES_BWRAM_SEL and NDMA_EN;
 DMA_SRC_IRAM_EN <= DMA_SRC_IRAM_SEL and not DMA_IRAM_WAIT and not SNES_IRAM_SEL and NDMA_EN;
 DMA_DST_BWRAM_EN <= DMA_DST_BWRAM_SEL and not DMA_BWRAM_WAIT and not SNES_BWRAM_SEL and NDMA_EN;
@@ -1018,12 +1143,12 @@ CC12_IRAM_WR_DAT <= BRF(to_integer(CC_TILE_Y(0 downto 0)&"000"))(to_integer(CC_B
 
 						 
 
-process( SDA, ROM_DI)
+process( DMA_ROM_BYTE, DMA_ROM_DATA)
 begin
-	if SDA(0) = '0' then
-		DMA_ROM_DAT <= ROM_DI(7 downto 0);
+	if DMA_ROM_BYTE = '0' then
+		DMA_ROM_DAT <= DMA_ROM_DATA(7 downto 0);
 	else
-		DMA_ROM_DAT <= ROM_DI(15 downto 8);
+		DMA_ROM_DAT <= DMA_ROM_DATA(15 downto 8);
 	end if;
 end process;
 
@@ -1034,7 +1159,7 @@ INT_DMA_DAT <= DMA_ROM_DAT when DMA_SRC_ROM_SEL = '1' else
 					
 				
 --VBP
-VBP_EN <= '1' when VBP_RUN = '1' and SNES_ROM_SEL = '0' else '0';
+VBP_EN <= VBP_RUN and not SNES_ROM_SEL and ROM_READY(3);
 
 process( RST_N, CLK )
 	variable NEW_VBIT : unsigned(4 downto 0);
@@ -1110,11 +1235,11 @@ begin
 				end if;
 			elsif VBP_EN = '1' then
 				if VBP_PRELOAD = '1' then
-					VBP_BUF <= x"0000" & ROM_DI;
+					VBP_BUF <= x"0000" & VBP_ROM_DATA;
 					VDA <= std_logic_vector( unsigned(VDA) + 2 );
 					VBP_PRELOAD <= '0';
 				else
-					VBP_BUF(31 downto 16) <= ROM_DI;
+					VBP_BUF(31 downto 16) <= VBP_ROM_DATA;
 					VBP_RUN <= '0';
 				end if;
 			end if;
@@ -1431,7 +1556,7 @@ begin
 end process;
 
 process( SNES_A, SNES_IRAM_ACCESS, SNES_CCDMA_IRAM_ACCESS, SNES_BWRAM_ACCESS, SNES_MMIO_READ_ACCESS, SNES_ROM_ACCESS, 
-			SNES_BWRAM_A, ROM_DI, IRAM_DO, BWRAM_DI, SIV, SNV, NMISEL, IRQSEL, SNES_IRQ_FLAG, CDMA_IRQ_FLAG, CMSG, OPENBUS, SNES_SSIO_READ_ACCESS, SS_DO )
+			SNES_BWRAM_A, SNES_ROM_DATA, SNES_ROM_BYTE, IRAM_DO, BWRAM_DI, SIV, SNV, NMISEL, IRQSEL, SNES_IRQ_FLAG, CDMA_IRQ_FLAG, CMSG, OPENBUS, SNES_SSIO_READ_ACCESS, SS_DO )
 begin
 	if SNES_ROM_ACCESS = '1' then													--ROM 00h-3Fh/80h-BFh:8000h-FFFFh, C0h-FFh:0000h-FFFFh 
 		if SNES_A(23 downto 1) = x"00FFE" & "101" and NMISEL = '1' then	--00FFEA/B
@@ -1447,10 +1572,10 @@ begin
 				SNES_DO <= SIV(15 downto 8);
 			end if;
 		else
-			if SNES_A(0) = '0' then
-				SNES_DO <= ROM_DI(7 downto 0);
+			if SNES_ROM_BYTE = '0' then
+				SNES_DO <= SNES_ROM_DATA(7 downto 0);
 			else
-				SNES_DO <= ROM_DI(15 downto 8);
+				SNES_DO <= SNES_ROM_DATA(15 downto 8);
 			end if;
 		end if;
 	elsif SNES_MMIO_READ_ACCESS = '1' then												--SNES Port Read

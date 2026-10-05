@@ -7,6 +7,7 @@ use work.DSP_PKG.all;
 
 
 entity DSP is
+	generic (ARAM_RETURN_STAGE : boolean := false);
 	port( 
 		CLK 			: in std_logic;
 		RST_N 		: in std_logic; 
@@ -565,7 +566,22 @@ begin
 	end process;
 	
 	RAM_D <= RAM_DO;
-	RAM_DI <= RAM_Q;
+	ARAM_STAGED: if ARAM_RETURN_STAGE generate
+	-- ARAM is a 4x-clock PSRAM return. A DSP substep lasts at least five
+	-- CLK cycles; even an old in-flight transaction followed by the current
+	-- read returns by mem edge 17, before this falling edge at mem edge 18.
+	-- Sample the already selected byte without changing a DSP/SMP CE cycle.
+	-- Keep raw RAM_Q available to the independent save-state readback below.
+	process(CLK)
+	begin
+		if falling_edge(CLK) then
+			RAM_DI <= RAM_Q;
+		end if;
+	end process;
+	end generate;
+	ARAM_LEGACY: if not ARAM_RETURN_STAGE generate
+		RAM_DI <= RAM_Q;
+	end generate;
 
 	RAM_WE_N <= not RAM_WE;
 	RAM_OE_N <= not RAM_OE;

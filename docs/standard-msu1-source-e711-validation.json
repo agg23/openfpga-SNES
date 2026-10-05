@@ -1,0 +1,130 @@
+{
+  "configuration_sha256": "83f712ab67bc3f1ca0ccf0ef5f7b56c0e1857eb47429b30262408d217f185ef0",
+  "cpp_invoked": false,
+  "date_utc": "2026-10-04",
+  "git_diff_check": "PASS",
+  "hardware_changes_relative_to_0da938e": [
+    "generate.tcl",
+    "target/pocket/standard_pal_fit.tcl",
+    "tools/build_msu1.sh"
+  ],
+  "hardware_file_count": 173,
+  "hardware_verified": false,
+  "helper_record": {
+    "bytes": 1554,
+    "sha256": "715334f5e91d09dccdc3980683711edd7d0a0b1165becc9f69a03a9ee679ae91"
+  },
+  "historical_real_report_parser_only": {
+    "actual_settings": {
+      "Fitter Effort": "Auto Fit",
+      "Fitter Initial Placement Seed": "1",
+      "Optimize Hold Timing": "All Paths",
+      "Optimize Multi-Corner Timing": "On"
+    },
+    "path": "historical-archives/standard-fit-ntsc-0da938e/snes_pocket.fit.rpt",
+    "raw_report": {
+      "bytes": 3744930,
+      "file": "snes_pocket.fit.rpt",
+      "sha256": "5a80c7d3b780568087f4e5e5050eabf598151fcceb6c73917c3f1233618c450b"
+    },
+    "receipt_origin": "Reconstructed transiently in memory for parser-only testing; not an original build-wrapper receipt or e711 evidence",
+    "result": "PASS native full-report format, legacy display encoding and exact byte preservation",
+    "source_commit": "0da938eb1eaaefc6ff23347568cd69a8240e4f37"
+  },
+  "identity": {
+    "build_source_commit": "e71101fd06a452da53cb0924e1d3701f53133435",
+    "core_version": "0.4.4-std-exp.e71101f",
+    "expected_fitter_settings": {
+      "msu_standard_ntsc": {
+        "Fitter Effort": "Auto Fit",
+        "Fitter Initial Placement Seed": "1",
+        "Optimize Hold Timing": "All Paths",
+        "Optimize Multi-Corner Timing": "On"
+      },
+      "msu_standard_pal": {
+        "Fitter Effort": "Standard Fit",
+        "Fitter Initial Placement Seed": "2",
+        "Optimize Hold Timing": "All Paths",
+        "Optimize Multi-Corner Timing": "On"
+      },
+      "standard_ntsc_spc": {
+        "Fitter Effort": "Auto Fit",
+        "Fitter Initial Placement Seed": "1",
+        "Optimize Hold Timing": "All Paths",
+        "Optimize Multi-Corner Timing": "On"
+      }
+    },
+    "hardware_commit": "3320a78f44ce8a56bc6168d8869371fd2d4c7608",
+    "hardware_inputs_sha256": "a9c619f6a2b1fa60b25dbbd9f5d39ad1f4a57e1c045b546b6c53a02545c41f29",
+    "homebrew_basename": "MSU1-STD-e71101f-HOMEBREW",
+    "qualification_state": "unverified_candidate"
+  },
+  "independent_read_only_review": {
+    "all_six_catalog_swaps_rejected": true,
+    "crlf_raw_byte_preservation_confirmed": true,
+    "final_result": "No remaining blocker in focused review",
+    "full_suite_independently_rerun": false,
+    "initial_finding": "Catalog allowed approved seed/effort values under the wrong profile",
+    "no_real_package_or_compiler_invocation": true,
+    "old_three_records_unchanged": true,
+    "repair": "Pin the exact per-profile e711 seed/effort tuple and test all six profile/field swaps",
+    "retained_real_ntsc_spc_full_report_parsers_passed": true
+  },
+  "new_receipt_gate": [
+    "Fixed adjacent filename; exact raw-byte count and SHA256",
+    "Full successful fitter report and expected Summary identity",
+    "Unique setting rows in authoritative Settings section, actual not default column",
+    "Declared actual settings equal real report settings",
+    "Exact reviewed source-specific per-profile seed/effort/hold/multicorner",
+    "Receipt mandatory for e711 source even direct read_build; cannot downgrade catalog policy",
+    "Raw full report copied as extra evidence and inventoried",
+    "Old schemas unchanged; no mixed-source or synthetic promotion"
+  ],
+  "old_three_identity_records_unchanged": true,
+  "packager_sha256": "57aeb60a203573249d606b909b8519a6dc3131b7ab204ecd9077d8bc581dc06b",
+  "production_files_modified_by_packaging_change": false,
+  "python_compile": "PASS",
+  "quartus_invoked": false,
+  "ready_for_release": false,
+  "real_e711_completed_build_receipt_validated": false,
+  "real_three_image_package_created": false,
+  "remaining": [
+    "Qualified completed e711 PAL archive with actual full-fit receipt",
+    "Qualified matching exact-source e711 NTSC and SPC archives",
+    "Source-matched native timing/CDC/I/O review of every image",
+    "Only after all three supplied/qualified: real staging verification; no automatic SD installation"
+  ],
+  "required_additional_report": "snes_pocket.fit.rpt",
+  "required_manifest_fields": [
+    "actual_fitter_settings",
+    "fitter_settings_report"
+  ],
+  "sd_installation": false,
+  "selected_identity": "candidate-e71101f",
+  "source_and_hardware_anchor_match": true,
+  "status": "PASS controlled packaging support; new actual candidate still unqualified",
+  "tests": [
+    {
+      "command": "python3 -m unittest discover -s tests -p 'test_package*msu1.py' -v",
+      "count": 113,
+      "new_controlled_receipt_tests": 23,
+      "prior_tests": 90,
+      "result": "PASS"
+    },
+    {
+      "command": "python3 -m unittest discover -s tests -p test_assets.py -v",
+      "count": 15,
+      "result": "PASS"
+    },
+    {
+      "command": "python3 -m unittest discover -s tests -p test_fitter_settings_receipt.py -v",
+      "count": 3,
+      "result": "PASS Python-only wrapper parser, no fitter invocation"
+    }
+  ],
+  "tests_sha256": "0116e472b7d635614c1135161aed04a534263a9224d917438daa3c751f45931a",
+  "timing_verified_by_packager": false,
+  "uploaded_or_published": false,
+  "worktree_base_commit": "4a87a86b1e5c14b672ce7a521abc34dcb7b79df1",
+  "public_document_adaptation": "The original absolute machine-local report path was replaced with a logical relative historical-archive reference. The report is not included; recorded validation values are unchanged."
+}

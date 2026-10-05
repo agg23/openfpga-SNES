@@ -1,3 +1,5 @@
+# Shared owner-slot transport, also used without an enabled SA1.
+set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SA1/SA1RomBridge.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) CX4/CX4.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) CX4/cx4cache.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) CX4/CX4Map.vhd ]
@@ -22,9 +24,11 @@ set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SP
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SPC7110_MULDIV.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) SPC7110/SPC7110Map.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) Sufami/SufamiMap.vhd ]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) BSX/bsx_memory_init.qip ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_MCC.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_DP.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSX_BS.vhd ]
+set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSXMemoryBridge.vhd ]
 set_global_assignment -name VHDL_FILE [file join $::quartus(qip_path) BSX/BSXMap.vhd ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) MSU1/MSU.sv ]
 set_global_assignment -name VERILOG_FILE [file join $::quartus(qip_path) MSU1/msu_audio.v ]

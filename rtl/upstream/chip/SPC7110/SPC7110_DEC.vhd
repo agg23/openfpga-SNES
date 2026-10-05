@@ -13,6 +13,7 @@ entity SPC7110_DEC is
 		ENABLE		: in std_logic;
 		
 		DI				: in std_logic_vector(7 downto 0);
+		DI_VALID     : in std_logic := '1';
 		RD      		: out std_logic;
 		
 		INIT			: in std_logic;
@@ -61,6 +62,9 @@ architecture rtl of SPC7110_DEC is
 	signal LOAD 			: unsigned(1 downto 0);
 	signal INT_RD 			: std_logic;
 	signal INT_WR 			: std_logic;
+	-- A successful rising half owns exactly one falling half. Input request
+	-- and arithmetic context remain unchanged across an empty FIFO.
+	signal HALF_STEP : std_logic;
 
 begin
 	
@@ -98,8 +102,13 @@ begin
 			LOAD <= (others => '0');
 			INT_RD <= '0';
 			INT_WR <= '0';
+			HALF_STEP <= '0';
 		elsif rising_edge(CLK) then
+			HALF_STEP <= '0';
+			if ENABLE = '1' then
 			INT_WR <= '0';
+			if INIT = '1' or INT_RD = '0' or DI_VALID = '1' then
+			HALF_STEP <= '1';
 			if INT_RD = '1' then
 				IN_BUF <= unsigned(DI);
 			end if;
@@ -174,7 +183,10 @@ begin
 			end if;
 			
 			DBG_PROB <= PROB;
+			end if; -- input beat available, or no input required
+			end if; -- ENABLE
 		elsif falling_edge(CLK) then
+			if HALF_STEP = '1' then
 			INT_RD <= '0';
 			
 			case DCS is
@@ -293,13 +305,14 @@ begin
 					
 				when others => null;
 			end case;
+			end if; -- matching rising-half token
 		end if;
 	end process; 
 	
 	DBG_CON <= CON;
 	
-	RD <= INT_RD;
-	WR <= INT_WR;
+	RD <= INT_RD and DI_VALID and ENABLE and not INIT;
+	WR <= INT_WR and ENABLE;
 
 	
 end rtl;

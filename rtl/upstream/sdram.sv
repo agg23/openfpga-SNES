@@ -422,21 +422,24 @@ module sdram
 	
 	reg [15:0] rbuf;
 	reg [15:0] dout_buf[2], sni_dout_buf;
-	reg data_read0_new;
 	always @(posedge clk) begin
 		if (data_read) rbuf <= SDRAM_DQ;
-		
-		data_read0_new <= 0;
-		if (data_read && !data_bank[1] && !data_rfs && !data_sni) begin
-			data_read0_new <= 1;
-		end
 
 		if (out_read) begin
 			if (out_sni) sni_dout_buf <= rbuf; 
-			else dout_buf[out_bank[1]] <= rbuf;
+			else if (out_bank[1]) dout_buf[1] <= rbuf;
 		end
+
+		// Preserve the existing early channel-0 result without a late-changing
+		// output mux. The old bypass selected rbuf on this edge, then copied
+		// that same word into dout_buf[0] on the following edge. Capture it
+		// directly here instead. No late channel-0 copy is needed: state[0]
+		// never asserts RD and RFS together, so every non-SNI bank-0 out_read
+		// has already been captured by this branch on the preceding edge.
+		if (data_read && !data_bank[1] && !data_rfs && !data_sni)
+			dout_buf[0] <= SDRAM_DQ;
 	end
-	wire [15:0] dout_temp_0 = data_read0_new ? rbuf : dout_buf[0];
+	wire [15:0] dout_temp_0 = dout_buf[0];
 	assign dout0 = addr0[0] && !word[0] ? {dout_temp_0[15:8],dout_temp_0[15:8]} : dout_temp_0;
 	assign dout1 = addr1[0] && !word[1] ? {dout_buf[1][15:8],dout_buf[1][15:8]} : dout_buf[1];
 	assign sni_dout = sni_addr[0] && !sni_word ? {sni_dout_buf[15:8],sni_dout_buf[15:8]} : sni_dout_buf;

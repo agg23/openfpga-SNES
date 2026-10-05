@@ -3,3 +3,19 @@ set_global_assignment -name QIP_FILE                  [file join $::quartus(qip_
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/SNES.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/rom_parser.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/scanline_filler.sv"]
+
+# Pocket MSU transport/player (optimized away for stock profiles)
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_block_cdc.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_mount_cdc.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_data_cache.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_pcm_player.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_pocket_host.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_pocket.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "msu1/msu_init_guard.sv"]
+
+# Standard-refresh experimental transaction transport
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "memory_ready/sdram_transaction_cdc.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "memory_ready/snes_rom_client.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "memory_ready/sdram_cart_port.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "memory_ready/sdram_single_request.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "memory_ready/rom_download_queue.sv"]

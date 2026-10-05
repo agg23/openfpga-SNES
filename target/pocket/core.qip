@@ -4,6 +4,10 @@ set_global_assignment -name SDC_FILE              [file join $::quartus(qip_path
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_loader.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "data_unloader.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "psram.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "wram_write_stage.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "wram_read_stage.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "ram_clear_frontier.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "host_reset_guard.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "save_state_controller.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sound_i2s.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE    [file join $::quartus(qip_path) "sync_fifo.sv"]
@@ -13,3 +17,7 @@ set_global_assignment -name SIGNALTAP_FILE [file join $::quartus(qip_path) "stp1
 set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "mf_pllbase.qip"]
 set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "mf_pllbase_pal.qip"]
 set_global_assignment -name QIP_FILE       [file join $::quartus(qip_path) "pll_reconfig.qip"]
+
+# Standard-refresh variants are elaborated only by USE_STANDARD_SDRAM.
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) "mf_pllbase_sdram.qip"]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) "mf_pllbase_pal_sdram.qip"]

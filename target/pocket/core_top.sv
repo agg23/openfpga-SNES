@@ -318,6 +318,9 @@ module core_top (
         // example
         bridge_rd_data <= 0;
       end
+      32'h90xxxxxx: begin
+        bridge_rd_data <= msu_bridge_rd_data;
+      end
       32'hF8xxxxxx: begin
         bridge_rd_data <= cmd_bridge_rd_data;
       end
@@ -401,7 +404,39 @@ module core_top (
 
   wire dataslot_requestread;
   wire [15:0] dataslot_requestread_id;
-  wire dataslot_requestread_ack = 1;
+  wire dataslot_requestread_ack;
+  wire queue_source_ready, queue_save_read_ready, save_backup_ready;
+  reg queue_save_read_request = 0;
+  reg read_fence_issued = 0, read_fence_saw_clear = 0;
+  // core_bridge_cmd tests ACK in the first ST_PARSE edge that also creates
+  // request/ID. Wait for its registered request before inspecting the ID.
+  assign dataslot_requestread_ack = !USE_STANDARD_SDRAM ? 1'b1 :
+      dataslot_requestread && (dataslot_requestread_id != 16'd10 ||
+      (read_fence_issued && read_fence_saw_clear && queue_save_read_ready));
+  always @(posedge clk_74a or negedge pll_core_locked) begin
+    if (!pll_core_locked) begin
+      queue_save_read_request <= 0; read_fence_issued <= 0; read_fence_saw_clear <= 0;
+    end else begin
+      queue_save_read_request <= 0;
+      if (!dataslot_requestread) begin
+        read_fence_issued <= 0; read_fence_saw_clear <= 0;
+      end else if (USE_STANDARD_SDRAM && dataslot_requestread_id == 16'd10) begin
+        if (!read_fence_issued && queue_source_ready) begin
+          queue_save_read_request <= 1;
+          read_fence_issued <= 1;
+          read_fence_saw_clear <= 0;
+        end else if (read_fence_issued && !queue_save_read_request && !queue_save_read_ready)
+          read_fence_saw_clear <= 1;
+      end
+    end
+  end
+  wire host_reset_s;
+  generate if (USE_STANDARD_SDRAM) begin : g_standard_host_reset
+    host_reset_guard host_reset_sync(.clk_sys(clk_sys_21_48),
+        .pll_locked(pll_core_locked),.host_reset_n(reset_n),.reset_hold(host_reset_s));
+  end else begin : g_legacy_host_reset
+    assign host_reset_s = 1'b0;
+  end endgenerate
   wire dataslot_requestread_ok = 1;
 
   wire dataslot_requestwrite;
@@ -494,6 +529,20 @@ module core_top (
 
       .osnotify_inmenu(osnotify_inmenu),
 
+      .target_dataslot_read(msu_target_dataslot_read),
+      .target_dataslot_write(msu_target_dataslot_write),
+      .target_dataslot_getfile(msu_target_dataslot_getfile),
+      .target_dataslot_openfile(msu_target_dataslot_openfile),
+      .target_dataslot_ack(msu_target_dataslot_ack),
+      .target_dataslot_done(msu_target_dataslot_done),
+      .target_dataslot_err(msu_target_dataslot_err),
+      .target_dataslot_id(msu_target_dataslot_id),
+      .target_dataslot_slotoffset(msu_target_dataslot_slotoffset),
+      .target_dataslot_bridgeaddr(msu_target_dataslot_bridgeaddr),
+      .target_dataslot_length(msu_target_dataslot_length),
+      .target_buffer_param_struct(msu_target_buffer_param_struct),
+      .target_buffer_resp_struct(msu_target_buffer_resp_struct),
+
       .datatable_addr(datatable_addr),
       .datatable_wren(datatable_wren),
       .datatable_data(datatable_data),
@@ -502,6 +551,15 @@ module core_top (
 
   reg ioctl_download = 0;
   wire ioctl_wr;
+  wire ioctl_ready;
+  wire ioctl_valid;
+  wire ioctl_image_complete;
+  wire ioctl_fault;
+  wire ioctl_image_busy;
+  wire ioctl_image_begin;
+  wire queue_save_valid, queue_save_ready, queue_save_busy;
+  wire [16:0] ioctl_config;
+  wire ioctl_config_valid;
   wire [24:0] ioctl_addr;
   wire [15:0] ioctl_dout;
 
@@ -529,8 +587,35 @@ module core_top (
       save_download,
       save_download_s,
       clk_sys_21_48
-  );
+  , , );
 
+  generate if(USE_STANDARD_SDRAM) begin: g_standard_rom_download
+    rom_download_queue queue(
+      .clk_74a(clk_74a),.clk_memory(clk_sys_21_48),.hard_reset_n(pll_core_locked),
+      .bridge_wr(bridge_wr),.bridge_endian_little(bridge_endian_little),
+      .bridge_addr(bridge_addr),.bridge_wr_data(bridge_wr_data),
+      .download_active(ioctl_download),
+      .config_in({PAL,ram_size,rom_size,rom_type}),.config_out(ioctl_config),.config_valid(ioctl_config_valid),
+      .write_valid(ioctl_valid),.write_ready(ioctl_ready),
+      .write_en(ioctl_wr),.write_addr(ioctl_addr),.write_data(ioctl_dout),
+       .image_begin(ioctl_image_begin),
+      .save_valid(queue_save_valid),.save_ready(queue_save_ready),.save_en(sd_wr),
+      .save_addr(sd_buff_addr_in),.save_data(sd_buff_dout),.save_busy(queue_save_busy),
+      .source_ready(queue_source_ready),.save_read_request(queue_save_read_request),
+      .save_read_ready(queue_save_read_ready),.save_read_quiescent(save_backup_ready),
+      .image_busy(ioctl_image_busy),.image_complete(ioctl_image_complete),.fault(ioctl_fault));
+  end else begin: g_legacy_rom_download
+    assign ioctl_valid=ioctl_wr;
+    assign ioctl_image_complete=1'b1;
+    assign ioctl_fault=1'b0;
+    assign ioctl_image_busy=ioctl_download;
+    assign ioctl_image_begin=1'b0;
+    assign queue_save_valid=1'b0;
+    assign queue_save_busy=1'b0;
+    assign queue_source_ready=1'b1;
+    assign queue_save_read_ready=1'b1;
+    assign ioctl_config={PAL,ram_size,rom_size,rom_type};
+    assign ioctl_config_valid=1'b1;
   data_loader #(
       .ADDRESS_MASK_UPPER_4(4'h1),
       .ADDRESS_SIZE(25),
@@ -549,7 +634,9 @@ module core_top (
       .write_addr(ioctl_addr),
       .write_data(ioctl_dout)
   );
+  end endgenerate
 
+  generate if (!USE_STANDARD_SDRAM) begin : g_legacy_save_download
   data_loader #(
       .ADDRESS_MASK_UPPER_4(4'h2),
       .ADDRESS_SIZE(17),
@@ -569,6 +656,8 @@ module core_top (
       .write_data(sd_buff_dout)
   );
 
+  end endgenerate
+
   wire [31:0] sd_read_data;
 
   wire sd_rd;
@@ -586,10 +675,12 @@ module core_top (
   data_unloader #(
       .ADDRESS_MASK_UPPER_4(4'h2),
       .ADDRESS_SIZE(17),
-      .READ_MEM_CLOCK_DELAY(7),
+      .READ_MEM_CLOCK_DELAY(USE_STANDARD_SDRAM ? 2 : 7),
+      .SAFE_RESPONSE_HANDSHAKE(USE_STANDARD_SDRAM),
       .INPUT_WORD_SIZE(2)
   ) data_unloader (
       .clk_74a(clk_74a),
+      .reset_n(pll_core_locked),
       .clk_memory(clk_sys_21_48),
 
       .bridge_rd(bridge_rd),
@@ -618,6 +709,7 @@ module core_top (
   end
 
   wire [15:0] audio_l;
+  wire [15:0] main_audio_l, main_audio_r;
   wire [15:0] audio_r;
 
   wire [3:0] sram_size;
@@ -642,7 +734,7 @@ module core_top (
       cont1_key,
       cont1_key_s,
       clk_sys_21_48
-  );
+  , , );
 
   synch_3 #(
       .WIDTH(32)
@@ -650,7 +742,7 @@ module core_top (
       cont2_key,
       cont2_key_s,
       clk_sys_21_48
-  );
+  , , );
 
   synch_3 #(
       .WIDTH(32)
@@ -658,7 +750,7 @@ module core_top (
       cont3_key,
       cont3_key_s,
       clk_sys_21_48
-  );
+  , , );
 
   synch_3 #(
       .WIDTH(32)
@@ -666,7 +758,7 @@ module core_top (
       cont4_key,
       cont4_key_s,
       clk_sys_21_48
-  );
+  , , );
 
   synch_3 #(
       .WIDTH(32)
@@ -674,7 +766,7 @@ module core_top (
       cont1_joy,
       cont1_joy_s,
       clk_sys_21_48
-  );
+  , , );
 
   // Settings
   reg [31:0] reset_delay = 0;
@@ -741,7 +833,7 @@ module core_top (
         blend_enabled_s
       },
       clk_sys_21_48
-  );
+  , , );
 
   reg new_rtc = 0;
   reg [31:0] prev_time = 0;
@@ -765,11 +857,90 @@ module core_top (
     rtc_time[7:0]  // Second
   };
 
-  MAIN_SNES snes (
+  // MSU is an opt-in build profile; original profiles remain unchanged.
+  parameter USE_MSU_POCKET = 1'b0;
+  parameter MSU_DEBUG = 1'b0;
+  wire msu_init_busy, msu_enable, msu_soft_reset;
+  wire [31:0] msu_bridge_rd_data;
+  wire [15:0] msu_track_num;
+  wire msu_track_request, msu_track_update, msu_track_mounting, msu_track_missing;
+  wire [7:0] msu_volume, msu_data;
+  wire msu_audio_repeat, msu_audio_playing, msu_audio_resume, msu_audio_stop;
+  wire [21:0] msu_audio_sector, msu_resume_sector;
+  wire [31:0] msu_audio_loop_index, msu_resume_loop_index, msu_data_addr;
+  wire msu_data_ack, msu_data_busy, msu_data_seek, msu_data_req;
+  wire msu_target_dataslot_read, msu_target_dataslot_write;
+  wire msu_target_dataslot_getfile, msu_target_dataslot_openfile;
+  wire msu_target_dataslot_ack, msu_target_dataslot_done;
+  wire [2:0] msu_target_dataslot_err;
+  wire [15:0] msu_target_dataslot_id;
+  wire [31:0] msu_target_dataslot_slotoffset, msu_target_dataslot_bridgeaddr, msu_target_dataslot_length;
+  wire [31:0] msu_target_buffer_param_struct, msu_target_buffer_resp_struct;
+  wire msu_init_req;
+  msu_init_guard msu_bootstrap_guard(
+    .clk(clk_74a),.reset(!pll_core_locked),
+    .dataslot_requestwrite(dataslot_requestwrite),
+    .dataslot_requestwrite_id(dataslot_requestwrite_id),
+    .dataslot_allcomplete(dataslot_allcomplete),
+    .ioctl_download(ioctl_download),.init_req(msu_init_req));
+  generate if(USE_MSU_POCKET)begin: g_msu
+  msu_pocket #(.CLK_RATE(PAL_PLL ? 21281370 : 21477270),.DEBUG(MSU_DEBUG)) msu(
+    .sys_clk(clk_sys_21_48),.host_clk(clk_74a),.reset(!pll_core_locked),
+    .init_req(msu_init_req),.init_busy(msu_init_busy),.soft_reset(msu_soft_reset),
+    .bridge_addr(bridge_addr),.bridge_rd(bridge_rd),.bridge_wr(bridge_wr),
+    .bridge_wr_data(bridge_wr_data),.bridge_endian_little(bridge_endian_little),.bridge_rd_data(msu_bridge_rd_data),
+    .target_dataslot_read(msu_target_dataslot_read),
+    .target_dataslot_write(msu_target_dataslot_write),
+    .target_dataslot_getfile(msu_target_dataslot_getfile),
+    .target_dataslot_openfile(msu_target_dataslot_openfile),
+    .target_dataslot_ack(msu_target_dataslot_ack),
+    .target_dataslot_done(msu_target_dataslot_done),
+    .target_dataslot_err(msu_target_dataslot_err),
+    .target_dataslot_id(msu_target_dataslot_id),
+    .target_dataslot_slotoffset(msu_target_dataslot_slotoffset),
+    .target_dataslot_bridgeaddr(msu_target_dataslot_bridgeaddr),
+    .target_dataslot_length(msu_target_dataslot_length),
+    .target_buffer_param_struct(msu_target_buffer_param_struct),
+    .target_buffer_resp_struct(msu_target_buffer_resp_struct),
+    .msu_enable(msu_enable),
+    .track_num(msu_track_num),
+    .track_request(msu_track_request),
+    .track_update(msu_track_update),
+    .track_mounting(msu_track_mounting),
+    .track_missing(msu_track_missing),
+    .volume(msu_volume),
+    .audio_repeat(msu_audio_repeat),
+    .audio_playing(msu_audio_playing),
+    .audio_resume(msu_audio_resume),
+    .audio_stop(msu_audio_stop),
+    .audio_sector(msu_audio_sector),
+    .audio_loop_index(msu_audio_loop_index),
+    .resume_sector(msu_resume_sector),
+    .resume_loop_index(msu_resume_loop_index),
+    .data_addr(msu_data_addr),
+    .data_seek(msu_data_seek),
+    .data_next(msu_data_req),.data(msu_data),.data_ack(msu_data_ack),.data_busy(msu_data_busy),
+    .main_l(main_audio_l),.main_r(main_audio_r),.audio_l(audio_l),.audio_r(audio_r));
+  end else begin: g_no_msu
+    assign audio_l=main_audio_l;assign audio_r=main_audio_r;
+    assign msu_init_busy=0;assign msu_enable=0;assign msu_bridge_rd_data=0;
+    assign msu_track_mounting=0;assign msu_track_missing=0;assign msu_audio_stop=0;
+    assign msu_audio_sector=0;assign msu_audio_loop_index=0;
+    assign msu_data=0;assign msu_data_ack=0;assign msu_data_busy=0;
+    assign msu_target_dataslot_read=0;assign msu_target_dataslot_write=0;
+    assign msu_target_dataslot_getfile=0;assign msu_target_dataslot_openfile=0;
+    assign msu_target_dataslot_id=0;assign msu_target_dataslot_slotoffset=0;
+    assign msu_target_dataslot_bridgeaddr=0;assign msu_target_dataslot_length=0;
+    assign msu_target_buffer_param_struct=0;assign msu_target_buffer_resp_struct=0;
+  end endgenerate
+
+  MAIN_SNES #(.USE_MSU(USE_MSU_POCKET),.USE_STANDARD_SDRAM(USE_STANDARD_SDRAM)) snes (
       .clk_mem_85_9 (clk_mem_85_9),
       .clk_sys_21_48(clk_sys_21_48),
+      .clk_sdram(clk_sdram),.pll_locked(pll_core_locked),
 
-      .core_reset(~pll_core_locked || reset_button_s),
+      .core_reset(~pll_core_locked || reset_button_s || msu_init_busy ||
+                  (USE_STANDARD_SDRAM && (!ioctl_config_valid || host_reset_s))),
 
       .rtc(rtc),
 
@@ -842,18 +1013,23 @@ module core_top (
       .p4_dpad_right(cont4_key_s[3]),
 
       // ROM loading
-      .ioctl_download(ioctl_download),
+      .ioctl_download(ioctl_image_busy),
+      .ioctl_image_begin(ioctl_image_begin),
       .ioctl_wr(ioctl_wr),
+      .ioctl_ready(ioctl_ready),.ioctl_valid(ioctl_valid),.ioctl_image_complete(ioctl_image_complete),
+      .ioctl_fault(ioctl_fault),
       .ioctl_addr(ioctl_addr),
       .ioctl_dout(ioctl_dout),
 
-      .rom_type(rom_type),
-      .rom_size(rom_size),
-      .ram_size(ram_size),
-      .PAL(PAL),
+      .rom_type(ioctl_config[7:0]),
+      .rom_size(ioctl_config[11:8]),
+      .ram_size(ioctl_config[15:12]),
+      .PAL(ioctl_config[16]),
 
       // Save input/output
       .save_download(save_download_s),
+      .save_busy(queue_save_busy), .save_write_addr(sd_buff_addr_in),
+      .save_write_ready(queue_save_ready), .save_backup_ready(save_backup_ready),
       .sd_rd(sd_rd),
       .sd_wr(sd_wr),
       .sd_buff_addr(sd_buff_addr),
@@ -909,9 +1085,31 @@ module core_top (
       .video_g(video_rgb_snes[15:8]),
       .video_b(video_rgb_snes[7:0]),
 
+      .msu_enable(msu_enable),
+      .msu_soft_reset(msu_soft_reset),
+      .msu_track_num(msu_track_num),
+      .msu_track_request(msu_track_request),
+      .msu_track_update(msu_track_update),
+      .msu_track_mounting(msu_track_mounting),
+      .msu_track_missing(msu_track_missing),
+      .msu_volume(msu_volume),
+      .msu_audio_repeat(msu_audio_repeat),
+      .msu_audio_playing(msu_audio_playing),
+      .msu_audio_resume(msu_audio_resume),
+      .msu_audio_stop(msu_audio_stop),
+      .msu_audio_sector(msu_audio_sector),
+      .msu_audio_loop_index(msu_audio_loop_index),
+      .msu_resume_sector(msu_resume_sector),
+      .msu_resume_loop_index(msu_resume_loop_index),
+      .msu_data_addr(msu_data_addr),
+      .msu_data(msu_data),
+      .msu_data_ack(msu_data_ack),
+      .msu_data_busy(msu_data_busy),
+      .msu_data_seek(msu_data_seek),
+      .msu_data_req(msu_data_req),
       // Audio
-      .audio_l(audio_l),
-      .audio_r(audio_r)
+      .audio_l(main_audio_l),
+      .audio_r(main_audio_r)
   );
 
   // Video
@@ -997,6 +1195,7 @@ module core_top (
   ///////////////////////////////////////////////
 
   wire clk_mem_85_9;
+  wire clk_sdram;
   wire clk_sys_21_48;
   wire clk_video_5_37;
   wire clk_video_5_37_90deg;
@@ -1004,9 +1203,21 @@ module core_top (
   wire pll_core_locked;
 
   parameter PAL_PLL = 1'b0;
+  parameter USE_STANDARD_SDRAM = 1'b0;
 
   generate
-    if (PAL_PLL) begin
+    if (USE_STANDARD_SDRAM && PAL_PLL) begin
+      mf_pllbase_pal_sdram mp1 (
+          .refclk(clk_74a),.outclk_0(clk_mem_85_9),.outclk_1(clk_sys_21_48),
+          .outclk_2(clk_video_5_37),.outclk_3(clk_video_5_37_90deg),.outclk_4(clk_sdram),
+          .locked(pll_core_locked));
+    end else if (USE_STANDARD_SDRAM) begin
+      mf_pllbase_sdram mp1 (
+          .refclk(clk_74a),.outclk_0(clk_mem_85_9),.outclk_1(clk_sys_21_48),
+          .outclk_2(clk_video_5_37),.outclk_3(clk_video_5_37_90deg),.outclk_4(clk_sdram),
+          .locked(pll_core_locked));
+    end else if (PAL_PLL) begin
+      assign clk_sdram=clk_mem_85_9;
       mf_pllbase_pal mp1 (
           .refclk(clk_74a),
 
@@ -1018,6 +1229,7 @@ module core_top (
           .locked(pll_core_locked)
       );
     end else begin
+      assign clk_sdram=clk_mem_85_9;
       mf_pllbase mp1 (
           .refclk(clk_74a),
 

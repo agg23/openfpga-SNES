@@ -16,10 +16,14 @@ module MSU
 	output            MSU_SEL,
 
 	output reg [15:0] track_num,
-	output            track_request,
+	output reg        track_request,
+	output reg        track_update, // toggle for each committed track write
 	input             track_mounting,
 
 	// Audio player control
+	// Keep this existing bus-write register in logic: DSP input packing made
+	// the genuine WRAM -> reverse DMA -> volume path cross the device.
+	(* altera_attribute = "-name QII_AUTO_PACKED_REGISTERS OFF" *)
 	output reg  [7:0] volume,
 	input             status_track_missing,
 	output reg        status_audio_repeat,
@@ -35,6 +39,7 @@ module MSU
 	output reg [31:0] data_addr,
 	input       [7:0] data,
 	input             data_ack,
+	input             data_busy_external, // Pocket streaming cache not yet ready
 	output reg        data_seek,
 	output reg        data_req
 );
@@ -45,7 +50,7 @@ module MSU
 // Status bits
 localparam [2:0] status_revision = 3'b010;
 wire [7:0] MSU_STATUS = {
-	status_data_busy,
+	(status_data_busy | data_busy_external),
 	status_audio_busy,
 	status_audio_repeat,
 	status_audio_playing,
@@ -69,13 +74,20 @@ reg data_ack_old;
 reg track_mounting_old;
 
 reg  data_rd_old;
-wire data_rd = MSU_SEL && !RD_N && ADDR[2:0] == 1 && !status_data_busy;
+wire data_rd = MSU_SEL && !RD_N && ADDR[2:0] == 1 && !status_data_busy && !data_busy_external;
 
 always @(posedge CLK) begin
 	if (~RST_N) begin
+		MSU_SEEK <= 0;
+		MSU_TRACK <= 0;
+		DOUT <= 0;
+		resume_track_num <= 0;
+		resume_sector <= 0;
+		resume_loop_index <= 0;
 		data_addr <= 0;
 		track_num <= 0;
 		track_request <= 0;
+		track_update <= 0;
 		volume <= 0;
 		status_audio_playing <= 0;
 		audio_resume <= 0;
@@ -119,6 +131,7 @@ always @(posedge CLK) begin
 				4: MSU_TRACK <= DIN;
 				5: begin
 					track_num <= {DIN, MSU_TRACK};
+					track_update <= ~track_update;
 					track_request <= 1;
 					status_audio_playing <= 0;
 					status_audio_repeat <= 0;
@@ -151,7 +164,7 @@ always @(posedge CLK) begin
 
 		case (ADDR[2:0])
 			0: DOUT <= MSU_STATUS;
-			1: DOUT <= data;
+			1: DOUT <= (status_data_busy | data_busy_external) ? 8'h00 : data;
 			2: DOUT <= "S";
 			3: DOUT <= "-";
 			4: DOUT <= "M";

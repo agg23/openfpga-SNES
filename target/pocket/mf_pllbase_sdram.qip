@@ -1,0 +1,4 @@
+# Dedicated fifth-output experimental wrapper. No change to original PLL IP.
+set_global_assignment -library "mf_pllbase_sdram" -name VERILOG_FILE [file join $::quartus(qip_path) "mf_pllbase_sdram.v"]
+set_global_assignment -library "mf_pllbase_sdram" -name VERILOG_FILE [file join $::quartus(qip_path) "mf_pllbase_sdram/mf_pllbase_sdram_0002.v"]
+set_global_assignment -library "mf_pllbase_sdram" -name QIP_FILE [file join $::quartus(qip_path) "mf_pllbase_sdram/mf_pllbase_sdram_0002.qip"]

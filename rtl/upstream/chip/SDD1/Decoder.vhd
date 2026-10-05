@@ -5,7 +5,11 @@ use IEEE.NUMERIC_STD.ALL;
 
 
 entity SDD1_Decoder is
+	generic (ROM_HANDSHAKE : boolean := false);
 	port(
+        INPUT_READY : in std_logic := '1';
+        OUTPUT_READY : in std_logic := '1';
+
 		RST_N			: in std_logic;
 		CLK			: in std_logic;
 		ENABLE		: in std_logic;
@@ -130,9 +134,17 @@ architecture rtl of SDD1_Decoder is
 	signal OUT_DATA0, OUT_DATA1	: std_logic_vector(7 downto 0);
 	signal OUT_CNT	: unsigned(3 downto 0);
 	signal RUN2	: std_logic;
+    signal INPUT_REQ, STEP, PLANE_PENDING : std_logic;
 	
 begin
-	
+    -- Freeze both pipeline stages and RUN2's payload together. In particular,
+    -- an ENABLE pause must not discard the pending second-stage bit.
+    STEP <= ENABLE when INIT='1' else
+            ENABLE and (not INPUT_REQ or INPUT_READY) and
+            (not PLANE_PENDING or OUTPUT_READY) when ROM_HANDSHAKE else ENABLE;
+    DATA_REQ <= INPUT_REQ and STEP when ROM_HANDSHAKE else INPUT_REQ;
+    PLANE_DONE <= PLANE_PENDING;
+
 	process( RST_N, CLK, HEADER, BITPLANE_CNT, BIT_NUM, PREV_BP, CNTXT_STATES, BIT_CNT, IN_DATA, BITS_CTR, RUN )
 		variable NEW_BIT_CNT : unsigned(3 downto 0);
 		variable TCURR_BP : integer range 0 to 7;
@@ -174,9 +186,9 @@ begin
 		end if;
 		
 		if (RUN = '1' or BIT_NUM(3 downto 0) /= "0000") and BITS_CTR(to_integer(TCODE_SIZE))(6 downto 0) = 0 and NEW_BIT_CNT(3) = '1' then
-			DATA_REQ <= '1';
+			INPUT_REQ <= '1';
 		else
-			DATA_REQ <= '0';
+			INPUT_REQ <= '0';
 		end if;
 						
 		if RST_N = '0' then
@@ -187,8 +199,9 @@ begin
 			RUN2 <= '0';
 
 		elsif rising_edge(CLK) then
-			RUN2 <= '0';
-			if ENABLE = '1' then
+			if not ROM_HANDSHAKE then RUN2 <= '0'; end if;
+			if STEP = '1' then
+                RUN2 <= '0';
 				if INIT = '1' then
 					BIT_NUM <= (others => '0');
 					BITPLANE_CNT <= (others => '0');
@@ -238,14 +251,17 @@ begin
 			OUT_DATA1 <= (others => '0');
 			OUT_CNT <= (others => '0');
 			LEFT_BYTES <= (others => '0');
-			PLANE_DONE <= '0';
+			PLANE_PENDING <= '0';
 			DONE <= '0';
 		elsif rising_edge(CLK) then
-			if ENABLE = '1' then
+            if ROM_HANDSHAKE and ENABLE='1' and OUTPUT_READY='1' then
+                PLANE_PENDING <= '0';
+            end if;
+			if STEP = '1' then
 				if INIT = '1' then
 					LEFT_BYTES <= unsigned(INIT_SIZE) - 1;
 					DONE <= '0';
-					PLANE_DONE <= '0';
+					PLANE_PENDING <= '0';
 					CNTXT_STATES <= (others => 0);
 					CNTXT_MPS <= (others => '0');
 					PREV_BP <= (others => (others => '0'));
@@ -276,9 +292,9 @@ begin
 					end if;
 					
 					if OUT_CNT(3 downto 0) = 15 then
-						PLANE_DONE <= '1';
-					else
-						PLANE_DONE <= '0';
+						PLANE_PENDING <= '1';
+					elsif not ROM_HANDSHAKE then
+						PLANE_PENDING <= '0';
 					end if;
 					
 					if OUT_CNT(2 downto 0) = 7 then

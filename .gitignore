@@ -75,3 +75,12 @@ cr_ie_info.json
 # ROMS Checklist
 !checklist.sha1
 !checklist.md5
+
+# MSU local validation products
+build/
+__pycache__/
+*.pyc
+
+# Generated audio-audit executables/logs (final reports are archived separately)
+tests/audio_memory_audit/preflight/
+tests/audio_memory_audit/results/

@@ -1,0 +1,57 @@
+{
+  "format": "pocket-standard-reviewed-source-identities-v1",
+  "identities": {
+    "baseline-982f103": {
+      "build_source_commit": "982f103a0d7fa39294b760738ceaed5bb88eddad",
+      "hardware_commit": "982f103a0d7fa39294b760738ceaed5bb88eddad",
+      "hardware_inputs_sha256": "177a7b4c6148e4dd8f4694f74f96831a30cccd0255f7b557e527e8fa3341d188",
+      "core_version": "0.4.4-std-exp.982f103",
+      "homebrew_basename": "MSU1-STD-982f103-HOMEBREW",
+      "qualification_state": "unverified_candidate"
+    },
+    "candidate-64b5b51": {
+      "build_source_commit": "aed6dd78f7852304d25c396763f47ae14d549b21",
+      "hardware_commit": "64b5b51f06128147c7973834baff03a1d7bf5f98",
+      "hardware_inputs_sha256": "90b21fdb95ed482fcdabbad78cb7eeb066eb35a5ee6e3ab2c0de941833101ecb",
+      "core_version": "0.4.4-std-exp.64b5b51",
+      "homebrew_basename": "MSU1-STD-64b5b51-HOMEBREW",
+      "qualification_state": "unverified_candidate"
+    },
+    "candidate-0da938e": {
+      "build_source_commit": "0da938eb1eaaefc6ff23347568cd69a8240e4f37",
+      "hardware_commit": "30f55d5be697b9f740d8e5510d22d56201a4b3bf",
+      "hardware_inputs_sha256": "e639440406e489e7ac46dce032baa1b13ef7878593a88f40860742255601a723",
+      "core_version": "0.4.4-std-exp.0da938e",
+      "homebrew_basename": "MSU1-STD-0da938e-HOMEBREW",
+      "qualification_state": "unverified_candidate"
+    },
+    "candidate-e71101f": {
+      "build_source_commit": "e71101fd06a452da53cb0924e1d3701f53133435",
+      "hardware_commit": "3320a78f44ce8a56bc6168d8869371fd2d4c7608",
+      "hardware_inputs_sha256": "a9c619f6a2b1fa60b25dbbd9f5d39ad1f4a57e1c045b546b6c53a02545c41f29",
+      "core_version": "0.4.4-std-exp.e71101f",
+      "homebrew_basename": "MSU1-STD-e71101f-HOMEBREW",
+      "qualification_state": "unverified_candidate",
+      "expected_fitter_settings": {
+        "msu_standard_ntsc": {
+          "Fitter Initial Placement Seed": "1",
+          "Fitter Effort": "Auto Fit",
+          "Optimize Hold Timing": "All Paths",
+          "Optimize Multi-Corner Timing": "On"
+        },
+        "msu_standard_pal": {
+          "Fitter Initial Placement Seed": "2",
+          "Fitter Effort": "Standard Fit",
+          "Optimize Hold Timing": "All Paths",
+          "Optimize Multi-Corner Timing": "On"
+        },
+        "standard_ntsc_spc": {
+          "Fitter Initial Placement Seed": "1",
+          "Fitter Effort": "Auto Fit",
+          "Optimize Hold Timing": "All Paths",
+          "Optimize Multi-Corner Timing": "On"
+        }
+      }
+    }
+  }
+}

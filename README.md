@@ -8,9 +8,16 @@ Please report any issues encountered to this repo. Most likely any problems are 
 > 
 > Savestates/Memories/Sleep not supported
 >
-> Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
-> 
-> **Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
+> This Pocket build does not enable Savestates, Memories or Sleep. Existing
+> MiSTer state RTL and Pocket controller code are not a complete, enabled
+> integration; their interfaces and state coverage need separate evaluation.
+
+## Experimental MSU-1 work
+
+This branch adds experimental SD-streamed MSU-1 and standard-memory profiles.
+See [implementation, builds, tests, and hardware notes](docs/MSU1-STANDARD.md).
+It is a draft contribution; the existing release/updater instructions below do
+not install this experiment. Savestates, Memories and Sleep remain disabled.
 
 ## Installation
 
@@ -54,9 +61,10 @@ BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supp
 
 > **Warning**: Not supported
 
-Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
-
-**Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
+This Pocket build does not enable Savestates, Memories or Sleep. The repository
+contains state-related RTL, but presence of that code alone does not establish
+an enabled and complete implementation. This limitation is specific to this
+Pocket build and is not a statement about all FPGA SNES implementations.
 
 ### Video
 

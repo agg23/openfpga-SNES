@@ -4,6 +4,7 @@ library STD;
 use IEEE.NUMERIC_STD.ALL;
 
 entity SWRAM is
+    generic (WMDATA_PREDECODE : boolean := false);
 	port(
 		CLK			: in std_logic;
 		SYSCLK_CE	: in std_logic;
@@ -16,6 +17,7 @@ entity SWRAM is
 		RAMSEL_N		: in std_logic;
 		
 		PA				: in std_logic_vector(7 downto 0);
+        PA_WMDATA   : in std_logic := '0';
 		PARD_N		: in std_logic;
 		PAWR_N		: in std_logic;
 
@@ -33,9 +35,15 @@ end SWRAM;
 
 architecture rtl of SWRAM is
 
+    signal WMDATA_SEL : std_logic;
+
 	signal WMADD : std_logic_vector(16 downto 0);
 
 begin
+    -- The legacy default retains the byte decode. The standard target supplies
+    -- the logically identical, parallel CPU/DMA predicate without a new phase.
+    WMDATA_SEL <= PA_WMDATA when WMDATA_PREDECODE else
+                  '1' when PA = x"80" else '0';
 	
 	process( RST_N, CLK )
 	begin
@@ -78,12 +86,12 @@ begin
 					
 	RAM_CE_N <= '0' when ENABLE = '0' else 
 					'0' when RAMSEL_N = '0' else
-					'0' when PA = x"80" else 
+					'0' when WMDATA_SEL = '1' else
 					'1';
 					
 	RAM_OE_N <= '0' when ENABLE = '0' else 
 					'0' when RAMSEL_N = '0' and CPURD_N = '0' else
-					'0' when PA = x"80" and PARD_N = '0' and RAMSEL_N = '1' else 
+					'0' when WMDATA_SEL = '1' and PARD_N = '0' and RAMSEL_N = '1' else
 					'1';
 				
 	RAM_WE_N <= '1' when ENABLE = '0' else

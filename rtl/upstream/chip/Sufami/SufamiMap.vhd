@@ -32,6 +32,8 @@ entity SufamiMap is
 		IRQ_N			: out std_logic;
 
 		ROM_ADDR		: out std_logic_vector(23 downto 0);
+        ROM_LOOKAHEAD_ADDR : out std_logic_vector(23 downto 0) := (others => '0');
+        ROM_LOOKAHEAD_SEL  : out std_logic := '0';
 		ROM_Q			: in  std_logic_vector(15 downto 0);
 		ROM_CE_N		: out std_logic;
 		ROM_OE_N		: out std_logic;
@@ -107,6 +109,8 @@ begin
 	end process;
 
 --	ROM_ADDR <= CART_ADDR and CART_MASK;
+    ROM_LOOKAHEAD_ADDR <= CART_ADDR and CART_MASK;
+    ROM_LOOKAHEAD_SEL <= ROM_BIOS_SEL or ROM_BASE_SEL or ROM_TURBO_SEL;
 	ROM_CE_N <= ROMSEL_N;
 	ROM_OE_N <= not ROM_RD;
 	ROM_WORD	<= '0';

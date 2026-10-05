@@ -7,6 +7,7 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.STD_LOGIC_TEXTIO.all;
 
 entity SA1Map is
+    generic (ROM_HANDSHAKE : boolean := false);
 	port(
 		MCLK			: in std_logic;
 		RST_N			: in std_logic;
@@ -33,6 +34,33 @@ entity SA1Map is
 		PAL			: in std_logic;
 		
 		IRQ_N			: out std_logic;
+
+
+        -- Optional transaction transport. Legacy fixed-latency behavior is
+        -- retained when ROM_HANDSHAKE is false. Owner 0=SNES, 1=CPU, 2=DMA, 3=VBP.
+        ROM_HARD_RESET_N : in std_logic := '1';
+        ROM_FLUSH       : in std_logic := '0';
+        ROM_EPOCH       : in std_logic_vector(7 downto 0) := x"00";
+        ROM_FLUSH_ACK   : out std_logic;
+        ROM_SNES_READ_INTENT : in std_logic := '0';
+        ROM_SNES_RETIRE : in std_logic := '0';
+        ROM_SNES_OWNER  : in std_logic_vector(1 downto 0) := "00";
+        ROM_SNES_WAIT   : out std_logic;
+        ROM_REQ_VALID   : out std_logic;
+        ROM_REQ_READY   : in std_logic := '0';
+        ROM_REQ_ADDR    : out std_logic_vector(22 downto 0);
+        ROM_REQ_OWNER   : out std_logic_vector(1 downto 0);
+        ROM_REQ_SNES_OWNER : out std_logic_vector(1 downto 0);
+        ROM_REQ_TAG     : out std_logic_vector(7 downto 0);
+        ROM_REQ_EPOCH   : out std_logic_vector(7 downto 0);
+        ROM_RSP_VALID   : in std_logic := '0';
+        ROM_RSP_READY   : out std_logic;
+        ROM_RSP_OWNER   : in std_logic_vector(1 downto 0) := "00";
+        ROM_RSP_TAG     : in std_logic_vector(7 downto 0) := x"00";
+        ROM_RSP_EPOCH   : in std_logic_vector(7 downto 0) := x"00";
+        ROM_RSP_DATA    : in std_logic_vector(15 downto 0) := x"FFFF";
+        ROM_RSP_ERROR   : in std_logic := '0';
+        ROM_FAULT       : out std_logic;
 
 		ROM_ADDR		: out std_logic_vector(22 downto 0);
 		ROM_Q			: in  std_logic_vector(15 downto 0);
@@ -77,6 +105,7 @@ begin
 	MAP_ACTIVE <= MAP_SEL;
 	
 	SA1 : entity work.SA1
+    generic map (ROM_HANDSHAKE=>ROM_HANDSHAKE)
 	port map(
 		CLK			=> MCLK,
 		RST_N			=> RST_N and MAP_SEL,
@@ -95,6 +124,30 @@ begin
 		
 		PAL			=> PAL,
 		
+        ROM_HARD_RESET_N=>ROM_HARD_RESET_N,
+        ROM_FLUSH=>ROM_FLUSH,
+        ROM_EPOCH=>ROM_EPOCH,
+        ROM_ADDR_MASK=>ROM_MASK(22 downto 0),
+        ROM_FLUSH_ACK=>ROM_FLUSH_ACK,
+        ROM_SNES_READ_INTENT=>ROM_SNES_READ_INTENT,
+        ROM_SNES_RETIRE=>ROM_SNES_RETIRE,
+        ROM_SNES_OWNER=>ROM_SNES_OWNER,
+        ROM_SNES_WAIT=>ROM_SNES_WAIT,
+        ROM_REQ_VALID=>ROM_REQ_VALID,
+        ROM_REQ_READY=>ROM_REQ_READY,
+        ROM_REQ_ADDR=>ROM_REQ_ADDR,
+        ROM_REQ_OWNER=>ROM_REQ_OWNER,
+        ROM_REQ_SNES_OWNER=>ROM_REQ_SNES_OWNER,
+        ROM_REQ_TAG=>ROM_REQ_TAG,
+        ROM_REQ_EPOCH=>ROM_REQ_EPOCH,
+        ROM_RSP_VALID=>ROM_RSP_VALID,
+        ROM_RSP_READY=>ROM_RSP_READY,
+        ROM_RSP_OWNER=>ROM_RSP_OWNER,
+        ROM_RSP_TAG=>ROM_RSP_TAG,
+        ROM_RSP_EPOCH=>ROM_RSP_EPOCH,
+        ROM_RSP_DATA=>ROM_RSP_DATA,
+        ROM_RSP_ERROR=>ROM_RSP_ERROR,
+        ROM_FAULT=>ROM_FAULT,
 		ROM_A			=> ROM_A,
 		ROM_DI		=> ROM_Q,
 		ROM_RD_N		=> ROM_OE_N,

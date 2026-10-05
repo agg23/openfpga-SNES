@@ -35,6 +35,8 @@ entity DSP_LHRomMap is
 		IRQ_N			: out std_logic;
 
 		ROM_ADDR		: out std_logic_vector(23 downto 0);
+        ROM_LOOKAHEAD_ADDR : out std_logic_vector(23 downto 0) := (others => '0');
+        ROM_LOOKAHEAD_SEL  : out std_logic := '0';
 		ROM_Q			: in  std_logic_vector(15 downto 0);
 		ROM_CE_N		: out std_logic;
 		ROM_OE_N		: out std_logic;
@@ -381,6 +383,8 @@ begin
 		end if;
 	end process;
 	
+    ROM_LOOKAHEAD_ADDR <= CART_ADDR and ROM_MASK;
+    ROM_LOOKAHEAD_SEL <= ROM_SEL;
 	ROM_CE_N <= ROMSEL_N;
 	ROM_OE_N <= not ROM_RD;
 	ROM_WORD	<= '0';

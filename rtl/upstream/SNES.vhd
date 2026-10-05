@@ -7,12 +7,25 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.STD_LOGIC_TEXTIO.all;
 
 entity SNES is
+    generic (
+        WRAM_PREDECODE : boolean := false;
+        ARAM_RETURN_STAGE : boolean := false
+    );
 	port(
 		MCLK			: in std_logic;
 		DSPCLK		: in std_logic;
 		
 		RST_N			: in std_logic;
 		ENABLE		: in std_logic;
+		BUS_WAIT	: in std_logic := '0';
+        -- Write credit is reserved before any B-bus read / A-bus write edge.
+        BUS_WRITE_WAIT   : in std_logic := '0';
+        -- Intent is independent of strobes/ready, so a wait cannot erase itself.
+        BUS_A_READ_INTENT : out std_logic := '0';
+        BUS_A_WRITE_INTENT: out std_logic := '0';
+        BUS_A_OWNER       : out std_logic_vector(1 downto 0) := "00";
+        BUS_A_WRITE_DATA  : out std_logic_vector(7 downto 0) := (others => '0');
+        BUS_A_RETIRE      : out std_logic := '0';
 		PAL			: in std_logic;
 		BLEND			: in std_logic;
 		
@@ -119,6 +132,7 @@ entity SNES is
 end SNES;
 
 architecture rtl of SNES is
+    signal INT_PA_WMDATA : std_logic;
 
 	-- SCPU
 	signal INT_CA : std_logic_vector(23 downto 0);
@@ -223,6 +237,13 @@ begin
 		RST_N			=> RST_N and not SPC_MODE,
 		
 		ENABLE		=> ENABLE,
+		BUS_WAIT	=> BUS_WAIT,
+        BUS_WRITE_WAIT => BUS_WRITE_WAIT,
+        BUS_A_READ_INTENT => BUS_A_READ_INTENT,
+        BUS_A_WRITE_INTENT => BUS_A_WRITE_INTENT,
+        BUS_A_OWNER => BUS_A_OWNER,
+        BUS_A_WRITE_DATA => BUS_A_WRITE_DATA,
+        BUS_A_RETIRE => BUS_A_RETIRE,
 		
 		HBLANK		=> INT_HBLANK,
 		VBLANK		=> INT_VBLANK,
@@ -233,6 +254,7 @@ begin
 		CPURD_N		=> INT_CPURD_N,
 		CPUWR_N		=> INT_CPUWR_N,
 		PA				=> INT_PA,
+        PA_WMDATA   => INT_PA_WMDATA,
 		PARD_N		=> INT_PARD_N,
 		PAWR_N		=> INT_PAWR_N,
 		DI				=> GENIE_DI,
@@ -282,6 +304,7 @@ begin
 				  CPU_DO;
 
 	WRAM : entity work.SWRAM
+    generic map (WMDATA_PREDECODE => WRAM_PREDECODE)
 	port map(
 		CLK			=> MCLK,
 		SYSCLK_CE	=> INT_SYSCLKF_CE,
@@ -294,6 +317,7 @@ begin
 		RAMSEL_N		=> INT_RAMSEL_N,
 		
 		PA				=> INT_PA,
+        PA_WMDATA   => INT_PA_WMDATA,
 		PARD_N		=> INT_PARD_N,
 		PAWR_N		=> INT_PAWR_N,
 		
@@ -406,6 +430,7 @@ begin
 
 	-- DSP 
 	DSP: entity work.DSP 
+	generic map (ARAM_RETURN_STAGE => ARAM_RETURN_STAGE)
 	port map (
 		CLK			=> DSPCLK,
 		RST_N			=> RST_N,

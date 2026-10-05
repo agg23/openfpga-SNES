@@ -5,7 +5,15 @@ use IEEE.NUMERIC_STD.ALL;
 
 
 entity SDD1 is
+	generic (ROM_HANDSHAKE : boolean := false);
 	port(
+        SNES_READ_INTENT, SNES_RETIRE : in std_logic := '0';
+        SNES_ROM_DATA : in std_logic_vector(7 downto 0) := (others=>'0');
+        SNES_ROM_ADDR, DEC_ROM_ADDR : out std_logic_vector(23 downto 0);
+        DEC_ROM_NEED, DEC_ROM_RETIRE : out std_logic;
+        DEC_ROM_READY : in std_logic := '0';
+        DATA_WAIT, DECOMP_READ : out std_logic;
+
 		RST_N			: in  std_logic;
 		CLK			: in  std_logic;
 		ENABLE		: in  std_logic;
@@ -103,6 +111,22 @@ architecture rtl of SDD1 is
 	signal CPUWR_N_OLD : std_logic;
 	signal RD_PULSE : std_logic;
 	signal PULSE_CNT : unsigned(1 downto 0);
+    signal IM_READY, OUT_VALID, OUT_READY, BYTE_RETIRE : std_logic;
+    function MapAddress(a : std_logic_vector(23 downto 0);
+        bc, bd, be, bf : std_logic_vector(3 downto 0)) return std_logic_vector is
+    begin
+        if a(22)='0' and a(15)='1' then
+            return "0" & a(23 downto 16) & a(14 downto 0);
+        elsif a(23 downto 22)="11" then
+            case a(21 downto 20) is
+                when "00" => return bc & a(19 downto 0);
+                when "01" => return bd & a(19 downto 0);
+                when "10" => return be & a(19 downto 0);
+                when others => return bf & a(19 downto 0);
+            end case;
+        else return x"FFFFFF";
+        end if;
+    end function;
 	
 begin
 
@@ -127,6 +151,7 @@ begin
 			ROMBANKF <= x"3";
 			OUT_DATA_SEL <= '0';
 			DEC_START <= '0';
+            CPUWR_N_OLD <= '1';
 		elsif rising_edge(CLK) then
 			if ENABLE = '1' then
 				DEC_START <= '0';
@@ -168,12 +193,13 @@ begin
 							when others => null;
 						end case; 
 					end if;
-				elsif CPURD_N = '0' and SYSCLKF_CE = '1' then
+				elsif BYTE_RETIRE = '1' then
 					if CA = DEC_CUR_ADDR then
 						OUT_DATA_SEL <= not OUT_DATA_SEL;
 						DMAS(DMA_CH) <= std_logic_vector(unsigned(DMAS(DMA_CH)) - 1);
 						if DMAS(DMA_CH) = x"0001" then
 							DMARUN(DMA_CH) <= '0';
+                            if ROM_HANDSHAKE then OUT_DATA_SEL <= '0'; end if;
 						end if;
 					end if;
 				end if;
@@ -190,6 +216,8 @@ begin
 		end if;
 	end process; 
 	
+    legacy_control: if not ROM_HANDSHAKE generate
+
 	process( RST_N, CLK)
 	begin
 		if RST_N = '0' then
@@ -244,18 +272,59 @@ begin
 		end if;
 	end process; 
 	
+    end generate;
+
+    transaction_control: if ROM_HANDSHAKE generate
+        process(CLK, RST_N)
+        begin
+            if RST_N='0' then
+                DS<=DS_IDLE; DEC_RUN<='0'; DMA_EXEC<='0';
+            elsif rising_edge(CLK) then
+                if ENABLE='1' then
+                    if DEC_START='1' then
+                        DS<=DS_INIT; DEC_RUN<='0'; DMA_EXEC<='1';
+                    else
+                        case DS is
+                            when DS_INIT => DS<=DS_WAIT_INIT;
+                            when DS_WAIT_INIT =>
+                                if DEC_INIT_DONE='1' then
+                                    DS<=DS_DECODING; DEC_RUN<='1';
+                                end if;
+                            when DS_DECODING =>
+                                if DEC_DONE='1' then DEC_RUN<='0'; end if;
+                                if DMARUN=x"00" then DS<=DS_IDLE; DEC_RUN<='0'; end if;
+                                if BYTE_RETIRE='1' and DEC_CUR_SIZE=x"0001" then
+                                    DEC_RUN<='0';
+                                    if (DMAEN and DMARUN)/=std_logic_vector(shift_left(to_unsigned(1,8),DMA_CH)) then
+                                        -- The selected channel changes after this edge.
+                                        -- INIT observes its own source, size and lane.
+                                        DS<=DS_INIT;
+                                    else DS<=DS_IDLE;
+                                    end if;
+                                end if;
+                            when others => null;
+                        end case;
+                    end if;
+                end if;
+            end if;
+        end process;
+    end generate;
+
 	DEC_EN <= '1' when (DS = DS_WAIT_INIT) and SNES_ACCESS = '0' else
 				 '1' when (DS = DS_DECODING or DS = DS_PREDECODING) and DMA_EXEC = '1' else 
 				 '0';
 	
 	DEC_INIT <= '1' when DS = DS_INIT else '0';
 	
-	IM: entity work.InputMgr 
+	IM: entity work.InputMgr
+    generic map (ROM_HANDSHAKE => ROM_HANDSHAKE)
 	port map (
 		CLK			=> CLK,
 		RST_N			=> RST_N,
 		ENABLE		=> ENABLE,
 		
+        ROM_NEED => DEC_ROM_NEED, ROM_READY => DEC_ROM_READY,
+        ROM_RETIRE => DEC_ROM_RETIRE, DATA_READY => IM_READY,
 		INIT_ADDR	=> DEC_CUR_ADDR,
 		
 		INIT			=> DEC_INIT,
@@ -272,12 +341,14 @@ begin
 		INIT_DONE	=> DEC_INIT_DONE
 	); 
 	
-	DEC: entity work.SDD1_Decoder 
+	DEC: entity work.SDD1_Decoder
+    generic map (ROM_HANDSHAKE => ROM_HANDSHAKE)
 	port map (
 		CLK			=> CLK,
 		RST_N			=> RST_N,
 		ENABLE		=> ENABLE,
 		
+        INPUT_READY => IM_READY, OUTPUT_READY => OUT_READY,
 		INIT_SIZE	=> DEC_CUR_SIZE,
 		IN_DATA		=> DEC_IN_DATA,
 		HEADER		=> HEADER,
@@ -292,20 +363,52 @@ begin
 		DONE 			=> DEC_DONE
 	); 
 	
-	process( RST_N, CLK)
-	begin
-		if RST_N = '0' then
-			DEC_OUT_DATA0 <= (others => '0');
-			DEC_OUT_DATA1 <= (others => '0');
-		elsif rising_edge(CLK) then
-			if DEC_PLANE_DONE = '1' and DEC_RUN = '1' then
-				DEC_OUT_DATA0 <= DEC_DO(7 downto 0);
-				DEC_OUT_DATA1 <= DEC_DO(15 downto 8);
-			end if;
-		end if;
-	end process; 
-	
-	TRANSFERING <= '1' when CA = DEC_CUR_ADDR and DMARUN /= x"00" else '0';
+    legacy_output: if not ROM_HANDSHAKE generate
+        OUT_VALID <= '1'; OUT_READY <= '1';
+        process(CLK, RST_N)
+        begin
+            if RST_N='0' then
+                DEC_OUT_DATA0 <= (others=>'0'); DEC_OUT_DATA1 <= (others=>'0');
+            elsif rising_edge(CLK) then
+                if DEC_PLANE_DONE='1' and DEC_RUN='1' then
+                    DEC_OUT_DATA0 <= DEC_DO(7 downto 0);
+                    DEC_OUT_DATA1 <= DEC_DO(15 downto 8);
+                end if;
+            end if;
+        end process;
+    end generate;
+    transaction_output: if ROM_HANDSHAKE generate
+        OUT_READY <= '1' when OUT_VALID='0' or
+            (BYTE_RETIRE='1' and (OUT_DATA_SEL='1' or DEC_CUR_SIZE=x"0001")) else '0';
+        process(CLK, RST_N)
+        begin
+            if RST_N='0' then
+                OUT_VALID<='0'; DEC_OUT_DATA0<=(others=>'0'); DEC_OUT_DATA1<=(others=>'0');
+            elsif rising_edge(CLK) then
+                if ENABLE='1' then
+                    if DEC_INIT='1' then OUT_VALID<='0';
+                    else
+                        if BYTE_RETIRE='1' and (OUT_DATA_SEL='1' or DEC_CUR_SIZE=x"0001") then
+                            OUT_VALID<='0';
+                        end if;
+                        if DEC_PLANE_DONE='1' and OUT_READY='1' then
+                            DEC_OUT_DATA0<=DEC_DO(7 downto 0);
+                            DEC_OUT_DATA1<=DEC_DO(15 downto 8);
+                            OUT_VALID<='1';
+                        end if;
+                    end if;
+                end if;
+            end if;
+        end process;
+    end generate;
+    BYTE_RETIRE <= SNES_RETIRE and TRANSFERING and OUT_VALID when ROM_HANDSHAKE
+        else not CPURD_N and SYSCLKF_CE;
+    DATA_WAIT <= SNES_READ_INTENT and TRANSFERING and not OUT_VALID when ROM_HANDSHAKE else '0';
+    DECOMP_READ <= TRANSFERING;
+
+	TRANSFERING <= '1' when CA=DEC_CUR_ADDR and
+        ((ROM_HANDSHAKE and (DMAEN and DMARUN)/=x"00") or
+         (not ROM_HANDSHAKE and DMARUN/=x"00")) else '0';
 	
 	process(CLK)
 	begin
@@ -317,25 +420,9 @@ begin
 	end process;
 	WORK_ADDR <= SNES_A when DEC_EN = '0' else DEC_A;
 	
-	process( WORK_ADDR, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF )
-	begin
-		if WORK_ADDR(22) = '0' and WORK_ADDR(15) = '1' then
-			MAP_ROM_A <= "0" & WORK_ADDR(23 downto 16) & WORK_ADDR(14 downto 0);
-		elsif WORK_ADDR(23 downto 22) = "11" then
-			case WORK_ADDR(21 downto 20) is
-				when "00" =>
-					MAP_ROM_A <= ROMBANKC & WORK_ADDR(19 downto 0);
-				when "01" =>
-					MAP_ROM_A <= ROMBANKD & WORK_ADDR(19 downto 0);
-				when "10" =>
-					MAP_ROM_A <= ROMBANKE & WORK_ADDR(19 downto 0);
-				when others =>
-					MAP_ROM_A <= ROMBANKF & WORK_ADDR(19 downto 0);
-			end case;
-		else
-			MAP_ROM_A <= x"FFFFFF";
-		end if;
-	end process; 
+    MAP_ROM_A <= MapAddress(WORK_ADDR, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF);
+    SNES_ROM_ADDR <= MapAddress(CA, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF);
+    DEC_ROM_ADDR <= MapAddress(DEC_A, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF);
 
 	process( TRANSFERING, CA, DMAEN, DMARUN, ROMBANKC, ROMBANKD, ROMBANKE, ROMBANKF, 
 			   ROM_DATA, OUT_DATA_SEL, DEC_OUT_DATA0, DEC_OUT_DATA1 )
@@ -371,7 +458,8 @@ begin
 	end process;
 	
 	ROM_A <= MAP_ROM_A;
-	ROM_DATA <= ROM_DO(7 downto 0) when MAP_ROM_A(0) = '0' else ROM_DO(15 downto 8);
+	ROM_DATA <= SNES_ROM_DATA when ROM_HANDSHAKE else
+                ROM_DO(7 downto 0) when MAP_ROM_A(0) = '0' else ROM_DO(15 downto 8);
 
 	RD_PULSE <= SYSCLKF_CE or SYSCLKR_CE when rising_edge(CLK);
 	ROM_RD_N <= not RD_PULSE;

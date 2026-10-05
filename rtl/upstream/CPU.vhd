@@ -9,12 +9,24 @@ entity SCPU is
 		CLK				: in std_logic;
 		RST_N				: in std_logic;
 		ENABLE			: in std_logic;
+		-- Address-qualified A-bus read backpressure, valid before the read phase.
+		BUS_WAIT		: in std_logic := '0';
+        -- Write credit is reserved before any B-bus read / A-bus write edge.
+        BUS_WRITE_WAIT   : in std_logic := '0';
+        -- Intent is independent of strobes/ready, so a wait cannot erase itself.
+        BUS_A_READ_INTENT : out std_logic := '0';
+        BUS_A_WRITE_INTENT: out std_logic := '0';
+        BUS_A_OWNER       : out std_logic_vector(1 downto 0) := "00";
+        BUS_A_WRITE_DATA  : out std_logic_vector(7 downto 0) := (others => '0');
+        BUS_A_RETIRE      : out std_logic := '0';
 		
 		CA       		: out std_logic_vector(23 downto 0);
 		CPURD_N			: out std_logic;
 		CPUWR_N			: out std_logic;
 		
 		PA					: out std_logic_vector(7 downto 0);
+        -- Parallel B-bus $2180 predicate; raw PA and all bus phases are unchanged.
+        PA_WMDATA       : out std_logic := '0';
 		PARD_N			: out std_logic;
 		PAWR_N			: out std_logic;
 		DI					: in std_logic_vector(7 downto 0);
@@ -55,6 +67,10 @@ architecture rtl of SCPU is
 
 	--clocks
 	signal EN : std_logic;
+	-- Keep the master timing phases running during a cartridge data miss.
+	-- Only the selected transaction's start/retirement is delayed. RDY, rather
+	-- than the 65C816 CE, holds execution so NMI edges are still sampled.
+	signal READ_WAIT, WRITE_WAIT, A_READ_INTENT, A_WRITE_INTENT, WAIT_CYCLE, BUS_WAIT_SEEN, BUS_CLKF_CE, BUS_CLKR_CE : std_logic;
 	signal CLK4_CE_F, CLK4_CE_R, CLK8_CE_F, CLK8_CE_R : std_logic;
 	signal INT_CLK : std_logic;
 	signal INT_CLKR_CE, INT_CLKF_CE : std_logic;
@@ -176,6 +192,7 @@ architecture rtl of SCPU is
 	signal HDS	: hds_t; 
 
 	signal HDMA_INIT_STEP: std_logic;
+	signal HDMA_FRAME_DEFERRED, HDMA_FRAME_INIT, HDMA_FRAME_APPLY : std_logic;
 	signal DMA_TRMODE_STEP, HDMA_TRMODE_STEP: unsigned(1 downto 0);
 	type DmaTransMode is array (0 to 7, 0 to 3) of unsigned(1 downto 0);
 	constant DMA_TRMODE_TAB	: DmaTransMode := (
@@ -340,12 +357,54 @@ begin
 		end if;
 	end process;
 
+    A_READ_INTENT <= P65_R_WN and (P65_VPA or P65_VDA)
+                     when DMA_ACTIVE = '0' else
+                     ((not DMA_DIR and (DMA_TRANSFER or HDMA_TRANSFER)) or
+                      FETCH_SCANLINE_COUNTER or FETCH_IND_ADDR);
+    A_WRITE_INTENT <= not P65_R_WN and (P65_VPA or P65_VDA)
+                      when DMA_ACTIVE = '0' else
+                      DMA_DIR and (DMA_TRANSFER or HDMA_TRANSFER);
+    READ_WAIT <= BUS_WAIT and A_READ_INTENT;
+    WRITE_WAIT <= BUS_WRITE_WAIT and A_WRITE_INTENT;
+    BUS_A_READ_INTENT <= A_READ_INTENT and ENABLE and P65_RST_N;
+    BUS_A_WRITE_INTENT <= A_WRITE_INTENT and ENABLE and P65_RST_N;
+    BUS_A_OWNER <= "11" when DMA_ACTIVE = '1' and
+                                (FETCH_SCANLINE_COUNTER = '1' or FETCH_IND_ADDR = '1') else
+                   "10" when HDMA_TRANSFER = '1' and DMA_ACTIVE = '1' else
+                   "01" when DMA_ACTIVE = '1' else "00";
+    -- CPU-only write lookahead. Actual DO remains MDR and changes at bus R.
+    -- DMA/HDMA B-bus source data is not available here before that read starts.
+    BUS_A_WRITE_DATA <= P65_DO;
+    BUS_A_RETIRE <= BUS_CLKF_CE and EN and
+                   ((A_READ_INTENT and not INT_CPURD_N) or
+                    (A_WRITE_INTENT and not INT_CPUWR_N));
+
+	-- A miss must restart at a normal read phase, even if readiness arrives
+	-- immediately before a falling phase. This protects edge-triggered WRAM
+	-- DMA writes as well as SYSCLKF_CE-qualified PPU register writes.
+	process(RST_N, CLK)
+	begin
+		if RST_N = '0' then
+			WAIT_CYCLE <= '0';
+			BUS_WAIT_SEEN <= '0';
+		elsif rising_edge(CLK) then
+			if READ_WAIT = '1' or WRITE_WAIT = '1' then
+				WAIT_CYCLE <= '1';
+				BUS_WAIT_SEEN <= '1';
+			elsif INT_CLKR_CE = '1' then
+				WAIT_CYCLE <= '0';
+			end if;
+		end if;
+	end process;
+	BUS_CLKR_CE <= INT_CLKR_CE and not READ_WAIT and not WRITE_WAIT;
+	BUS_CLKF_CE <= INT_CLKF_CE and not READ_WAIT and not WRITE_WAIT and not WAIT_CYCLE;
+
 	EN <= ENABLE and (not REFRESHED);
 	P65_EN <= not DMA_ACTIVE and ENABLE;
 
 	SYSCLK <= INT_CLK; 
-	SYSCLKF_CE <= INT_CLKF_CE;
-	SYSCLKR_CE <= INT_CLKR_CE;
+	SYSCLKF_CE <= BUS_CLKF_CE;
+	SYSCLKR_CE <= BUS_CLKR_CE;
 
 
 	-- 65C816
@@ -359,7 +418,7 @@ begin
 		D_IN     	=> P65_DI,
 		D_OUT    	=> P65_DO,
 		A_OUT			=> P65_A,
-		RDY_IN      => P65_EN,
+		RDY_IN      => P65_EN and not READ_WAIT and not WRITE_WAIT and not WAIT_CYCLE,
 		NMI_N       => P65_NMI_N,    
 		IRQ_N       => P65_IRQ_N,
 		ABORT_N     => '1',
@@ -434,10 +493,10 @@ begin
 			CPU_RD <= '0';
 		elsif rising_edge(CLK) then
 			if EN = '1' then
-				if P65_EN = '1' and (P65_VPA = '1' or P65_VDA = '1') and INT_CLKR_CE = '1' then
+				if P65_EN = '1' and (P65_VPA = '1' or P65_VDA = '1') and BUS_CLKR_CE = '1' then
 					CPU_WR <= not P65_R_WN;
 					CPU_RD <= P65_R_WN;
-				elsif INT_CLKF_CE = '1' then
+				elsif BUS_CLKF_CE = '1' then
 					CPU_WR <= '0';
 					CPU_RD <= '0';
 				end if;
@@ -445,6 +504,14 @@ begin
 		end if;
 	end process;
 	
+    -- Decode before the byte-wide PA mux. This combinational sideband avoids
+    -- putting PA[7:0]'s mux and a second equality decode in the WRAM read path.
+    -- Keep the same HDMA/DMA priority and CPU B-bus qualification as PA below.
+    PA_WMDATA <= '1' when (HDMA_BUS_ACTIVE = '1' or DMA_TRANSFER = '1') and EN = '1' and DMA_B = x"80" else
+                 '0' when (HDMA_BUS_ACTIVE = '1' or DMA_TRANSFER = '1') and EN = '1' else
+                 '1' when P65_A(22) = '0' and P65_A(15 downto 0) = x"2180" and P65_EN = '1' else
+                 '0';
+
 	process(P65_A, EN, CPU_RD, CPU_WR, DMA_B, DMA_B_RD, DMA_B_WR, DMA_A_RD, DMA_A_WR, 
 			  HDMA_A_RD, HDMA_A_WR, HDMA_B_RD, HDMA_B_WR, DMA_TRANSFER, HDMA_BUS_ACTIVE, P65_EN)
 	begin
@@ -570,6 +637,7 @@ begin
 				when "01" => IRQ_TIME := H_TIME;					--H-IRQ:  every scanline, H=HTIME+~3.5
 				when "10" => IRQ_TIME := V_TIME;					--V-IRQ:  V=VTIME, H=~2.5
 				when "11" => IRQ_TIME := H_TIME and V_TIME;	--HV-IRQ: V=VTIME, H=HTIME+~3.5
+				when others => IRQ_TIME := '0';
 			end case;
 			
 			if ENABLE = '1' then
@@ -659,7 +727,8 @@ begin
 				REFRESH_EN3 <= REFRESH_EN2;
 			end if;
 			
-			if ENABLE = '1' and INT_CLKF_CE = '1' then
+			if ENABLE = '1' and INT_CLKF_CE = '1' and
+			   (REFRESHED = '1' or (READ_WAIT = '0' and WRITE_WAIT = '0' and WAIT_CYCLE = '0')) then
 				REFRESHED <= REFRESH_EN3;
 			end if; 
 		end if;
@@ -838,11 +907,11 @@ begin
 		if RST_N = '0' then
 			MDR <= (others => '1');
 		elsif rising_edge(CLK) then
-			if INT_CLKR_CE = '1' then
+			if BUS_CLKR_CE = '1' then
 				if EN = '1' and P65_EN = '1' and (P65_VPA = '1' or P65_VDA = '1') and P65_R_WN = '0' then
 					MDR <= P65_DO;
 				end if;
-			elsif INT_CLKF_CE = '1' then
+			elsif BUS_CLKF_CE = '1' then
 				if EN = '1' and P65_EN = '1' and (P65_VPA = '1' or P65_VDA = '1') and P65_R_WN = '1' then
 					MDR <= P65_DI;
 				elsif DMA_ACTIVE = '1' and EN = '1' then
@@ -858,6 +927,8 @@ begin
 	HDMA_CH_EN <= HDMAEN and HDMA_CH_RUN and HDMA_CH_DO;
 	HDMA_CH_LAST <= IsLastHDMACh(HDMA_CH_EN and HDMA_CH_WORK, DMA_CH);
 	HDMA_EN <= '1' when (HDMAEN and HDMA_CH_RUN) /= x"00" else '0';
+	HDMA_FRAME_APPLY <= HDMA_FRAME_DEFERRED when HDMA_RUN = '0' and HDS = HDS_IDLE and
+	                    EN = '1' and BUS_CLKF_CE = '1' else '0';
 				
 	process( RST_N, CLK )
 		variable i : integer range 0 to 7;
@@ -888,6 +959,8 @@ begin
 			DMA_TRMODE_STEP <= (others => '0');
 			HDMA_TRMODE_STEP <= (others => '0');
 			HDMA_INIT_STEP <= '0';
+			HDMA_FRAME_DEFERRED <= '0';
+			HDMA_FRAME_INIT <= '0';
 			DS <= DS_IDLE;
 			HDS <= HDS_IDLE;
 		elsif rising_edge(CLK) then
@@ -959,12 +1032,25 @@ begin
 					HDMA_START <= '1';
 				end if;
 			end if;
+			-- A delayed cartridge read may span a frame boundary. Keep the
+			-- active channel masks intact until that HDMA operation drains.
 			if FALLING_VBLANK = '1' then
+				if (HDMA_RUN = '1' and BUS_WAIT_SEEN = '1') or READ_WAIT = '1' or WRITE_WAIT = '1' or WAIT_CYCLE = '1' then
+					HDMA_FRAME_DEFERRED <= '1';
+				else
+					HDMA_CH_RUN <= (others => '1');
+					HDMA_CH_DO <= (others => '0');
+				end if;
+			end if;
+			if HDMA_FRAME_APPLY = '1' then
+				HDMA_FRAME_DEFERRED <= '0';
 				HDMA_CH_RUN <= (others => '1');
 				HDMA_CH_DO <= (others => '0');
+				HDMA_INIT_START <= '1';
+				HDMA_START <= '0';
 			end if;
 			
-			if EN = '1' and INT_CLKF_CE = '1' then
+			if EN = '1' and BUS_CLKF_CE = '1' then
 				DMA_A <= (others => '1');
 				DMA_B <= (others => '1');
 				DMA_DIR <= '0';
@@ -1029,11 +1115,14 @@ begin
 				FETCH_IND_ADDR <= '0';
 				HDMA_TRANSFER <= '0';
 				HDMA_BUS_ACTIVE <= '0';
+				if HDMA_FRAME_APPLY = '0' then
 				case HDS is
 					when HDS_IDLE =>
 						if HDMA_INIT_START = '1' and (DMA_PATTERN_END = '1' or DMA_RUN = '0') then
 							HDMA_INIT_START <= '0';
+							HDMA_FRAME_INIT <= '0';
 							if (HDMA_CH_RUN and HDMAEN) /= x"00" then
+								HDMA_FRAME_INIT <= '1';
 								HDMA_CH_DO <= (others => '1'); 
 								HDMA_CH_WORK <= HDMAEN;--(others => '1');
 								HDMA_RUN <= '1';
@@ -1041,8 +1130,9 @@ begin
 							end if;
 						end if;
 						
-						if HDMA_START = '1' and (DMA_PATTERN_END = '1' or DMA_RUN = '0') then
+						if HDMA_START = '1' and (HDMA_INIT_START = '0' or BUS_WAIT_SEEN = '0') and (DMA_PATTERN_END = '1' or DMA_RUN = '0') then
 							HDMA_START <= '0';
+							HDMA_FRAME_INIT <= '0';
 							if HDMA_CH_EN /= x"00" then
 								HDMA_CH_WORK <= HDMAEN;--(others => '1'); 
 								HDMA_RUN <= '1';
@@ -1060,7 +1150,7 @@ begin
 						MDMAEN(DMA_CH) <= '0';
 						
 						NEXT_NTLR := std_logic_vector(unsigned(NTLR(DMA_CH)) - 1); 
-						if NEXT_NTLR(6 downto 0) = "0000000" or LONG_FALLING_VBLANK = '1' then
+						if NEXT_NTLR(6 downto 0) = "0000000" or (LONG_FALLING_VBLANK = '1' or (HDMA_FRAME_INIT = '1' and BUS_WAIT_SEEN = '1')) then
 							FETCH_SCANLINE_COUNTER <= '1';
 							
 							if DMAP(DMA_CH)(6) = '0' then
@@ -1075,7 +1165,7 @@ begin
 								HDMA_CH_LAST_IND <= HDMA_CH_LAST;
 								HDS <= HDS_INIT_IND;
 							end if;
-							if LONG_FALLING_VBLANK = '1' then
+							if (LONG_FALLING_VBLANK = '1' or (HDMA_FRAME_INIT = '1' and BUS_WAIT_SEEN = '1')) then
 								A2A(DMA_CH) <= std_logic_vector(unsigned(A1T(DMA_CH)) + 1);
 							else
 								A2A(DMA_CH) <= std_logic_vector(unsigned(A2A(DMA_CH)) + 1);
@@ -1093,7 +1183,7 @@ begin
 						end if;
 						HDMA_BUS_ACTIVE <= '1';
 						DMA_CH_LATCH <= DMA_CH;
-						if LONG_FALLING_VBLANK = '1' then
+						if (LONG_FALLING_VBLANK = '1' or (HDMA_FRAME_INIT = '1' and BUS_WAIT_SEEN = '1')) then
 							DMA_A <= A1B(DMA_CH) & A1T(DMA_CH);
 						else
 							DMA_A <= A1B(DMA_CH) & A2A(DMA_CH);
@@ -1120,6 +1210,7 @@ begin
 						DMA_A <= A1B(DMA_CH_IND) & A2A(DMA_CH_IND);
 						
 					when HDS_INIT_END =>
+						HDMA_FRAME_INIT <= '0';
 						HDMA_RUN <= '0';
 						HDS <= HDS_IDLE;
 								
@@ -1158,6 +1249,7 @@ begin
 						
 					when others => null;
 				end case;
+				end if;
 				
 				if FETCH_SCANLINE_COUNTER = '1' then
 					NTLR(DMA_CH_LATCH) <= DI;
@@ -1194,29 +1286,29 @@ begin
 			HDMA_B_RD <= '0';	
 		elsif rising_edge(CLK) then
 			if EN = '1' then
-				if DMA_TRANSFER = '1' and INT_CLKR_CE = '1' then
+				if DMA_TRANSFER = '1' and BUS_CLKR_CE = '1' then
 					DMA_A_WR <= DMA_DIR;
 					DMA_A_RD <= not DMA_DIR;
 					DMA_B_WR <= not DMA_DIR;
 					DMA_B_RD <= DMA_DIR;
-				elsif INT_CLKF_CE = '1' then
+				elsif BUS_CLKF_CE = '1' then
 					DMA_A_WR <= '0';
 					DMA_A_RD <= '0';
 					DMA_B_WR <= '0';
 					DMA_B_RD <= '0';
 				end if;
 				
-				if HDMA_TRANSFER = '1' and INT_CLKR_CE = '1' then
+				if HDMA_TRANSFER = '1' and BUS_CLKR_CE = '1' then
 					HDMA_A_WR <= DMA_DIR;
 					HDMA_A_RD <= not DMA_DIR;
 					HDMA_B_WR <= not DMA_DIR;
 					HDMA_B_RD <= DMA_DIR;
-				elsif (FETCH_SCANLINE_COUNTER = '1' or FETCH_IND_ADDR = '1') and INT_CLKR_CE = '1' then
+				elsif (FETCH_SCANLINE_COUNTER = '1' or FETCH_IND_ADDR = '1') and BUS_CLKR_CE = '1' then
 					HDMA_A_WR <= '0';
 					HDMA_A_RD <= '1';
 					HDMA_B_WR <= '0';
 					HDMA_B_RD <= '0';
-				elsif INT_CLKF_CE = '1' then
+				elsif BUS_CLKF_CE = '1' then
 					HDMA_A_WR <= '0';
 					HDMA_A_RD <= '0';
 					HDMA_B_WR <= '0';

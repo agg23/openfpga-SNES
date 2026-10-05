@@ -48,6 +48,7 @@ architecture rtl of SPC700 is
 
 	signal MC : MCode_r;
 	signal SB, DB    : std_logic_vector(7 downto 0);
+	signal WRITE_SB  : std_logic_vector(7 downto 0);
 
 	-- AddrGen 
 	signal AX: std_logic_vector(15 downto 0);
@@ -367,8 +368,20 @@ begin
 		end if;
 	end process;
 
-	D_OUT <= SB when MC.OUT_BUS = "001" else
-				AluR when MC.OUT_BUS = "010" else
+	-- The current M_TAB writes only A/X/Y/T, PSW, or PC. It never
+	-- selects AluR or the live D_IN path for D_OUT. Keep this write-only
+	-- mux separate from SB so an impossible microcode combination cannot
+	-- create a RAM input -> ALU -> RAM write-data timing path.
+	-- Undefined all-X M_TAB rows still produce x"FF", as before.
+	-- tests/test_spc700_write_mux.py checks every table row against the
+	-- original mux; update that proof before adding a new write source.
+	WRITE_SB <= A when MC.BUS_CTRL(5 downto 3) = "000" else
+				X when MC.BUS_CTRL(5 downto 3) = "001" else
+				Y when MC.BUS_CTRL(5 downto 3) = "010" else
+				T when MC.BUS_CTRL(5 downto 3) = "011" else
+				x"00";
+
+	D_OUT <= WRITE_SB when MC.OUT_BUS = "001" else
 				PSW when MC.OUT_BUS = "011" else
 				PC(7 downto 0) when MC.OUT_BUS = "100" else
 				PC(15 downto 8) when MC.OUT_BUS = "101" else

@@ -5,6 +5,7 @@ use IEEE.NUMERIC_STD.ALL;
 library work;
 
 entity SPC7110 is
+	generic (ROM_HANDSHAKE : boolean := false);
 	port(
 		RST_N				: in std_logic;
 		CLK				: in std_logic;
@@ -23,6 +24,7 @@ entity SPC7110 is
 		DROM_DO			: in std_logic_vector(7 downto 0);
 		DROM_OE_N		: out std_logic;
 		DROM_RDY			: in std_logic;
+		DATA_WAIT       : out std_logic;
 		
 		SNES_DROM_A		: out std_logic_vector(22 downto 0);
 		SNES_DROM_OE_N	: out std_logic;
@@ -112,6 +114,12 @@ architecture rtl of SPC7110 is
 	signal FIFO_WR 			: std_logic;
 	signal FIFO_CLR 			: std_logic;
 	signal FIFO_FULL 			: std_logic;
+	signal FIFO_EMPTY : std_logic;
+	signal FIFO_FETCH_CANCEL : std_logic;
+	signal DEC_VALID : std_logic_vector(63 downto 0);
+	signal DEC_RD_BANK : std_logic;
+	signal DEC_RESUME : std_logic;
+	signal DEC_PORT, DP_PORT, PORT_WAIT : std_logic;
 	
 	--DATA ROM PORT
 	signal DP_READ 			: std_logic;
@@ -136,6 +144,7 @@ architecture rtl of SPC7110 is
 	signal DROM_DATA 			: std_logic_vector(7 downto 0);
 	signal DROM_READ 			: std_logic;
 	signal SNES_A 				: std_logic_vector(23 downto 0);
+	signal MAP_A : std_logic_vector(23 downto 0);
 	signal MAP_ROM_A 			: std_logic_vector(23 downto 0);
 
 begin
@@ -290,7 +299,7 @@ begin
 								
 							when others => null;
 						end case; 
-					elsif CPURD_N = '0' and SYSCLKF_CE = '1' then	--IO read
+					elsif CPURD_N = '0' and SYSCLKF_CE = '1' and PORT_WAIT = '0' then	--IO read
 						case CA(6 downto 0) is
 							when "0000000" =>						--4800
 								DEC_BUF_RD_ADDR <= DEC_BUF_RD_ADDR + 1;
@@ -322,7 +331,7 @@ begin
 						end case; 
 					
 					end if;
-				elsif CA(23 downto 16) = x"50" and CPURD_N = '0' and SYSCLKF_CE = '1' then	--50:0000-50:FFFF read
+				elsif CA(23 downto 16) = x"50" and CPURD_N = '0' and SYSCLKF_CE = '1' and PORT_WAIT = '0' then	--50:0000-50:FFFF read
 					DEC_BUF_RD_ADDR <= DEC_BUF_RD_ADDR + 1;
 				end if;
 				
@@ -472,12 +481,15 @@ begin
 			
 			DROM_ADDR <= (others => '0');
 			DROM_READ <= '0';
+			DP_DATA_OUT <= (others => '0');
 			
 			FIFO_D <= (others => '0');
 			FIFO_WR <= '0';
+			FIFO_FETCH_CANCEL <= '0';
 		elsif rising_edge(CLK) then
+			FIFO_WR <= '0';
 			if ENABLE = '1' then
-				FIFO_WR <= '0';
+				if DEC_START='1' and WS=WS_LOAD_FIFO2 then FIFO_FETCH_CANCEL<='1'; end if;
 				case WS is
 					when WS_IDLE =>
 						if LOAD_RUN = '1' then
@@ -514,15 +526,18 @@ begin
 						end if;
 					
 					when WS_LOAD_FIFO1 =>
+						FIFO_FETCH_CANCEL <= '0';
 						DROM_ADDR <= DEC_ADDR;
 						DROM_READ <= '1';
 						WS <= WS_LOAD_FIFO2;
 							
 					when WS_LOAD_FIFO2 =>
 						if DROM_RDY = '1' then
-							FIFO_D <= DROM_DO;
-							FIFO_WR <= '1';
-							DEC_ADDR <= std_logic_vector( unsigned(DEC_ADDR) + 1 );
+							if FIFO_FETCH_CANCEL='0' and DEC_START='0' then
+								FIFO_D <= DROM_DO;
+								FIFO_WR <= '1';
+								DEC_ADDR <= std_logic_vector( unsigned(DEC_ADDR) + 1 );
+							end if;
 							DROM_READ <= '0';
 							WS <= WS_LOAD_FIFO3;
 						end if;
@@ -619,16 +634,77 @@ begin
 										end if;
 									end if;
 							end case;
-						elsif DEC_RUN = '0' and DEC_BUF_RD_ADDR(5) /= DEC_BUF_WR_ADDR(5) then
+						elsif DEC_RESUME = '1' then
 							DEC_RUN <= '1';
 						end if;
 						
 					when others => null;
 				end case;
+				if DEC_START='1' then
+					DEC_RUN<='0'; DEC_INIT<='0'; DS<=DS_PRELOAD;
+				end if;
 			end if;
 		end if;
 	end process; 
 	
+	-- Availability belongs to each decoded byte (mode 2 writes split planes).
+	-- Waiting at these ports cannot stop DROM refill, arithmetic, MMIO or RTC.
+	DEC_PORT <= '1' when CA(23 downto 16)=x"50" or
+		(CA(22)='0' and CA(15 downto 0)=x"4800") else '0';
+	DP_PORT <= '1' when CA(22)='0' and
+		(CA(15 downto 0)=x"4810" or CA(15 downto 0)=x"481A") else '0';
+	PORT_WAIT <= '1' when ROM_HANDSHAKE and
+		((DEC_PORT='1' and (DEC_VALID(to_integer(DEC_BUF_RD_ADDR))='0' or
+             (DECREGS.MODE="10" and DECREGS.OFFSET/=x"0000"))) or
+		 (DP_PORT='1' and (DP_READ='1' or WS=WS_DP_READ1 or WS=WS_DP_READ2))) else '0';
+	DATA_WAIT <= PORT_WAIT;
+    -- Offset skipping can leave the reader ahead in the same bank. Bank parity
+    -- alone is not enough to decide whether a stopped producer must resume.
+    DEC_RESUME <= '1' when DS=DS_DECODING and DEC_RUN='0' and
+        LOAD_RUN='0' and DP_READ='0' and DEC_OUT_WR='0' and
+        (DEC_BUF_RD_ADDR(5)/=DEC_BUF_WR_ADDR(5) or
+         (ROM_HANDSHAKE and DEC_VALID(to_integer(DEC_BUF_RD_ADDR))='0')) else '0';
+	process(RST_N, CLK)
+		variable v : std_logic_vector(63 downto 0);
+		variable a : natural range 0 to 63;
+	begin
+		if RST_N='0' then
+			DEC_VALID <= (others=>'0');
+			DEC_RD_BANK <= '0';
+		elsif rising_edge(CLK) then
+			if ENABLE='1' then
+				v := DEC_VALID;
+                -- Offset mode can skip bytes without CPU pops. Reclaim the
+                -- whole bank as soon as the reader leaves it, so skipped old
+                -- bytes cannot appear valid after the next ring wrap.
+                if DEC_RD_BANK/=DEC_BUF_RD_ADDR(5) then
+                    if DEC_RD_BANK='0' then v(31 downto 0):=(others=>'0');
+                    else v(63 downto 32):=(others=>'0'); end if;
+                end if;
+                DEC_RD_BANK <= DEC_BUF_RD_ADDR(5);
+                if DEC_RESUME='1' then
+                    -- The producer is taking ownership of a free/reclaimed bank.
+                    -- Clear its previous generation before exposing any new byte.
+                    if DEC_BUF_WR_ADDR(5)='0' then v(31 downto 0):=(others=>'0');
+                    else v(63 downto 32):=(others=>'0'); end if;
+                end if;
+				if DEC_PORT='1' and CPURD_N='0' and SYSCLKF_CE='1' and PORT_WAIT='0' then
+					v(to_integer(DEC_BUF_RD_ADDR)) := '0';
+				end if;
+				if DEC_OUT_WR='1' and DS=DS_DECODING and LOAD_RUN='0' and DP_READ='0' then
+					a := to_integer(DEC_BUF_WR_ADDR);
+					v(a) := '1';
+					if DEC_MODE/="00" then v(a+1) := '1'; end if;
+					if DEC_MODE="10" or DEC_MODE="11" then
+						v(a+16) := '1'; v(a+17) := '1';
+					end if;
+				end if;
+				if DEC_START='1' then v := (others=>'0'); DEC_RD_BANK<='0'; end if;
+				DEC_VALID <= v;
+			end if;
+		end if;
+	end process;
+
 	DEC_BUF_OUT <= DEC_BUF(to_integer(DEC_BUF_RD_ADDR));
 	
 	
@@ -640,18 +716,20 @@ begin
 		wrreq 	=> FIFO_WR,
 		sclr 		=> FIFO_CLR,
 		full 		=> FIFO_FULL,
+		empty     => FIFO_EMPTY,
 		q 			=> FIFO_Q
 	);
 	FIFO_RD <= DEC_IN_RD;
-	FIFO_CLR <= DEC_START;
+	FIFO_CLR <= DEC_START or not RST_N;
 	
 	dec : entity work.SPC7110_DEC
 	PORT MAP (
 		RST_N 	=> RST_N,
 		CLK 		=> CLK,
-		ENABLE 	=> '1',
+		ENABLE 	=> ENABLE,
 		
 		DI 		=> FIFO_Q,
+		DI_VALID => not FIFO_EMPTY,
 		RD 		=> DEC_IN_RD,
 		
 		INIT 		=> DEC_INIT,
@@ -671,20 +749,21 @@ begin
 		end if;
 	end process;
 	
-	process( SNES_A, BANKD, BANKE, BANKF )
+	MAP_A <= CA when ROM_HANDSHAKE else SNES_A;
+	process( MAP_A, BANKD, BANKE, BANKF )
 	begin
-		case SNES_A(23 downto 20) is
+		case MAP_A(23 downto 20) is
 			when x"D" =>
-				MAP_ROM_A <= BANKD & SNES_A(19 downto 0);
+				MAP_ROM_A <= BANKD & MAP_A(19 downto 0);
 			when x"E" =>
-				MAP_ROM_A <= BANKE & SNES_A(19 downto 0);
+				MAP_ROM_A <= BANKE & MAP_A(19 downto 0);
 			when others =>
-				MAP_ROM_A <= BANKF & SNES_A(19 downto 0);
+				MAP_ROM_A <= BANKF & MAP_A(19 downto 0);
 		end case;
 	end process; 
 	
 	SNES_DROM_A <= MAP_ROM_A(22 downto 0);
-	SNES_DROM_OE_N <= '0' when SNES_A(23 downto 20) >= x"D" else '1';
+	SNES_DROM_OE_N <= '0' when MAP_A(23 downto 20) >= x"D" else '1';
 	
 	DROM_A <= DROM_ADDR(22 downto 0);
 	DROM_OE_N <= not DROM_READ;

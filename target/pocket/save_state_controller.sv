@@ -48,7 +48,7 @@ module save_state_controller (
       {savestate_load, savestate_start},
       {savestate_load_s, savestate_start_s},
       clk_ppu_21_47
-  );
+  , , );
 
   reg savestate_load_ack;
   reg savestate_load_busy;
@@ -84,7 +84,7 @@ module save_state_controller (
         savestate_start_err_s
       },
       clk_74a
-  );
+  , , );
 
   wire save_state_loader_write;
   wire [22:0] save_state_loader_addr;

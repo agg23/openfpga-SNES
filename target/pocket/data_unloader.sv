@@ -35,10 +35,13 @@ module data_unloader #(
     parameter READ_MEM_CLOCK_DELAY = 1,
 
     // Word size in number of bytes. Can either be 1 (input 8 bits), or 2 (input 16 bits)
-    parameter INPUT_WORD_SIZE = 1
+    parameter INPUT_WORD_SIZE = 1,
+    // Standard profile: wait for every returned word and recover after PLL loss.
+    parameter SAFE_RESPONSE_HANDSHAKE = 0
 ) (
     input wire clk_74a,
     input wire clk_memory,
+    input wire reset_n,
 
     input wire bridge_rd,
     input wire bridge_endian_little,
@@ -52,6 +55,22 @@ module data_unloader #(
 );
 
   localparam WORD_SIZE = 8 * INPUT_WORD_SIZE;
+
+  // Keep reset synchronization stages distinct from unrelated constant-after-reset
+  // functional registers (for example the host datatable write controls).
+  (* ASYNC_REG = "TRUE", preserve, dont_merge, altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED" *)
+  reg [1:0] source_release = 0, memory_release = 0;
+  generate if (SAFE_RESPONSE_HANDSHAKE) begin : safe_release
+    always @(posedge clk_74a or negedge reset_n)
+      if (!reset_n) source_release <= 0;
+      else source_release <= {source_release[0], 1'b1};
+    always @(posedge clk_memory or negedge reset_n)
+      if (!reset_n) memory_release <= 0;
+      else memory_release <= {memory_release[0], 1'b1};
+  end endgenerate
+  wire source_reset_n = SAFE_RESPONSE_HANDSHAKE ? source_release[1] : 1'b1;
+  wire memory_reset_n = SAFE_RESPONSE_HANDSHAKE ? memory_release[1] : 1'b1;
+  wire fifo_clear = SAFE_RESPONSE_HANDSHAKE ? !reset_n : 1'b0;
 
   // APF address to memory FIFO
   reg [27:0] fifo_address_in = 0;
@@ -68,9 +87,9 @@ module data_unloader #(
       .wrclk(clk_74a),
       .wrreq(address_write_req),
       .q(fifo_address_out),
-      .rdempty(address_empty)
+      .rdempty(address_empty),
       // .wrempty(),
-      // .aclr(),
+      .aclr(fifo_clear)
       // .eccstatus(),
       // .rdfull(),
       // .rdusedw(),
@@ -83,7 +102,9 @@ module data_unloader #(
       fifo_address_req.lpm_width = 28, fifo_address_req.lpm_widthu = 2,
       fifo_address_req.overflow_checking = "OFF", fifo_address_req.rdsync_delaypipe = 5,
       fifo_address_req.underflow_checking = "OFF", fifo_address_req.use_eab = "OFF",
-      fifo_address_req.wrsync_delaypipe = 5;
+      fifo_address_req.wrsync_delaypipe = 5,
+      fifo_address_req.read_aclr_synch = SAFE_RESPONSE_HANDSHAKE ? "ON" : "OFF",
+      fifo_address_req.write_aclr_synch = SAFE_RESPONSE_HANDSHAKE ? "ON" : "OFF";
 
   // Memory output to APF FIFO
   reg [WORD_SIZE - 1:0] fifo_data_in = 0;
@@ -100,9 +121,9 @@ module data_unloader #(
       .wrclk(clk_memory),
       .wrreq(data_write_req),
       .q(fifo_data_out),
-      .rdempty(data_empty)
+      .rdempty(data_empty),
       // .wrempty(),
-      // .aclr(),
+      .aclr(fifo_clear)
       // .eccstatus(),
       // .rdfull(),
       // .rdusedw(),
@@ -115,11 +136,14 @@ module data_unloader #(
       fifo_data_response.lpm_width = WORD_SIZE, fifo_data_response.lpm_widthu = 2,
       fifo_data_response.overflow_checking = "OFF", fifo_data_response.rdsync_delaypipe = 5,
       fifo_data_response.underflow_checking = "OFF", fifo_data_response.use_eab = "OFF",
-      fifo_data_response.wrsync_delaypipe = 5;
+      fifo_data_response.wrsync_delaypipe = 5,
+      fifo_data_response.read_aclr_synch = SAFE_RESPONSE_HANDSHAKE ? "ON" : "OFF",
+      fifo_data_response.write_aclr_synch = SAFE_RESPONSE_HANDSHAKE ? "ON" : "OFF";
 
   /// APF side
 
   reg prev_bridge_rd = 0;
+  reg source_armed = 0;
   reg [2:0] addr_count = 0;
   reg [2:0] addr_state = 0;
 
@@ -127,40 +151,50 @@ module data_unloader #(
   localparam ADDR_REQ = 2;
 
   // Receive APF read addresses and buffer them into the memory clock domain
-  always @(posedge clk_74a) begin
-    prev_bridge_rd <= bridge_rd;
-
-    if (~prev_bridge_rd && bridge_rd && bridge_addr[31:28] == ADDRESS_MASK_UPPER_4) begin
-      // Beginning APF read from core
-      addr_state <= ADDR_REQ;
-      address_write_req <= 1;
+  always @(posedge clk_74a or negedge source_reset_n) begin
+    if (!source_reset_n) begin
+      prev_bridge_rd <= 0;
+      source_armed <= 0;
       addr_count <= 0;
+      addr_state <= 0;
+      address_write_req <= 0;
+      fifo_address_in <= 0;
+    end else begin
+      prev_bridge_rd <= bridge_rd;
+      if (!bridge_rd) source_armed <= 1;
 
-      fifo_address_in <= bridge_addr[27:0];
-    end
-
-    case (addr_state)
-      ADDR_START: begin
-        address_write_req <= 1;
-
+      if ((!SAFE_RESPONSE_HANDSHAKE || source_armed) && ~prev_bridge_rd && bridge_rd && bridge_addr[31:28] == ADDRESS_MASK_UPPER_4) begin
+        // Beginning APF read from core
         addr_state <= ADDR_REQ;
+        address_write_req <= 1;
+        addr_count <= 0;
+
+        fifo_address_in <= bridge_addr[27:0];
       end
-      ADDR_REQ: begin
-        address_write_req <= 0;
 
-        fifo_address_in <= fifo_address_in + INPUT_WORD_SIZE;
+      case (addr_state)
+        ADDR_START: begin
+          address_write_req <= 1;
 
-        addr_count <= addr_count + 1;
-
-        if (addr_count == (4 / INPUT_WORD_SIZE) - 1) begin
-          // Finished write
-          addr_count <= 0;
-          addr_state <= 0;
-        end else begin
-          addr_state <= ADDR_START;
+          addr_state <= ADDR_REQ;
         end
-      end
-    endcase
+        ADDR_REQ: begin
+          address_write_req <= 0;
+
+          fifo_address_in <= fifo_address_in + INPUT_WORD_SIZE;
+
+          addr_count <= addr_count + 1;
+
+          if (addr_count == (4 / INPUT_WORD_SIZE) - 1) begin
+            // Finished write
+            addr_count <= 0;
+            addr_state <= 0;
+          end else begin
+            addr_state <= ADDR_START;
+          end
+        end
+      endcase
+    end
   end
 
   reg [2:0] data_send_state = 0;
@@ -171,44 +205,62 @@ module data_unloader #(
 
   localparam READ_DATA_DELAY = 1;
   localparam READ_DATA_WRITE = 2;
+  localparam READ_DATA_WAIT_NEXT = 3;
 
   // Receive data from memory and write to APF bridge
-  always @(posedge clk_74a) begin
-    if (data_send_state != 0) begin
-      data_send_state <= data_send_state + 1;
-    end else if (~data_empty) begin
-      // Start data read
-      data_send_state <= READ_DATA_DELAY;
-      data_read_req   <= 1;
+  always @(posedge clk_74a or negedge source_reset_n) begin
+    if (!source_reset_n) begin
+      data_send_state <= 0;
+      apf_data_count <= 0;
+      apf_bridge_write_data <= 0;
+      data_read_req <= 0;
+      bridge_rd_data <= 0;
+    end else begin
+      if (data_send_state != 0) begin
+        data_send_state <= data_send_state + 1;
+      end else if (~data_empty) begin
+        // Start data read
+        data_send_state <= READ_DATA_DELAY;
+        data_read_req   <= 1;
 
-      apf_data_count  <= 0;
-    end
-
-    case (data_send_state)
-      READ_DATA_DELAY: begin
-        data_read_req <= 0;
-
-        // Shift current APF data
-        apf_bridge_write_data <= apf_bridge_write_data >> WORD_SIZE;
+        apf_data_count  <= 0;
       end
-      READ_DATA_WRITE: begin
-        // Data from memory is available
-        if (apf_data_count == (4 / INPUT_WORD_SIZE) - 1) begin
-          // We have all of the data we need, send to APF
-          bridge_rd_data  <= bridge_endian_little ? apf_final_data :
-            {apf_final_data[7:0], apf_final_data[15:8], apf_final_data[23:16], apf_final_data[31:24]};
 
-          data_send_state <= 0;
-        end else begin
-          apf_bridge_write_data <= apf_final_data;
+      case (data_send_state)
+        READ_DATA_DELAY: begin
+          data_read_req <= 0;
 
-          data_read_req <= 1;
-          data_send_state <= READ_DATA_DELAY;
-
-          apf_data_count <= apf_data_count + 1;
+          // Shift current APF data
+          apf_bridge_write_data <= apf_bridge_write_data >> WORD_SIZE;
         end
-      end
-    endcase
+        READ_DATA_WRITE: begin
+          // Data from memory is available
+          if (apf_data_count == (4 / INPUT_WORD_SIZE) - 1) begin
+            // We have all of the data we need, send to APF
+            bridge_rd_data  <= bridge_endian_little ? apf_final_data :
+              {apf_final_data[7:0], apf_final_data[15:8], apf_final_data[23:16], apf_final_data[31:24]};
+
+            data_send_state <= 0;
+          end else begin
+            apf_bridge_write_data <= apf_final_data;
+
+            // The next memory beat may still be in the other clock domain.
+            // Never consume an empty FIFO merely because the first beat arrived.
+            data_read_req <= SAFE_RESPONSE_HANDSHAKE ? 1'b0 : 1'b1;
+            data_send_state <= SAFE_RESPONSE_HANDSHAKE ? READ_DATA_WAIT_NEXT : READ_DATA_DELAY;
+
+            apf_data_count <= apf_data_count + 1;
+          end
+        end
+        READ_DATA_WAIT_NEXT: begin
+          data_send_state <= READ_DATA_WAIT_NEXT;
+          if (!data_empty) begin
+            data_read_req <= 1;
+            data_send_state <= READ_DATA_DELAY;
+          end
+        end
+      endcase
+    end
   end
 
   /// Mem side
@@ -220,38 +272,47 @@ module data_unloader #(
   localparam READ_MEM_COMPLETE = READ_MEM_START + READ_MEM_CLOCK_DELAY;
   localparam READ_ADDRESS_END = READ_MEM_COMPLETE + 1;
 
-  always @(posedge clk_memory) begin
-    if (data_read_state != 0) begin
-      data_read_state <= data_read_state + 1;
-    end else if (~address_empty) begin
-      // Start address read
-      data_read_state  <= READ_ADDRESS_DELAY;
-      address_read_req <= 1;
+  always @(posedge clk_memory or negedge memory_reset_n) begin
+    if (!memory_reset_n) begin
+      data_read_state <= 0;
+      address_read_req <= 0;
+      data_write_req <= 0;
+      fifo_data_in <= 0;
+      read_en <= 0;
+      read_addr <= 0;
+    end else begin
+      if (data_read_state != 0) begin
+        data_read_state <= data_read_state + 1;
+      end else if (~address_empty) begin
+        // Start address read
+        data_read_state  <= READ_ADDRESS_DELAY;
+        address_read_req <= 1;
+      end
+
+      case (data_read_state)
+        READ_ADDRESS_DELAY: begin
+          address_read_req <= 0;
+        end
+        READ_MEM_START: begin
+          // Address read data is available
+          read_en   <= 1;
+
+          read_addr <= fifo_address_out[ADDRESS_SIZE-1:0];
+        end
+        READ_MEM_COMPLETE: begin
+          // We have data to send to APF
+          read_en <= 0;
+
+          data_write_req <= 1;
+          fifo_data_in <= read_data;
+        end
+        READ_ADDRESS_END: begin
+          data_write_req  <= 0;
+
+          data_read_state <= 0;
+        end
+      endcase
     end
-
-    case (data_read_state)
-      READ_ADDRESS_DELAY: begin
-        address_read_req <= 0;
-      end
-      READ_MEM_START: begin
-        // Address read data is available
-        read_en   <= 1;
-
-        read_addr <= fifo_address_out[ADDRESS_SIZE-1:0];
-      end
-      READ_MEM_COMPLETE: begin
-        // We have data to send to APF
-        read_en <= 0;
-
-        data_write_req <= 1;
-        fifo_data_in <= read_data;
-      end
-      READ_ADDRESS_END: begin
-        data_write_req  <= 0;
-
-        data_read_state <= 0;
-      end
-    endcase
   end
 
 endmodule

@@ -5,6 +5,7 @@ use IEEE.NUMERIC_STD.ALL;
 library work;
 
 entity DATAPAK is
+	generic (MEM_TRANSACTIONAL : boolean := false);
 	port(
 		CLK			: in std_logic;
 		RST_N			: in std_logic;
@@ -23,7 +24,14 @@ entity DATAPAK is
 		MEM_DI		: in std_logic_vector(7 downto 0);
 		MEM_DO		: out std_logic_vector(7 downto 0);
 		MEM_RD		: out std_logic;
-		MEM_WR		: out std_logic
+		MEM_WR		: out std_logic;
+        -- A matched internal read/write completion, held until this owner retires.
+        MEM_READY : in std_logic := '1';
+        SNES_DATA : in std_logic_vector(7 downto 0) := (others => '0');
+        READ_USES_MEMORY : out std_logic := '1';
+        WRITE_CREDIT : out std_logic := '1';
+        DP_CREDIT_DATA : in std_logic_vector(7 downto 0) := (others=>'0');
+        WRITE_BUSY : out std_logic := '0'
 	);
 end DATAPAK;
 
@@ -68,7 +76,8 @@ begin
 			if ENABLE = '1' then
 				if CE_N = '0' and WR_N = '0' and SYSCLKF_CE = '1' then 
 					if BYTE_WRITE = '1' then		--Data write
-						if WRITE_PEND = '0' then
+						if WRITE_PEND = '0' and (not MEM_TRANSACTIONAL or
+                            (PAGE_ERASE_PEND = '0' and CHIP_ERASE_PEND = '0')) then
 							WRITE_ADDR <= A;
 							WRITE_DATA <= DI;
 							WRITE_PEND <= '1';
@@ -92,13 +101,15 @@ begin
 							when x"D0" =>				--Double Byte Commands 
 								case PREV_COM is
 									when x"20" =>		--Page erase 
-										if PAGE_ERASE_PEND = '0' then
+										if PAGE_ERASE_PEND = '0' and (not MEM_TRANSACTIONAL or
+                                            (WRITE_PEND = '0' and CHIP_ERASE_PEND = '0')) then
 											WRITE_ADDR <= A(19 downto 16)&x"0000";
 											WRITE_DATA <= x"FF";
 											PAGE_ERASE_PEND <= '1';
 										end if;
 									when x"A7" =>		--Chip erase 
-										if CHIP_ERASE_PEND = '0' then
+										if CHIP_ERASE_PEND = '0' and (not MEM_TRANSACTIONAL or
+                                            (WRITE_PEND = '0' and PAGE_ERASE_PEND = '0')) then
 											WRITE_ADDR <= (others => '0');
 											WRITE_DATA <= x"FF";
 											CHIP_ERASE_PEND <= '1';
@@ -116,11 +127,15 @@ begin
 					end if;
 				end if;
 				
-				if SYSCLKR_CE = '1' then
+				if SYSCLKR_CE = '1' and not MEM_TRANSACTIONAL then
 					READ_DATA <= MEM_DI;
 				end if;
 				
-				if SYSCLKF_CE = '1' then
+                -- Internal flash progress cannot depend on the SCPU falling
+                -- phase: a CPU write waiting for credit must not stop an erase.
+                -- Legacy mode retains the original phase-qualified behavior.
+                if (not MEM_TRANSACTIONAL and SYSCLKF_CE = '1') or
+                   (MEM_TRANSACTIONAL and (FS = FS_IDLE or MEM_READY = '1')) then
 					case FS is
 						when FS_IDLE =>
 							if WRITE_PEND = '1' then
@@ -130,7 +145,11 @@ begin
 							end if;
 							
 						when FS_READ =>
-							WRITE_DATA <= WRITE_DATA and READ_DATA;
+                            if MEM_TRANSACTIONAL then
+                                WRITE_DATA <= WRITE_DATA and MEM_DI;
+                            else
+                                WRITE_DATA <= WRITE_DATA and READ_DATA;
+                            end if;
 							FS <= FS_WRITE;
 							
 						when FS_WRITE =>
@@ -152,6 +171,16 @@ begin
 		end if;
 	end process;
 	
+    READ_USES_MEMORY <= '0' when
+        (ESR = '1' and (A(15 downto 0) = x"0002" or A(15 downto 0) = x"0004")) or
+        CSR = '1' or (VEN = '1' and A(14 downto 8) = "1111111") else '1';
+    -- Only a data byte requires a free programming slot. Status/control
+    -- commands remain accessible while the independent erase owner waits.
+    WRITE_BUSY <= WRITE_PEND or PAGE_ERASE_PEND or CHIP_ERASE_PEND;
+    WRITE_CREDIT <= '0' when MEM_TRANSACTIONAL and
+        (BYTE_WRITE = '1' or (DP_CREDIT_DATA = x"D0" and (PREV_COM = x"20" or PREV_COM = x"A7"))) and
+        (WRITE_PEND = '1' or PAGE_ERASE_PEND = '1' or CHIP_ERASE_PEND = '1') else '1';
+
 	MEM_ADDR <= WRITE_ADDR;
 	MEM_DO <= WRITE_DATA;
 	MEM_RD <= '1' when FS = FS_READ else '0';
@@ -182,7 +211,8 @@ begin
 					when others =>DO <= x"00";
 				end case;
 			else
-				DO <= MEM_DI;
+                if MEM_TRANSACTIONAL then DO <= SNES_DATA;
+                else DO <= MEM_DI; end if;
 			end if;
 		end if;
 	end process;

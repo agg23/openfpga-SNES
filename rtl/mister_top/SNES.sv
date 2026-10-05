@@ -1,6 +1,8 @@
 module MAIN_SNES (
     input wire clk_mem_85_9,
     input wire clk_sys_21_48,
+    input wire clk_sdram,
+    input wire pll_locked,
 
     input wire core_reset,
 
@@ -77,6 +79,11 @@ module MAIN_SNES (
     // ROM loading
     input wire ioctl_download,
     input wire ioctl_wr,
+    input wire ioctl_valid,
+    input wire ioctl_image_complete,
+    input wire ioctl_image_begin,
+    input wire ioctl_fault,
+    output wire ioctl_ready,
     input wire [24:0] ioctl_addr,
     input wire [15:0] ioctl_dout,
 
@@ -87,6 +94,10 @@ module MAIN_SNES (
 
     // Saves
     input wire save_download,
+    input wire save_busy,
+    input wire [16:0] save_write_addr,
+    output wire save_write_ready,
+    output wire save_backup_ready,
     input wire sd_rd,
     input wire sd_wr,
     input wire [16:0] sd_buff_addr,
@@ -139,14 +150,33 @@ module MAIN_SNES (
     output wire vsync,
     output wire hsync,
 
-    output wire [7:0] video_r,
-    output wire [7:0] video_g,
-    output wire [7:0] video_b,
+    output reg [7:0] video_r,
+    output reg [7:0] video_g,
+    output reg [7:0] video_b,
+
+    // Pocket MSU transport; all synchronous to clk_sys_21_48.
+    input wire msu_enable,
+    output wire msu_soft_reset,
+    output wire [15:0] msu_track_num,
+    output wire msu_track_request, msu_track_update,
+    input wire msu_track_mounting, msu_track_missing,
+    output wire [7:0] msu_volume,
+    output wire msu_audio_repeat, msu_audio_playing, msu_audio_resume,
+    input wire msu_audio_stop,
+    input wire [21:0] msu_audio_sector,
+    input wire [31:0] msu_audio_loop_index,
+    output wire [21:0] msu_resume_sector,
+    output wire [31:0] msu_resume_loop_index,
+    output wire [31:0] msu_data_addr,
+    input wire [7:0] msu_data,
+    input wire msu_data_ack, msu_data_busy,
+    output wire msu_data_seek, msu_data_req,
 
     // Audio
     output wire [15:0] audio_l,
     output wire [15:0] audio_r
 );
+  parameter USE_STANDARD_SDRAM = 1'b0;
   parameter USE_CX4 = 1'b0;
   parameter USE_SDD1 = 1'b0;
   parameter USE_GSU = 1'b0;
@@ -181,7 +211,7 @@ module MAIN_SNES (
   wire joy_swap = swap_controllers | status[7] | piano;
 
   wire [6:0] USER_IN = 0;
-  wire [6:0] USER_OUT;
+  logic [6:0] USER_OUT;
 
   reg [128:0] gg_code = 0;
   wire gg_available;
@@ -317,7 +347,18 @@ module MAIN_SNES (
   wire [7:0] G;
   wire [7:0] B;
 
+  wire mem_flush,mem_flush_ack,mem_fault,standard_run_ready,standard_fault;
+  wire standard_host_quiescent;
+  wire [7:0] mem_epoch;
+  wire mem_req_valid,mem_req_ready,mem_req_write,mem_req_drain,mem_rsp_valid,mem_rsp_ready,mem_rsp_error,mem_rsp_write;
+  wire [23:0] mem_req_addr;
+  wire [15:0] mem_req_wdata,mem_rsp_data;
+  wire [1:0] mem_req_wstrb;
+  wire [4:0] mem_req_owner,mem_rsp_owner;
+  wire [7:0] mem_req_tag,mem_req_epoch,mem_rsp_tag,mem_rsp_epoch;
+
   main #(
+      .USE_STANDARD_SDRAM(USE_STANDARD_SDRAM),
       .USE_CX4(USE_CX4),
       .USE_SDD1(USE_SDD1),
       .USE_GSU(USE_GSU),
@@ -329,7 +370,15 @@ module MAIN_SNES (
       .USE_SS(USE_SS),
       .USE_SUFAMI(USE_SUFAMI)
   ) main (
-      .RESET_N(RESET_N),
+      .RESET_N(USE_STANDARD_SDRAM ? (RESET_N && standard_run_ready && !reset) : RESET_N),
+      .MEM_HARD_RESET_N(pll_locked),.MEM_FLUSH(mem_flush),.MEM_FLUSH_ACK(mem_flush_ack),
+      .MEM_EPOCH(mem_epoch),.MEM_FAULT(mem_fault),
+      .MEM_REQ_VALID(mem_req_valid),.MEM_REQ_READY(mem_req_ready),.MEM_REQ_ADDR(mem_req_addr),
+      .MEM_REQ_WRITE(mem_req_write),.MEM_REQ_DRAIN(mem_req_drain),.MEM_REQ_WDATA(mem_req_wdata),.MEM_REQ_WSTRB(mem_req_wstrb),
+      .MEM_REQ_OWNER(mem_req_owner),.MEM_REQ_TAG(mem_req_tag),.MEM_REQ_EPOCH(mem_req_epoch),
+      .MEM_RSP_VALID(mem_rsp_valid),.MEM_RSP_READY(mem_rsp_ready),.MEM_RSP_DATA(mem_rsp_data),
+      .MEM_RSP_ERROR(mem_rsp_error),.MEM_RSP_WRITE(mem_rsp_write),.MEM_RSP_OWNER(mem_rsp_owner),
+      .MEM_RSP_TAG(mem_rsp_tag),.MEM_RSP_EPOCH(mem_rsp_epoch),
 
       .MCLK(clk_sys),  // 21.47727 / 21.28137
       .ACLK(clk_sys),
@@ -429,20 +478,24 @@ module MAIN_SNES (
 `endif
 
       // MSU register handling
-      // .MSU_TRACK_NUM(msu_track_num),
-      // .MSU_TRACK_REQUEST(msu_track_request),
-      // .MSU_TRACK_MOUNTING(msu_track_mounting),
-      // .MSU_TRACK_MISSING(msu_track_missing),
-      // .MSU_VOLUME(msu_volume),
-      // .MSU_AUDIO_REPEAT(msu_audio_repeat),
-      // .MSU_AUDIO_STOP(msu_audio_stop),
-      // .MSU_AUDIO_PLAYING(msu_audio_playing),
-      // .MSU_DATA_ADDR(msu_data_addr),
-      // .MSU_DATA(msu_data),
-      // .MSU_DATA_ACK(msu_data_ack),
-      // .MSU_DATA_SEEK(msu_data_seek),
-      // .MSU_DATA_REQ(msu_data_req),
-      .MSU_ENABLE(0),  // TODO
+       .MSU_TRACK_NUM(msu_track_num),
+       .MSU_TRACK_REQUEST(msu_track_request),
+      .MSU_TRACK_UPDATE(msu_track_update),
+       .MSU_TRACK_MOUNTING(msu_track_mounting),
+       .MSU_TRACK_MISSING(msu_track_missing),
+       .MSU_VOLUME(msu_volume),
+       .MSU_AUDIO_REPEAT(msu_audio_repeat),
+       .MSU_AUDIO_STOP(msu_audio_stop),
+       .MSU_AUDIO_PLAYING(msu_audio_playing),
+       .MSU_DATA_ADDR(msu_data_addr),
+       .MSU_DATA(msu_data),
+       .MSU_DATA_ACK(msu_data_ack),
+       .MSU_DATA_SEEK(msu_data_seek),
+       .MSU_DATA_REQ(msu_data_req),
+      .MSU_ENABLE(msu_enable),
+      .MSU_DATA_BUSY(msu_data_busy),
+      .MSU_AUDIO_LOOP_INDEX(msu_audio_loop_index),
+      .MSU_RESUME_LOOP_INDEX(msu_resume_loop_index),
 
       .AUDIO_L(audio_l),
       .AUDIO_R(audio_r),
@@ -453,7 +506,7 @@ module MAIN_SNES (
       .SUFAMI_SWAP(1'b0),
       .CC_DIP(8'b0),
       .DSP_FREQ(1'b0),
-      .MSU_AUDIO_SECTOR(22'b0),
+      .MSU_AUDIO_SECTOR(msu_audio_sector),
       .SS_SAVE(1'b0),
       .SS_TOSD(1'b0),
       .SS_LOAD(1'b0),
@@ -467,8 +520,8 @@ module MAIN_SNES (
       .REFRESH(),
       .V224_MODE(),
       .SNI_JOY(),
-      .MSU_AUDIO_RESUME(),
-      .MSU_RESUME_SECTOR(),
+      .MSU_AUDIO_RESUME(msu_audio_resume),
+      .MSU_RESUME_SECTOR(msu_resume_sector),
       .SS_AVAIL(),
       .SS_DDR_DO(),
       .SS_DDR_ADDR(),
@@ -477,9 +530,12 @@ module MAIN_SNES (
       .SS_DDR_REQ()
   );
 
-  wire reset = core_reset | cart_download | spc_download | bk_loading | clearing_ram | msu_data_download | parser_delay != 0;
+  wire reset = core_reset | cart_download | spc_download | bk_loading | ram_clear_busy | msu_data_download |
+               (USE_STANDARD_SDRAM && save_busy) |
+               (parser_delay != 0) | (USE_STANDARD_SDRAM && !standard_run_ready);
 
   reg RESET_N = 0;
+  assign msu_soft_reset = ~RESET_N;
   reg RFSH = 0;
   always @(posedge clk_sys) begin
     reg [1:0] div;
@@ -498,23 +554,46 @@ module MAIN_SNES (
 
   ////////////////////////////  MEMORY  ///////////////////////////////////
 
-  reg [16:0] mem_fill_addr;
-  // Slowed down for PSRAM
-  reg [1:0] clear_div = 0;
-  reg clearing_ram = 0;
-  always @(posedge clk_sys) begin
-    if (~old_downloading & cart_download) clearing_ram <= 1'b1;
-
-    if (&mem_fill_addr) clearing_ram <= 0;
-
-    clear_div <= clear_div + 1;
-
-    if (clearing_ram) begin
-      if (clear_div == 0) begin
-        mem_fill_addr <= mem_fill_addr + 1'b1;
-      end
-    end else mem_fill_addr <= 0;
-  end
+  wire [16:0] mem_fill_addr;
+  wire clearing_ram, ram_clear_busy;
+  wire wram_psram_busy, aram_psram_busy;
+  wire block_ram_clients = USE_STANDARD_SDRAM && ram_clear_busy;
+  generate if (USE_STANDARD_SDRAM) begin : standard_ram_clear
+    wire frontier_credit;
+    ram_clear_frontier #(.BSRAM_BITS(BSRAM_BITS)) clear_frontier(
+        .clk_sys(clk_sys), .hard_reset_n(pll_locked),
+        .image_begin(ioctl_image_begin),
+        .quiescent(standard_host_quiescent && !wram_psram_busy && !aram_psram_busy),
+        .save_byte_addr(save_write_addr),
+        .active(clearing_ram), .busy(ram_clear_busy), .clear_addr(mem_fill_addr), .save_credit(frontier_credit)
+    );
+    // Independent address input: sd_buff_addr is selected by the actual sd_wr
+    // pulse and must never feed back into the credit that creates that pulse.
+    assign save_write_ready = frontier_credit && standard_host_quiescent &&
+                              !ioctl_image_begin && !ioctl_fault && !sd_rd;
+    // The queue holds an ordered read fence while this physical barrier closes.
+    // It does not ask for FIFO empty, which would deadlock on the fence itself.
+    assign save_backup_ready = standard_host_quiescent && !ram_clear_busy &&
+                               !wram_psram_busy && !aram_psram_busy &&
+                               !ioctl_image_begin && !ioctl_fault && !sd_rd;
+  end else begin : legacy_ram_clear
+    reg [16:0] legacy_fill_addr;
+    reg [1:0] clear_div = 0;
+    reg legacy_clearing = 0;
+    assign mem_fill_addr = legacy_fill_addr;
+    assign clearing_ram = legacy_clearing;
+    assign ram_clear_busy = legacy_clearing;
+    assign save_write_ready = 1'b1;
+    assign save_backup_ready = 1'b1;
+    always @(posedge clk_sys) begin
+      if (~old_downloading & cart_download) legacy_clearing <= 1'b1;
+      if (&legacy_fill_addr) legacy_clearing <= 0;
+      clear_div <= clear_div + 1;
+      if (legacy_clearing) begin
+        if (clear_div == 0) legacy_fill_addr <= legacy_fill_addr + 1'b1;
+      end else legacy_fill_addr <= 0;
+    end
+  end endgenerate
 
   reg [7:0] wram_fill_data;
   always @* begin
@@ -543,6 +622,41 @@ module MAIN_SNES (
   wire [15:0] ROM_D;
   wire [15:0] ROM_Q;
 
+  generate if(USE_STANDARD_SDRAM) begin: g_standard_sdram
+    wire [15:0] dq_out;
+    wire dq_oe;
+    wire dram_cs_unused;
+    assign dram_dq=dq_oe ? dq_out : 16'hzzzz;
+    // Each mapper consumes its own retained tagged result in this profile.
+    assign ROM_Q=16'b0;
+    sdram_cart_port cart_memory(
+      .clk_sys(clk_sys),.clk_sdram(clk_sdram),.hard_reset_n(1'b1),.pll_locked(pll_locked),
+      .soft_reset(core_reset || save_busy || ram_clear_busy),.download_active(cart_download),.download_complete(ioctl_image_complete),
+      .download_fault(ioctl_fault),
+      .download_valid(ioctl_valid),.download_ready(ioctl_ready),
+      .download_addr(ioctl_addr),.download_data(ioctl_dout),
+      .client_flush(mem_flush),.client_flush_ack(mem_flush_ack),.client_fault(mem_fault),
+      .epoch(mem_epoch),.run_ready(standard_run_ready),.host_quiescent(standard_host_quiescent),.fault(standard_fault),
+      .req_valid(mem_req_valid),.req_ready(mem_req_ready),.req_addr(mem_req_addr),.req_channel(1'b0),
+      .req_write(mem_req_write),.req_drain(mem_req_drain),.req_wdata(mem_req_wdata),.req_wstrb(mem_req_wstrb),
+      .req_owner(mem_req_owner),.req_tag(mem_req_tag),.req_epoch(mem_req_epoch),
+      .rsp_valid(mem_rsp_valid),.rsp_ready(mem_rsp_ready),.rsp_data(mem_rsp_data),
+      .rsp_error(mem_rsp_error),.rsp_write(mem_rsp_write),.rsp_owner(mem_rsp_owner),.rsp_tag(mem_rsp_tag),.rsp_epoch(mem_rsp_epoch),
+      .dram_cke(dram_cke),.dram_cs_n(dram_cs_unused),.dram_ras_n(dram_ras_n),
+      .dram_cas_n(dram_cas_n),.dram_we_n(dram_we_n),.dram_addr(dram_a),
+      .dram_ba(dram_ba),.dram_dqm(dram_dqm),.dq_in(dram_dq),.dq_out(dq_out),.dq_oe(dq_oe));
+    altddio_out #(
+      .extend_oe_disable("OFF"),.intended_device_family("Cyclone V"),.invert_output("OFF"),
+      .lpm_hint("UNUSED"),.lpm_type("altddio_out"),.oe_reg("UNREGISTERED"),
+      .power_up_high("OFF"),.width(1)) sdramclk_ddr(
+      .datain_h(1'b0),.datain_l(1'b1),.outclock(clk_sdram),.dataout(dram_clk),
+      .aclr(1'b0),.aset(1'b0),.oe(1'b1),.outclocken(1'b1),.sclr(1'b0),.sset(1'b0));
+  end else begin: g_legacy_sdram
+    assign ioctl_ready=1'b1;
+    assign standard_run_ready=1'b1;assign standard_fault=1'b0;assign standard_host_quiescent=1'b1;
+    assign mem_flush=1'b0;assign mem_epoch=0;assign mem_req_ready=1'b0;
+    assign mem_rsp_valid=1'b0;assign mem_rsp_data=0;assign mem_rsp_error=1'b0;assign mem_rsp_write=1'b0;
+    assign mem_rsp_owner=0;assign mem_rsp_tag=0;assign mem_rsp_epoch=0;
   sdram sdram (
       .init(0),  //~clock_locked),
       .clk(clk_mem),
@@ -584,6 +698,7 @@ module MAIN_SNES (
       .SDRAM_CLK(dram_clk),
       .SDRAM_CKE(dram_cke)
   );
+  end endgenerate
 
   wire [16:0] WRAM_ADDR;
   wire        WRAM_CE_N;
@@ -591,13 +706,32 @@ module MAIN_SNES (
   wire        WRAM_WE_N;
   wire [7:0] WRAM_Q, WRAM_D;
 
-  wire [16:0] psram_wram_addr = clearing_ram ? mem_fill_addr[16:0] : WRAM_ADDR;
+  wire wram_stage_write;
+  wire [16:0] wram_stage_addr;
+  wire [7:0] wram_stage_data;
+  wram_write_stage wram_stage(
+      .clk_sys(clk_sys), .write_en(~WRAM_CE_N & ~WRAM_WE_N),
+      .address(WRAM_ADDR), .data(WRAM_D),
+      .memory_write(wram_stage_write), .memory_address(wram_stage_addr),
+      .memory_data(wram_stage_data)
+  );
+  wire wram_write = USE_STANDARD_SDRAM ? wram_stage_write : ~WRAM_CE_N & ~WRAM_WE_N;
+  wire [7:0] wram_byte = USE_STANDARD_SDRAM ? wram_stage_data : WRAM_D;
+  wire [16:0] wram_addr = USE_STANDARD_SDRAM ? wram_stage_addr : WRAM_ADDR;
+  wire [16:0] psram_wram_addr = clearing_ram ? mem_fill_addr[16:0] : wram_addr;
   wire [15:0] wram_data_in = clearing_ram ? {wram_fill_data, wram_fill_data} : // TODO: This isn't correct
   // Data either goes in high or low byte
-  psram_wram_addr[0] ? {WRAM_D, 8'h0} : {8'h0, WRAM_D};
+  psram_wram_addr[0] ? {wram_byte, 8'h0} : {8'h0, wram_byte};
   wire [15:0] wram_data_out;
 
-  assign WRAM_Q = psram_wram_addr[0] ? wram_data_out[15:8] : wram_data_out[7:0];
+  generate if (USE_STANDARD_SDRAM) begin : standard_wram_return
+    wram_read_stage wram_return(
+        .clk_sys(clk_sys), .memory_data(wram_data_out),
+        .byte_lane(psram_wram_addr[0]), .data(WRAM_Q)
+    );
+  end else begin : legacy_wram_return
+    assign WRAM_Q = psram_wram_addr[0] ? wram_data_out[15:8] : wram_data_out[7:0];
+  end endgenerate
 
   psram #(
       .CLOCK_SPEED(85.9)
@@ -608,13 +742,14 @@ module MAIN_SNES (
       // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
       .addr(psram_wram_addr[16:1]),
 
-      .write_en(clearing_ram ? 1'b1 : ~WRAM_CE_N & ~WRAM_WE_N),
+      .write_en(clearing_ram ? 1'b1 : block_ram_clients ? 1'b0 : wram_write),
       .data_in(wram_data_in),
       .write_high_byte(psram_wram_addr[0]),
       .write_low_byte(~psram_wram_addr[0]),
 
-      .read_en (clearing_ram ? 1'b0 : ~WRAM_CE_N & ~WRAM_OE_N),
+      .read_en (clearing_ram || block_ram_clients ? 1'b0 : ~WRAM_CE_N & ~WRAM_OE_N),
       .data_out(wram_data_out),
+      .busy(wram_psram_busy),
 
       // Actual PSRAM interface
       .cram_a(cram0_a),
@@ -638,7 +773,7 @@ module MAIN_SNES (
       .clock(clk_sys),
       .address_a(VRAM1_ADDR[14:0]),
       .data_a(VRAM1_D),
-      .wren_a(~VRAM1_WE_N),
+      .wren_a(~VRAM1_WE_N && !block_ram_clients),
       .q_a(VRAM1_Q),
 
       // clear the RAM on loading
@@ -653,7 +788,7 @@ module MAIN_SNES (
       .clock(clk_sys),
       .address_a(VRAM2_ADDR[14:0]),
       .data_a(VRAM2_D),
-      .wren_a(~VRAM2_WE_N),
+      .wren_a(~VRAM2_WE_N && !block_ram_clients),
       .q_a(VRAM2_Q),
 
       // clear the RAM on loading
@@ -685,13 +820,14 @@ module MAIN_SNES (
       // Remove bottom most bit, since this is a 8bit address and the RAM wants a 16bit address
       .addr(psram_aram_addr[15:1]),
 
-      .write_en(clearing_ram ? 1'b1 : ~ARAM_CE_N & ~ARAM_WE_N),
+      .write_en(clearing_ram ? 1'b1 : block_ram_clients ? 1'b0 : ~ARAM_CE_N & ~ARAM_WE_N),
       .data_in(aram_16_data),
       .write_high_byte(psram_aram_addr[0]),
       .write_low_byte(~psram_aram_addr[0]),
 
-      .read_en (~ARAM_CE_N & ~ARAM_OE_N),
+      .read_en (block_ram_clients ? 1'b0 : ~ARAM_CE_N & ~ARAM_OE_N),
       .data_out(aram_16_out),
+      .busy(aram_psram_busy),
 
       // Actual PSRAM interface
       .cram_a(cram1_a),
@@ -720,7 +856,7 @@ module MAIN_SNES (
       //Thrash the BSRAM upon ROM loading
       .address_a(clearing_ram ? mem_fill_addr[BSRAM_BITS-1:0] : BSRAM_ADDR[BSRAM_BITS-1:0]),
       .data_a(clearing_ram ? 8'hFF : BSRAM_D),
-      .wren_a(clearing_ram ? 1'b1 : ~BSRAM_CE_N & ~BSRAM_WE_N),
+      .wren_a(clearing_ram ? 1'b1 : block_ram_clients ? 1'b0 : ~BSRAM_CE_N & ~BSRAM_WE_N),
       .q_a(BSRAM_Q),
 
       // .address_b({sd_lba[BSRAM_BITS-10:0],sd_buff_addr}),
@@ -916,17 +1052,17 @@ module MAIN_SNES (
   wire raw_serial = status[8];
   reg                          snac_p2 = 0;
 
-  assign USER_OUT[2] = 1'b1;
-  assign USER_OUT[5] = 1'b1;
-  assign USER_OUT[6] = 1'b1;
+
+
+
 
   wire [1:0] datajoy0_DI = snac_p2 ? {1'b1, USER_IN[6]} : JOY1_DO;
   wire [1:0] datajoy1_DI = snac_p2 ? {USER_IN[2], USER_IN[6]} : JOY2_DO;
 
   // JOYX_DO[0] is P4, JOYX_DO[1] is P5
-  wire [1:0] JOY1_DI;
-  wire [1:0] JOY2_DI;
-  wire JOY2_P6_DI;
+  logic [1:0] JOY1_DI;
+  logic [1:0] JOY2_DI;
+  logic JOY2_P6_DI;
 
   always @(posedge clk_sys) begin
     if (raw_serial) begin
@@ -937,6 +1073,7 @@ module MAIN_SNES (
   end
 
   always_comb begin
+    USER_OUT = 7'h7f;
     if (raw_serial) begin
       USER_OUT[0] = JOY_STRB;
       USER_OUT[1] = joy_swap ? ~JOY2_CLK : ~JOY1_CLK;

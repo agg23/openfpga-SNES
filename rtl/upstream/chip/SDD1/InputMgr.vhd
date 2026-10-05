@@ -4,7 +4,13 @@ use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity InputMgr is
+	generic (ROM_HANDSHAKE : boolean := false);
 	port(
+        ROM_NEED : out std_logic;
+        ROM_READY : in std_logic := '0';
+        ROM_RETIRE : out std_logic;
+        DATA_READY : out std_logic;
+
 		RST_N			: in std_logic;
 		CLK			: in std_logic;
 		ENABLE		: in std_logic;
@@ -42,6 +48,10 @@ architecture rtl of InputMgr is
 	signal WR_POS 	: std_logic_vector(1 downto 0);
 	signal RD_POS 	: std_logic_vector(1 downto 0);
 begin
+    legacy_input: if not ROM_HANDSHAKE generate
+    ROM_NEED <= '0';
+    ROM_RETIRE <= '0';
+    DATA_READY <= '1';
 
 	process( RST_N, CLK)
 		variable READ_REQ  : std_logic;
@@ -144,4 +154,62 @@ begin
 	OUT_DATA <= CURR_DATA;
 	INIT_DONE <= TINIT_DONE;
 
+    end generate;
+
+    -- The queue includes the two-byte decoder window. A pop is legal only
+    -- when a third byte exists; that byte becomes the new low window byte.
+    -- Refill runs on CLK independently of CPU phases and decoder ENABLE.
+    handshake_input: if ROM_HANDSHAKE generate
+        type byte_queue_t is array(0 to 11) of std_logic_vector(7 downto 0);
+        signal bytes : byte_queue_t := (others => (others => '0'));
+        signal count : integer range 0 to 12 := 0;
+        signal address : std_logic_vector(23 downto 0) := (others => '0');
+        signal active, first_word, need : std_logic := '0';
+    begin
+        need <= '1' when active='1' and INIT='0' and count<=10 else '0';
+        ROM_NEED <= need;
+        ROM_RETIRE <= need and ROM_READY;
+        ROM_ADDR <= address;
+        OUT_DATA <= bytes(0) & bytes(1);
+        DATA_READY <= '1' when count>=3 else '0';
+        INIT_DONE <= '1' when active='1' and count>=2 else '0';
+        process(CLK, RST_N)
+            variable q : byte_queue_t;
+            variable n : integer range 0 to 12;
+        begin
+            if RST_N='0' then
+                bytes <= (others => (others => '0'));
+                count <= 0; address <= (others => '0');
+                active <= '0'; first_word <= '1'; HEADER <= (others => '0');
+            elsif rising_edge(CLK) then
+                if INIT='1' and ENABLE='1' then
+                    count <= 0; address <= INIT_ADDR;
+                    active <= '1'; first_word <= '1';
+                else
+                    q := bytes; n := count;
+                    if ENABLE='1' and DATA_REQ='1' then
+                        assert count>=3 report "SDD1 input pop without a replacement byte" severity failure;
+                        if count>=3 then
+                            for i in 0 to 10 loop q(i) := q(i+1); end loop;
+                            n := n-1;
+                        end if;
+                    end if;
+                    if need='1' and ROM_READY='1' then
+                        if first_word='1' and address(0)='1' then
+                            q(n) := ROM_DATA(15 downto 8); n := n+1;
+                            HEADER <= ROM_DATA(15 downto 12);
+                            address <= address+1;
+                        else
+                            q(n) := ROM_DATA(7 downto 0);
+                            q(n+1) := ROM_DATA(15 downto 8); n := n+2;
+                            if first_word='1' then HEADER <= ROM_DATA(7 downto 4); end if;
+                            address <= address+2;
+                        end if;
+                        first_word <= '0';
+                    end if;
+                    bytes <= q; count <= n;
+                end if;
+            end if;
+        end process;
+    end generate;
 end rtl;

@@ -1,0 +1,4 @@
+# Resolve the channel-data ROM independently of the generated project's cwd.
+# The generic uses only its basename; the QIP owns its exact source directory.
+set_global_assignment -name SEARCH_PATH $::quartus(qip_path)
+set_global_assignment -name MIF_FILE [file join $::quartus(qip_path) bsx121-124.mif]
