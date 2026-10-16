@@ -4,13 +4,9 @@ Ported from the original core developed by [srg320](https://github.com/srg320) (
 
 Please report any issues encountered to this repo. Most likely any problems are a result of my port, not the original core. Issues will be upstreamed as necessary.
 
-> [!WARNING]
-> 
-> Savestates/Memories/Sleep not supported
+> [!NOTE]
 >
-> Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
-> 
-> **Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
+> Savestates/Memories/Sleep are supported for regular carts, and the DSP, Super FX (GSU), and SA-1 special chips. CX4, S-DD1, SPC7110, and BSX are not supported. See the Savestates/Memories/Sleep section below.
 
 ## Installation
 
@@ -52,11 +48,11 @@ BSX ROMs must be patched to run without BIOS. The BSX BIOS is not currently supp
 
 ### Savestates/Memories/Sleep
 
-> **Warning**: Not supported
+Supported: regular carts and the DSP, Super FX/GSU, and SA-1 special chips.
 
-Savestates/Memories/Sleep are not supported by any FPGA SNES core. Not this one, not the MiSTer core it's ported from, not the Analogue Super NT one.
+Not supported: CX4, S-DD1, SPC7110, and BSX games
 
-**Support for savestates will _not_ be coming** to any of these cores. Do not ask. If you would like to learn more, see [issue #59](https://github.com/agg23/openfpga-SNES/issues/59) and [this discussion on the MiSTer forums](https://misterfpga.org/viewtopic.php?t=4944).
+Sleep requires working savestates. Processing the power button on your Pocket while playing an unsupported cart type will turn off the Pocket while losing your current game state.
 
 ### Video
 

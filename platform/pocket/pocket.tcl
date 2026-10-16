@@ -758,6 +758,63 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to sram_oe_n
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to sram_ub_n
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to sram_we_n
 
+# Register the driven SRAM I/O in the IO cells for low skew. DQ inputs keep no
+# FAST_INPUT_REGISTER: reads are a fixed 6 clk_mem multicycle that an IOB input
+# register would break.
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[8]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[9]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[10]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[11]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[12]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[13]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[14]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[15]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_a[16]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[0]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[0]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[1]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[1]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[2]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[2]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[3]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[3]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[4]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[4]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[5]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[5]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[6]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[6]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[7]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[7]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[8]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[8]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[9]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[9]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[10]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[10]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[11]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[11]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[12]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[12]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[13]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[13]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[14]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[14]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_dq[15]
+set_instance_assignment -name FAST_OUTPUT_ENABLE_REGISTER ON -to sram_dq[15]
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_oe_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_we_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_ub_n
+set_instance_assignment -name FAST_OUTPUT_REGISTER ON -to sram_lb_n
+
 # ==============================================================================
 # Powerup self test (DO NOT USE)
 # ==============================================================================

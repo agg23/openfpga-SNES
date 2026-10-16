@@ -10,6 +10,9 @@ src/sim/*.hex
 src/sim/*.mem
 src/sim/*.bin
 **/tmp
+build_id.mif
+build_id.v
+rtl/mister_top/boot1.mif
 
 # Quartus directories and files
 db
@@ -51,8 +54,6 @@ vip
 *.xml
 *~
 **/.DS_Store
-build_id.mif
-build_id.v
 c5_pin_model_dump.txt
 cr_ie_info.json
 # Gateman directories and files

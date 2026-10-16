@@ -41,6 +41,26 @@ const tests = [
     filename: "roms/F-Zero (Europe).sfc",
     expectedCore: 2,
   },
+  {
+    name: "SA1",
+    filename: "roms/Super Mario RPG - Legend of the Seven Stars (USA).sfc",
+    expectedCore: 3,
+  },
+  {
+    name: "CX4",
+    filename: "roms/Mega Man X2 (USA).sfc",
+    expectedCore: 3,
+  },
+  {
+    name: "PAL SA1",
+    filename: "roms/Kirby's Fun Pak (Europe).sfc",
+    expectedCore: 4,
+  },
+  {
+    name: "PAL CX4",
+    filename: "roms/Mega Man X2 (Europe).sfc",
+    expectedCore: 4,
+  },
 ];
 
 const makeDataJson = (testCase) => {
