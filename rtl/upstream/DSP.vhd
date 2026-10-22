@@ -236,7 +236,7 @@ architecture rtl of DSP is
 begin
 	
 	MCLK_FREQ <= MCLK_PAL_FREQ when PAL = '1' else MCLK_NTSC_FREQ;
-	ACLK_FREQ <= ACLK_REAL_FREQ when FREQ = '1' else ACLK_TYPE_FREQ;
+	ACLK_FREQ <= ACLK_TYPE_FREQ when FREQ = '1' else ACLK_REAL_FREQ;
 	CEGEN_RST_N <= RST_N and ENABLE;
 	
 	CEGen : entity work.CEGen
