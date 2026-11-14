@@ -181,7 +181,7 @@ signal BG_GET_PIXEL 		: std_logic;
 signal BG_MATH 			: std_logic;
 signal BG_OUT 				: std_logic;
 signal GET_PIXEL_X		: unsigned(7 downto 0);
-signal WINDOW_X			: unsigned(7 downto 0);
+signal GET_PIXEL_X_D1	: unsigned(7 downto 0);
 signal WIN_ACTIVE		: std_logic_vector(1 downto 0);
 signal WIN_PRE_STOP		: std_logic_vector(1 downto 0);
 signal WIN_STOP			: std_logic_vector(1 downto 0);
@@ -1899,6 +1899,7 @@ variable N1,N2,N3,N4	: unsigned(3 downto 0);
 begin
 	if RST_N = '0' then
 		GET_PIXEL_X <= (others => '0');
+		GET_PIXEL_X_D1 <= (others => '0');
 		BG1_PIX_DATA <= (others => '0');
 		BG2_PIX_DATA <= (others => '0');
 		BG3_PIX_DATA <= (others => '0');
@@ -1957,7 +1958,7 @@ begin
 				end if;
 				
 				GET_PIXEL_X <= GET_PIXEL_X + 1;
-				
+				GET_PIXEL_X_D1 <= GET_PIXEL_X;
 				
 				if BG_MOSAIC_X = unsigned(MOSAIC_SIZE) then
 					BG_MOSAIC_X <= (others => '0');
@@ -2362,7 +2363,6 @@ begin
 
 	
 	if RST_N = '0' then
-		WINDOW_X <= (others => '0');
 		WIN_ACTIVE <= (others => '0');
 		WIN_PRE_STOP <= (others => '0');
 		WIN_STOP <= (others => '0');
@@ -2379,28 +2379,25 @@ begin
 		SUB_B <= (others => '0');
 	elsif rising_edge(CLK) then 
 		if ENABLE = '1' then
-			if BG_GET_PIXEL = '1' and DOT_CLKR_CE = '1' then
-				WINDOW_X <= GET_PIXEL_X;
-			end if;
 
-			if DOT_CLKF_CE = '1' then
-				if WINDOW_X = unsigned(WH0) then
+			if DOT_CLKR_CE = '1' then
+				if GET_PIXEL_X = unsigned(WH0) then
 					WIN_ACTIVE(0) <= '1';
 				end if;
-				if WINDOW_X = unsigned(WH1) then
+				if GET_PIXEL_X = unsigned(WH1) then
 					WIN_PRE_STOP(0) <= '1';
 				end if;
-				if WINDOW_X = unsigned(WH2) then
+				if GET_PIXEL_X = unsigned(WH2) then
 					WIN_ACTIVE(1) <= '1';
 				end if;
-				if WINDOW_X = unsigned(WH3) then
+				if GET_PIXEL_X = unsigned(WH3) then
 					WIN_PRE_STOP(1) <= '1';
 				end if;
 
 				WIN_STOP <= WIN_PRE_STOP;
 			end if;
 
-			if H_CNT = BG_GET_PIX_START then
+			if H_CNT = BG_GET_PIX_START-1 then
 				WIN_ACTIVE <= (others => '0');
 				WIN_PRE_STOP <= (others => '0');
 				WIN_STOP <= (others => '0');
@@ -2498,7 +2495,7 @@ begin
 			end if;
 			
 			if BG_MATH = '1' then
-				MATH_X <= WINDOW_X;
+				MATH_X <= GET_PIXEL_X_D1;
 			end if;
 		end if;
 	end if;
