@@ -17,16 +17,18 @@ core.workflow(
     ),
     mode = "ITERATIVE",
     authoring = authoring.pass_thru("Copybara <copybara@example.com>"),
-    origin_files = glob(["rtl/**"]),
+    origin_files = glob(["rtl/**", "releases/boot1.rom"]),
     destination_files = glob(["rtl/upstream/**"], exclude = ["rtl/upstream/snes_mister.qip"]),
     transformations = [
         core.move("rtl", "rtl/upstream"),
-        # Normalize CRLF→LF before patching (upstream stores mixed/CRLF endings)
+        core.move("releases/boot1.rom", "rtl/upstream/releases/boot1.rom"),
+        # Normalize CRLF→LF before patching (upstream stores mixed/CRLF endings);
+        # keep the binary boot ROM out of the text transform
         core.transform(transformations = [
             core.replace(
                 before = "\r\n",
                 after = "\n",
-                paths = glob(["rtl/upstream/**"]),
+                paths = glob(["rtl/upstream/**"], exclude = ["rtl/upstream/releases/boot1.rom"]),
                 multiline = True,
             ),
         ], noop_behavior = "IGNORE_NOOP"),

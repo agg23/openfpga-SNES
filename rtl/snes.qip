@@ -3,3 +3,7 @@ set_global_assignment -name QIP_FILE                  [file join $::quartus(qip_
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/SNES.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/rom_parser.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/scanline_filler.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/savestate.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/psram_blob.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "mister_top/boot1_rom.sv"]
+set_global_assignment -name MIF_FILE                  [file join $::quartus(qip_path) "mister_top/boot1.mif"]

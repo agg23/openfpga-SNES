@@ -15,7 +15,7 @@
     "framework": {
       "target_product": "Analogue Pocket",
       "version_required": "1.1",
-      "sleep_supported": false,
+      "sleep_supported": true,
       "dock": {
         "supported": true,
         "analog_output": false
@@ -41,6 +41,16 @@
         "name": "PAL",
         "id": 2,
         "filename": "snes_pal.rev"
+      },
+      {
+        "name": "SA1CX4",
+        "id": 3,
+        "filename": "snes_sa1cx4.rev"
+      },
+      {
+        "name": "PALSA1CX4",
+        "id": 4,
+        "filename": "snes_pal_sa1cx4.rev"
       }
     ]
   }

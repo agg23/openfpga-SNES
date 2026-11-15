@@ -1,5 +1,5 @@
 diff --git a/rtl/upstream/main.v b/rtl/upstream/main.v
-index dba1449..5b04939 100644
+index dba1449..c63f111 100644
 --- a/rtl/upstream/main.v
 +++ b/rtl/upstream/main.v
 @@ -1,4 +1,15 @@
@@ -19,7 +19,14 @@ index dba1449..5b04939 100644
  	input             RESET_N,
  
  	input             MCLK,
-@@ -141,16 +152,6 @@ module main (
+@@ -136,21 +147,13 @@ module main (
+ 	output      [7:0] SS_DDR_BE,
+ 	output            SS_DDR_REQ,
+ 
++	output            SS_BUSY,
++
+ 	output     [15:0] AUDIO_L,
+ 	output     [15:0] AUDIO_R
  );
  
  parameter USE_DLH = 1'b1;
@@ -36,3 +43,11 @@ index dba1449..5b04939 100644
  
  wire [23:0] CA;
  wire        CPURD_N;
+@@ -882,7 +885,6 @@ end else
+ assign MAP_ACTIVE[6] = 0;
+ endgenerate
+ 
+-wire        SS_BUSY;
+ wire  [7:0] SS_DO;
+ wire [23:0] SS_ROM_ADDR;
+ 
